@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>schema_dms_audit_log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>資料表結構：dms_audit_log (系統稽核紀錄)</h1>
+<p>本文件紀錄 DMS V5 之 <code>dms_audit_log</code> 資料表結構定義。</p>
+<p>本文件依據 <code>system_specifications.md</code> 第 1.5 節「資料表與欄位命名規則」與第 5 節「全域稽核紀錄規格」製作。資料表名稱與 schema 檔名一致，檔名前綴統一使用 <code>schema_</code>。</p>
+<p>本專案資料庫不建立實體 <code>FOREIGN KEY</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
+<p>---</p>
+<h2>1. 資料表說明</h2>
+<ul>
+  <li><strong>表名稱</strong>：<code>dms_audit_log</code></li>
+  <li><strong>schema 檔名</strong>：<code>schema_dms_audit_log.md</code>、<code>schema_dms_audit_log.html</code></li>
+  <li><strong>用途</strong>：保存登入、登出、文件查閱、文件下載、文件生命週期、資料夾異動、權限異動、權限不足與操作失敗等全域稽核紀錄。</li>
+</ul>
+<h3>欄位規劃</h3>
+<table>
+  <thead>
+    <tr><th>欄位名稱</th><th>資料型態</th><th>屬性</th><th>說明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>SERIAL (INT)</td><td>Primary Key</td><td>稽核紀錄唯一識別碼。</td></tr>
+    <tr><td><code>event_at</code></td><td>TIMESTAMP</td><td>Not Null, Default</td><td>事件發生時間，預設為 <code>CURRENT_TIMESTAMP</code>。</td></tr>
+    <tr><td><code>actor_uid</code></td><td>VARCHAR(50)</td><td>Nullable</td><td>操作者帳號；未登入或登入失敗時可依情境留空或記錄輸入帳號。</td></tr>
+    <tr><td><code>actor_name</code></td><td>VARCHAR(255)</td><td>Nullable</td><td>操作者姓名。</td></tr>
+    <tr><td><code>actor_role</code></td><td>VARCHAR(20)</td><td>Nullable</td><td>操作者登入角色，僅記錄 <code>ADMIN</code> 或 <code>USER</code>。資料夾管理員屬於計算型管理身分，不寫入為登入角色。</td></tr>
+    <tr><td><code>action</code></td><td>VARCHAR(80)</td><td>Not Null</td><td>動作代碼，例如 <code>DOCUMENT_PREVIEWED</code>、<code>DOCUMENT_DOWNLOADED</code>、<code>DOCUMENT_VERSION_CANCELLED</code>。</td></tr>
+    <tr><td><code>resource_type</code></td><td>VARCHAR(30)</td><td>Nullable</td><td>被操作的資源類型，例如 <code>AUTH</code>、<code>FOLDER</code>、<code>DOCUMENT</code>、<code>VERSION</code>、<code>ACL</code>。</td></tr>
+    <tr><td><code>resource_id</code></td><td>VARCHAR(80)</td><td>Nullable</td><td>被操作資源的主要識別碼。</td></tr>
+    <tr><td><code>managed_folder_id</code></td><td>INTEGER</td><td>Nullable</td><td>事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。</td></tr>
+    <tr><td><code>folder_id</code></td><td>INTEGER</td><td>Nullable</td><td>事件所屬資料夾識別碼，邏輯對應 <code>dms_folders.df_fid</code>；根目錄文件可使用 <code>0</code>。</td></tr>
+    <tr><td><code>document_id</code></td><td>INTEGER</td><td>Nullable</td><td>事件所屬文件主檔識別碼，邏輯對應 <code>dms_doc.dd_id</code>。</td></tr>
+    <tr><td><code>version_id</code></td><td>INTEGER</td><td>Nullable</td><td>事件所屬文件版本識別碼，邏輯對應 <code>dms_doc_ver.ddv_id</code>。</td></tr>
+    <tr><td><code>result</code></td><td>VARCHAR(20)</td><td>Not Null</td><td>執行結果。<code>SUCCESS</code>：成功，<code>FAILED</code>：失敗，<code>DENIED</code>：拒絕。</td></tr>
+    <tr><td><code>ip_address</code></td><td>VARCHAR(80)</td><td>Nullable</td><td>使用者來源 IP 位址。</td></tr>
+    <tr><td><code>user_agent</code></td><td>TEXT</td><td>Nullable</td><td>瀏覽器或用戶端識別資訊。</td></tr>
+    <tr><td><code>request_id</code></td><td>VARCHAR(80)</td><td>Nullable</td><td>後端請求追蹤識別碼，便於除錯與串接日誌。</td></tr>
+    <tr><td><code>reason</code></td><td>TEXT</td><td>Nullable</td><td>使用者填寫或系統產生的原因，例如撤回原因、廢止原因或拒絕原因。</td></tr>
+    <tr><td><code>before_data</code></td><td>JSONB</td><td>Nullable</td><td>異動前資料快照。</td></tr>
+    <tr><td><code>after_data</code></td><td>JSONB</td><td>Nullable</td><td>異動後資料快照。</td></tr>
+    <tr><td><code>metadata</code></td><td>JSONB</td><td>Nullable</td><td>額外資料，例如檔名、MIME Type、版本號、下載類型、浮水印內容或錯誤訊息。</td></tr>
+  </tbody>
+</table>
+<p>---</p>
+<h2>2. PostgreSQL DDL 語法</h2>
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">CREATE TABLE dms_audit_log (
+    id SERIAL PRIMARY KEY,
+    event_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actor_uid VARCHAR(50),
+    actor_name VARCHAR(255),
+    actor_role VARCHAR(20),
+    action VARCHAR(80) NOT NULL,
+    resource_type VARCHAR(30),
+    resource_id VARCHAR(80),
+    managed_folder_id INTEGER,
+    folder_id INTEGER,
+    document_id INTEGER,
+    version_id INTEGER,
+    result VARCHAR(20) NOT NULL,
+    ip_address VARCHAR(80),
+    user_agent TEXT,
+    request_id VARCHAR(80),
+    reason TEXT,
+    before_data JSONB,
+    after_data JSONB,
+    metadata JSONB
+);
+
+CREATE INDEX idx_dms_audit_log_event_at
+ON dms_audit_log(event_at);
+
+CREATE INDEX idx_dms_audit_log_actor
+ON dms_audit_log(actor_uid, event_at);
+
+CREATE INDEX idx_dms_audit_log_action
+ON dms_audit_log(action, event_at);
+
+CREATE INDEX idx_dms_audit_log_result
+ON dms_audit_log(result, event_at);
+
+CREATE INDEX idx_dms_audit_log_folder
+ON dms_audit_log(folder_id, event_at);
+
+CREATE INDEX idx_dms_audit_log_document
+ON dms_audit_log(document_id, event_at);
+
+CREATE INDEX idx_dms_audit_log_version
+ON dms_audit_log(version_id, event_at);
+
+CREATE INDEX idx_dms_audit_log_managed_folder
+ON dms_audit_log(managed_folder_id, event_at);</code></pre>
+</div>
+<p>---</p>
+<h2>3. 欄位與資料表註解</h2>
+<pre><code class="language-sql">COMMENT ON TABLE dms_audit_log IS '系統稽核紀錄';
+COMMENT ON COLUMN dms_audit_log.id IS '稽核紀錄唯一識別碼';
+COMMENT ON COLUMN dms_audit_log.event_at IS '事件發生時間';
+COMMENT ON COLUMN dms_audit_log.actor_uid IS '操作者帳號';
+COMMENT ON COLUMN dms_audit_log.actor_name IS '操作者姓名';
+COMMENT ON COLUMN dms_audit_log.actor_role IS '操作者登入角色。ADMIN：系統管理員，USER：一般使用者';
+COMMENT ON COLUMN dms_audit_log.action IS '動作代碼';
+COMMENT ON COLUMN dms_audit_log.resource_type IS '被操作的資源類型';
+COMMENT ON COLUMN dms_audit_log.resource_id IS '被操作資源的主要識別碼';
+COMMENT ON COLUMN dms_audit_log.managed_folder_id IS '事件所屬管理資料夾節點識別碼';
+COMMENT ON COLUMN dms_audit_log.folder_id IS '事件所屬資料夾識別碼';
+COMMENT ON COLUMN dms_audit_log.document_id IS '事件所屬文件主檔識別碼';
+COMMENT ON COLUMN dms_audit_log.version_id IS '事件所屬文件版本識別碼';
+COMMENT ON COLUMN dms_audit_log.result IS '執行結果。SUCCESS：成功，FAILED：失敗，DENIED：拒絕';
+COMMENT ON COLUMN dms_audit_log.ip_address IS '使用者來源 IP 位址';
+COMMENT ON COLUMN dms_audit_log.user_agent IS '瀏覽器或用戶端識別資訊';
+COMMENT ON COLUMN dms_audit_log.request_id IS '後端請求追蹤識別碼';
+COMMENT ON COLUMN dms_audit_log.reason IS '使用者填寫或系統產生的原因';
+COMMENT ON COLUMN dms_audit_log.before_data IS '異動前資料快照';
+COMMENT ON COLUMN dms_audit_log.after_data IS '異動後資料快照';
+COMMENT ON COLUMN dms_audit_log.metadata IS '額外資料';</code></pre>
+<p>---</p>
+<h2>4. 常用查詢方向</h2>
+<p>依時間區間查詢稽核紀錄：</p>
+<pre><code class="language-sql">SELECT id,
+       event_at,
+       actor_uid,
+       actor_name,
+       actor_role,
+       action,
+       resource_type,
+       resource_id,
+       result,
+       ip_address,
+       reason,
+       metadata
+  FROM dms_audit_log
+ WHERE event_at &gt;= :date_from
+   AND event_at &lt; :date_to
+ ORDER BY event_at DESC,
+          id DESC;</code></pre>
+<p>查詢單一文件的預覽、下載與生命週期紀錄：</p>
+<pre><code class="language-sql">SELECT id,
+       event_at,
+       actor_uid,
+       action,
+       result,
+       version_id,
+       ip_address,
+       reason,
+       metadata
+  FROM dms_audit_log
+ WHERE document_id = :document_id
+ ORDER BY event_at DESC,
+          id DESC;</code></pre>
+<p>查詢特定使用者的操作軌跡：</p>
+<pre><code class="language-sql">SELECT id,
+       event_at,
+       action,
+       resource_type,
+       resource_id,
+       result,
+       folder_id,
+       document_id,
+       version_id,
+       ip_address
+  FROM dms_audit_log
+ WHERE actor_uid = :actor_uid
+   AND event_at &gt;= :date_from
+   AND event_at &lt; :date_to
+ ORDER BY event_at DESC,
+          id DESC;</code></pre>
+<p>---</p>
+<h2>5. 後端檢核規則</h2>
+<ul>
+  <li>稽核紀錄採追加寫入模式，系統一般功能不提供修改或刪除稽核紀錄的操作。</li>
+  <li>稽核紀錄必須由後端統一寫入，不得只依賴前端事件紀錄。</li>
+  <li>管理類異動成功時，主要資料異動與稽核紀錄應在同一個短交易中完成；若稽核紀錄寫入失敗，該管理異動應回復。</li>
+  <li>查閱、預覽與下載屬高頻事件，仍須留下紀錄。</li>
+  <li><code>actor_role</code> 只保存登入角色 <code>ADMIN</code> 或 <code>USER</code>。資料夾管理員不是登入角色，其管理範圍需由 <code>managed_folder_id</code> 與後端權限計算判斷。</li>
+  <li><code>result</code> 必須使用 <code>SUCCESS</code>、<code>FAILED</code> 或 <code>DENIED</code>。</li>
+  <li><code>before_data</code>、<code>after_data</code> 與 <code>metadata</code> 必須保存合法 JSONB 資料；無額外資料時可使用 <code>{}</code>。</li>
+  <li>一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。</li>
+</ul>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>schema_dms_doc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>資料表結構：dms_doc (文件主檔)</h1>
+<p>本文件紀錄 DMS V4 之 <code>dms_doc</code> 資料表結構定義。</p>
+<p>本文件依據 <code>system_specifications.md</code> 第 1.5 節「資料表與欄位命名規則」製作。資料表名稱與 schema 檔名一致，檔名前綴統一使用 <code>schema_</code>。</p>
+<p>本專案資料庫不建立實體 <code>FOREIGN KEY</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
+<p>---</p>
+<h2>1. 資料表說明</h2>
+<ul>
+  <li><strong>表名稱</strong>：<code>dms_doc</code></li>
+  <li><strong>schema 檔名</strong>：<code>schema_dms_doc.md</code>、<code>schema_dms_doc.html</code></li>
+  <li><strong>用途</strong>：代表一份文件本身，保存文件編號、文件名稱、所屬資料夾、文件狀態與廢止資訊。</li>
+</ul>
+<h3>欄位規劃</h3>
+<table>
+  <thead>
+    <tr><th>欄位名稱</th><th>資料型態</th><th>屬性</th><th>說明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>dd_id</code></td><td>SERIAL (INT)</td><td>Primary Key</td><td>文件主檔唯一識別碼。</td></tr>
+    <tr><td><code>df_fid</code></td><td>INTEGER</td><td>Not Null</td><td>所屬資料夾 ID，邏輯對應 <code>dms_folders.df_fid</code>。</td></tr>
+    <tr><td><code>dd_code</code></td><td>VARCHAR(50)</td><td>Not Null</td><td>文件編號。</td></tr>
+    <tr><td><code>dd_title</code></td><td>VARCHAR(255)</td><td>Not Null</td><td>文件名稱。</td></tr>
+    <tr><td><code>dd_status</code></td><td>SMALLINT</td><td>Not Null</td><td>文件狀態。1：有效，2：廢止。</td></tr>
+    <tr><td><code>dd_obs_at</code></td><td>TIMESTAMP</td><td>Nullable</td><td>廢止時間。</td></tr>
+    <tr><td><code>dd_obs_by</code></td><td>VARCHAR(50)</td><td>Nullable</td><td>廢止人員帳號。</td></tr>
+    <tr><td><code>dd_obs_reason</code></td><td>TEXT</td><td>Nullable</td><td>廢止原因。</td></tr>
+    <tr><td><code>dfi_id</code></td><td>INTEGER</td><td>Nullable</td><td>廢止公文檔案 ID，邏輯對應 <code>dms_file.dfi_id</code>。</td></tr>
+    <tr><td><code>dd_obs_src</code></td><td>SMALLINT</td><td>Nullable</td><td>廢止來源。1：手動廢止，2：資料夾封存自動廢止。</td></tr>
+    <tr><td><code>dd_crtby</code></td><td>VARCHAR(50)</td><td>Not Null</td><td>建立者帳號。</td></tr>
+    <tr><td><code>dd_crtat</code></td><td>TIMESTAMP</td><td>Not Null, Default</td><td>建立時間，預設為 <code>CURRENT_TIMESTAMP</code>。</td></tr>
+    <tr><td><code>dd_updby</code></td><td>VARCHAR(50)</td><td>Nullable</td><td>最後異動者帳號。</td></tr>
+    <tr><td><code>dd_updat</code></td><td>TIMESTAMP</td><td>Nullable</td><td>最後異動時間。</td></tr>
+  </tbody>
+</table>
+<p>---</p>
+<h2>2. PostgreSQL DDL 語法</h2>
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">CREATE TABLE dms_doc (
+    dd_id SERIAL PRIMARY KEY,
+    df_fid INTEGER NOT NULL,
+    dd_code VARCHAR(50) NOT NULL,
+    dd_title VARCHAR(255) NOT NULL,
+    dd_status SMALLINT NOT NULL DEFAULT 1,
+    dd_obs_at TIMESTAMP,
+    dd_obs_by VARCHAR(50),
+    dd_obs_reason TEXT,
+    dfi_id INTEGER,
+    dd_obs_src SMALLINT,
+    dd_crtby VARCHAR(50) NOT NULL,
+    dd_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dd_updby VARCHAR(50),
+    dd_updat TIMESTAMP
+);
+
+CREATE UNIQUE INDEX uq_dms_doc_code
+ON dms_doc(UPPER(dd_code));
+
+CREATE INDEX idx_dms_doc_folder
+ON dms_doc(df_fid, dd_status);
+
+CREATE INDEX idx_dms_doc_obs
+ON dms_doc(dd_obs_at)
+WHERE dd_status = 2;</code></pre>
+</div>
+<p>---</p>
+<h2>3. 欄位與資料表註解</h2>
+<pre><code class="language-sql">COMMENT ON TABLE dms_doc IS '文件主檔';
+COMMENT ON COLUMN dms_doc.dd_id IS '文件主檔唯一識別碼';
+COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
+COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
+COMMENT ON COLUMN dms_doc.dd_title IS '文件名稱';
+COMMENT ON COLUMN dms_doc.dd_status IS '文件狀態。1：有效，2：廢止';
+COMMENT ON COLUMN dms_doc.dd_obs_at IS '廢止時間';
+COMMENT ON COLUMN dms_doc.dd_obs_by IS '廢止人員帳號';
+COMMENT ON COLUMN dms_doc.dd_obs_reason IS '廢止原因';
+COMMENT ON COLUMN dms_doc.dfi_id IS '廢止公文檔案 ID';
+COMMENT ON COLUMN dms_doc.dd_obs_src IS '廢止來源。1：手動廢止，2：資料夾封存自動廢止';
+COMMENT ON COLUMN dms_doc.dd_crtby IS '建立者帳號';
+COMMENT ON COLUMN dms_doc.dd_crtat IS '建立時間';
+COMMENT ON COLUMN dms_doc.dd_updby IS '最後異動者帳號';
+COMMENT ON COLUMN dms_doc.dd_updat IS '最後異動時間';</code></pre>
+<p>---</p>
+<h2>4. 後端檢核規則</h2>
+<ul>
+  <li>文件編號 <code>dd_code</code> 採全系統唯一，且不區分大小寫。</li>
+  <li><code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</li>
+  <li>文件主檔為 <code>dd_status = 2</code> 時，不得再建立新版、預約版或執行撤回版本。</li>
+  <li>手動廢止時，<code>dfi_id</code> 必填，且必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 4</code>。</li>
+  <li>資料夾封存造成文件廢止時，需於同一交易內更新資料夾樹與底下文件主檔。</li>
+</ul>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>frontend_iis_deployment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>前端部署到 IIS 操作文件</h1>
+<h2>1. 部署結論</h2>
+<p>V5 前端不再使用舊 Vite <code>dist</code> 靜態檔部署方式。正式部署到 IIS 時，正確架構如下：</p>
+<pre><code class="language-text">使用者瀏覽器
+  ↓
+IIS
+  ↓
+Next.js standalone server
+  ↓
+內部後端 API
+  ↓
+PostgreSQL</code></pre>
+<p>IIS 的角色是對外提供 HTTP 或 HTTPS 入口，並透過 URL Rewrite 與 ARR 將請求反向代理到本機的 Next.js standalone server。</p>
+<h2>2. 禁止使用的舊方式</h2>
+<ul>
+  <li>不部署 <code>dms\dist</code>。</li>
+  <li>不部署 <code>dms\public\config.js</code> 作為正式環境設定來源。</li>
+  <li>不讓使用者瀏覽器直接連線到內部後端 API。</li>
+  <li>不在 IIS 內直接託管 Next.js 原始碼資料夾。</li>
+</ul>
+<p>原因是 V5 已將登入狀態、後端 API 轉發、文件下載與 PDF 預覽移到 Next.js route handler。瀏覽器端只應呼叫同源的 Next.js 路由，不應知道內部後端 API 位址。</p>
+<h2>3. 相關檔案</h2>
+<table>
+  <thead>
+    <tr><th>檔案</th><th>用途</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>_iis.bat</code></td><td>IIS 部署輔助入口，會呼叫 <code>_build_next_standalone.bat</code> 產生部署包，並提示 IIS 後續設定</td></tr>
+    <tr><td><code>_build_next_standalone.bat</code></td><td>建置 Next.js standalone 輸出，產生 <code>_deploy\nextjs</code></td></tr>
+    <tr><td><code>_start_next_standalone.bat</code></td><td>在正式主機啟動 Next.js standalone server</td></tr>
+    <tr><td><code>deploy\iis\web.config</code></td><td>IIS URL Rewrite 與 ARR 反向代理範本</td></tr>
+    <tr><td><code>deploy\env.production.sample</code></td><td>正式環境 <code>.env.production</code> 範本</td></tr>
+    <tr><td><code>_deploy\nextjs</code></td><td>建置後產生的前端部署包</td></tr>
+  </tbody>
+</table>
+<h2>4. 正式主機前置需求</h2>
+<ul>
+  <li>Windows Server 或可執行 IIS 的 Windows 主機。</li>
+  <li>IIS 已安裝並建立網站。</li>
+  <li>IIS 已安裝 URL Rewrite。</li>
+  <li>IIS 已安裝 Application Request Routing，簡稱 ARR。</li>
+  <li>ARR 已啟用 Proxy 功能。</li>
+  <li>正式主機已安裝 Node.js LTS runtime。</li>
+  <li>正式主機可連線到內部後端 API。</li>
+  <li>若 <code>SESSION_COOKIE_SECURE=true</code>，IIS 對外站台必須使用 HTTPS。</li>
+</ul>
+<h2>5. 在開發機產生部署包</h2>
+<p>在專案根目錄執行：</p>
+<pre><code class="language-bat">_iis.bat</code></pre>
+<p><code>_iis.bat</code> 會檢查 <code>deploy\iis\web.config</code> 是否存在，並呼叫：</p>
+<pre><code class="language-bat">_build_next_standalone.bat</code></pre>
+<p>建置成功後會產生：</p>
+<pre><code class="language-text">_deploy\nextjs</code></pre>
+<p>部署到正式主機時，複製整個 <code>_deploy\nextjs</code> 資料夾即可。正式主機不需要執行 <code>npm install</code>，也不需要從 npm registry 下載套件。</p>
+<h2>6. 部署包目錄建議</h2>
+<p>正式主機可使用下列目錄結構：</p>
+<pre><code class="language-text">C:\DMS\nextjs
+  app\
+    server.js
+    .next\
+    public\
+  _start_next_standalone.bat
+  .env.production</code></pre>
+<p>其中 <code>C:\DMS\nextjs</code> 對應從開發機複製過來的 <code>_deploy\nextjs</code>。</p>
+<h2>7. 建立正式環境設定</h2>
+<p>在正式主機的部署包目錄中，將：</p>
+<pre><code class="language-text">.env.production.sample</code></pre>
+<p>複製成：</p>
+<pre><code class="language-text">.env.production</code></pre>
+<p>設定內容範例：</p>
+<pre><code class="language-text">BACKEND_API_BASE_URL=http://內部後端主機:8080
+SESSION_COOKIE_NAME=dms_session
+SESSION_SECRET=請改成至少 32 字元的隨機字串
+SESSION_MAX_AGE_SECONDS=28800
+SESSION_COOKIE_SECURE=true
+DMS_NEXT_HOST=127.0.0.1
+DMS_NEXT_PORT=3000</code></pre>
+<p>設定原則：</p>
+<ul>
+  <li><code>BACKEND_API_BASE_URL</code> 指向內部後端 API，不是 IIS 對外網址。</li>
+  <li><code>SESSION_SECRET</code> 必須更換為正式環境專用隨機字串。</li>
+  <li><code>DMS_NEXT_HOST</code> 建議固定為 <code>127.0.0.1</code>，避免 Next.js server 直接暴露到使用者網段。</li>
+  <li><code>DMS_NEXT_PORT</code> 預設為 <code>3000</code>。</li>
+  <li>若正式環境尚未啟用 HTTPS，<code>SESSION_COOKIE_SECURE</code> 必須先設為 <code>false</code>；啟用 HTTPS 後再改回 <code>true</code>。</li>
+</ul>
+<h2>8. 啟動 Next.js standalone server</h2>
+<p>在正式主機部署包目錄執行：</p>
+<pre><code class="language-bat">_start_next_standalone.bat</code></pre>
+<p>預設監聽位址為：</p>
+<pre><code class="language-text">127.0.0.1:3000</code></pre>
+<p>正式環境必須讓此程序長時間執行。可使用 Windows Service、工作排程器或既有服務管理工具控管啟動、停止與重啟。</p>
+<h2>9. IIS 網站設定</h2>
+<h3>9.1 建立 IIS 站台</h3>
+<ul>
+  <li>建立一個 IIS Website 作為 DMS 對外入口。</li>
+  <li>Application Pool 可使用「No Managed Code」。</li>
+  <li>綁定正式網域、IP、port 與憑證。</li>
+  <li>Site root 可使用獨立資料夾，例如：</li>
+</ul>
+<pre><code class="language-text">C:\inetpub\dms</code></pre>
+<h3>9.2 放置 web.config</h3>
+<p>將專案內的：</p>
+<pre><code class="language-text">deploy\iis\web.config</code></pre>
+<p>複製到 IIS site root，例如：</p>
+<pre><code class="language-text">C:\inetpub\dms\web.config</code></pre>
+<p>目前範本內容會把所有外部請求轉送到：</p>
+<pre><code class="language-text">http://127.0.0.1:3000</code></pre>
+<p>若 <code>.env.production</code> 的 <code>DMS_NEXT_PORT</code> 不是 <code>3000</code>，必須同步修改 <code>web.config</code> 內的反向代理目標。</p>
+<h3>9.3 啟用 ARR Proxy</h3>
+<p>在 IIS Manager 中設定：</p>
+<ul>
+  <li>選取伺服器節點。</li>
+  <li>開啟 Application Request Routing Cache。</li>
+  <li>進入 Server Proxy Settings。</li>
+  <li>勾選 Enable proxy。</li>
+  <li>套用設定。</li>
+</ul>
+<p>未啟用 ARR Proxy 時，URL Rewrite 規則存在也無法正常反向代理到 Next.js server。</p>
+<h2>10. 防火牆與網路規則</h2>
+<ul>
+  <li>使用者瀏覽器只能連到 IIS 對外網址。</li>
+  <li>Next.js standalone server 只監聽 <code>127.0.0.1:3000</code>。</li>
+  <li>內部後端 API 只允許 Next.js 主機或必要的管理網段連線。</li>
+  <li>PostgreSQL 不對使用者網段開放。</li>
+  <li>若有 HTTPS，TLS 憑證終止點放在 IIS。</li>
+</ul>
+<h2>11. 部署後驗證</h2>
+<p>在正式主機本機確認 Next.js server：</p>
+<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/</code></pre>
+<p>在其他使用者電腦確認 IIS 對外網址：</p>
+<pre><code class="language-text">https://正式網域/</code></pre>
+<p>驗收項目：</p>
+<ul>
+  <li>首頁可開啟。</li>
+  <li>登入成功後使用 <code>HttpOnly Cookie</code> 保存 session。</li>
+  <li>瀏覽器端看不到 <code>BACKEND_API_BASE_URL</code>。</li>
+  <li>文件下載走 <code>/api/documents/download?version_id=...</code>。</li>
+  <li>PDF 預覽走 <code>/api/documents/preview?version_id=...</code>。</li>
+  <li>使用者無法直接連線到內部後端 API。</li>
+  <li>IIS access log 可看到使用者請求。</li>
+  <li>Next.js server console 或服務日誌沒有連線後端 API 失敗訊息。</li>
+</ul>
+<h2>12. 常見錯誤處理</h2>
+<table>
+  <thead>
+    <tr><th>Status</th><th>Root Cause</th><th>Suggested Fix</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>IIS 回傳 404</td><td><code>web.config</code> 未放在 IIS site root，或 IIS 站台實體路徑指錯</td><td>確認 IIS site root，並將 <code>deploy\iis\web.config</code> 複製到該目錄</td></tr>
+    <tr><td>IIS 回傳 502</td><td>Next.js standalone server 未啟動，或 port 與 <code>web.config</code> 不一致</td><td>執行 <code>_start_next_standalone.bat</code>，確認 <code>DMS_NEXT_PORT</code> 與 <code>web.config</code> 代理目標一致</td></tr>
+    <tr><td>IIS rewrite 規則無效</td><td>未安裝 URL Rewrite 或 ARR Proxy 未啟用</td><td>安裝 URL Rewrite 與 ARR，並在 ARR Server Proxy Settings 啟用 Proxy</td></tr>
+    <tr><td>登入後 Cookie 未保存</td><td><code>SESSION_COOKIE_SECURE=true</code> 但 IIS 未使用 HTTPS</td><td>測試環境改成 <code>SESSION_COOKIE_SECURE=false</code>，正式 HTTPS 啟用後改回 <code>true</code></td></tr>
+    <tr><td>無法連線後端 API</td><td><code>BACKEND_API_BASE_URL</code> 指向錯誤主機、port 或防火牆未開</td><td>在 Next.js 主機測試連線到內部後端 API，修正 <code>.env.production</code> 或防火牆</td></tr>
+    <tr><td>大檔案上傳失敗</td><td>IIS request body 限制過小</td><td>調整 IIS requestFiltering 與相關上傳大小限制</td></tr>
+    <tr><td>正式主機找不到 node</td><td>未安裝 Node.js LTS 或 PATH 未包含 Node.js</td><td>安裝 Node.js LTS，並確認 <code>node --version</code> 可執行</td></tr>
+  </tbody>
+</table>
+<h2>13. 更新版本流程</h2>
+<ul>
+  <li>在開發機執行 <code>_iis.bat</code> 重新產生 <code>_deploy\nextjs</code>。</li>
+  <li>停止正式主機上的 Next.js standalone server。</li>
+  <li>備份正式主機現有部署目錄與 <code>.env.production</code>。</li>
+  <li>用新的 <code>_deploy\nextjs</code> 內容更新正式主機部署目錄。</li>
+  <li>還原或保留正式主機原本的 <code>.env.production</code>。</li>
+  <li>啟動 <code>_start_next_standalone.bat</code>。</li>
+  <li>從 IIS 對外網址執行部署後驗證。</li>
+</ul>
+<h2>14. 回復流程</h2>
+<p>若新版本部署後失敗：</p>
+<ul>
+  <li>停止 Next.js standalone server。</li>
+  <li>將正式主機部署目錄還原為前一版備份。</li>
+  <li>確認 <code>.env.production</code> 為前一版可用設定。</li>
+  <li>啟動 <code>_start_next_standalone.bat</code>。</li>
+  <li>從 IIS 對外網址重新驗證登入、文件下載與 PDF 預覽。</li>
+</ul>
+<p>IIS 的 <code>web.config</code> 在 port 與代理目標未變更時不需要回復。</p>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

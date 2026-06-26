@@ -1,0 +1,99 @@
+# 資料表結構：dms_doc (文件主檔)
+
+本文件紀錄 DMS V4 之 `dms_doc` 資料表結構定義。
+
+本文件依據 `system_specifications.md` 第 1.5 節「資料表與欄位命名規則」製作。資料表名稱與 schema 檔名一致，檔名前綴統一使用 `schema_`。
+
+本專案資料庫不建立實體 `FOREIGN KEY`。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。
+
+---
+
+## 1. 資料表說明
+
+* **表名稱**：`dms_doc`
+* **schema 檔名**：`schema_dms_doc.md`、`schema_dms_doc.html`
+* **用途**：代表一份文件本身，保存文件編號、文件名稱、所屬資料夾、文件狀態與廢止資訊。
+
+### 欄位規劃
+
+| 欄位名稱 | 資料型態 | 屬性 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `dd_id` | SERIAL (INT) | Primary Key | 文件主檔唯一識別碼。 |
+| `df_fid` | INTEGER | Not Null | 所屬資料夾 ID，邏輯對應 `dms_folders.df_fid`。 |
+| `dd_code` | VARCHAR(50) | Not Null | 文件編號。 |
+| `dd_title` | VARCHAR(255) | Not Null | 文件名稱。 |
+| `dd_status` | SMALLINT | Not Null | 文件狀態。1：有效，2：廢止。 |
+| `dd_obs_at` | TIMESTAMP | Nullable | 廢止時間。 |
+| `dd_obs_by` | VARCHAR(50) | Nullable | 廢止人員帳號。 |
+| `dd_obs_reason` | TEXT | Nullable | 廢止原因。 |
+| `dfi_id` | INTEGER | Nullable | 廢止公文檔案 ID，邏輯對應 `dms_file.dfi_id`。 |
+| `dd_obs_src` | SMALLINT | Nullable | 廢止來源。1：手動廢止，2：資料夾封存自動廢止。 |
+| `dd_crtby` | VARCHAR(50) | Not Null | 建立者帳號。 |
+| `dd_crtat` | TIMESTAMP | Not Null, Default | 建立時間，預設為 `CURRENT_TIMESTAMP`。 |
+| `dd_updby` | VARCHAR(50) | Nullable | 最後異動者帳號。 |
+| `dd_updat` | TIMESTAMP | Nullable | 最後異動時間。 |
+
+---
+
+## 2. PostgreSQL DDL 語法
+
+```sql
+CREATE TABLE dms_doc (
+    dd_id SERIAL PRIMARY KEY,
+    df_fid INTEGER NOT NULL,
+    dd_code VARCHAR(50) NOT NULL,
+    dd_title VARCHAR(255) NOT NULL,
+    dd_status SMALLINT NOT NULL DEFAULT 1,
+    dd_obs_at TIMESTAMP,
+    dd_obs_by VARCHAR(50),
+    dd_obs_reason TEXT,
+    dfi_id INTEGER,
+    dd_obs_src SMALLINT,
+    dd_crtby VARCHAR(50) NOT NULL,
+    dd_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dd_updby VARCHAR(50),
+    dd_updat TIMESTAMP
+);
+
+CREATE UNIQUE INDEX uq_dms_doc_code
+ON dms_doc(UPPER(dd_code));
+
+CREATE INDEX idx_dms_doc_folder
+ON dms_doc(df_fid, dd_status);
+
+CREATE INDEX idx_dms_doc_obs
+ON dms_doc(dd_obs_at)
+WHERE dd_status = 2;
+```
+
+---
+
+## 3. 欄位與資料表註解
+
+```sql
+COMMENT ON TABLE dms_doc IS '文件主檔';
+COMMENT ON COLUMN dms_doc.dd_id IS '文件主檔唯一識別碼';
+COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
+COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
+COMMENT ON COLUMN dms_doc.dd_title IS '文件名稱';
+COMMENT ON COLUMN dms_doc.dd_status IS '文件狀態。1：有效，2：廢止';
+COMMENT ON COLUMN dms_doc.dd_obs_at IS '廢止時間';
+COMMENT ON COLUMN dms_doc.dd_obs_by IS '廢止人員帳號';
+COMMENT ON COLUMN dms_doc.dd_obs_reason IS '廢止原因';
+COMMENT ON COLUMN dms_doc.dfi_id IS '廢止公文檔案 ID';
+COMMENT ON COLUMN dms_doc.dd_obs_src IS '廢止來源。1：手動廢止，2：資料夾封存自動廢止';
+COMMENT ON COLUMN dms_doc.dd_crtby IS '建立者帳號';
+COMMENT ON COLUMN dms_doc.dd_crtat IS '建立時間';
+COMMENT ON COLUMN dms_doc.dd_updby IS '最後異動者帳號';
+COMMENT ON COLUMN dms_doc.dd_updat IS '最後異動時間';
+```
+
+---
+
+## 4. 後端檢核規則
+
+* 文件編號 `dd_code` 採全系統唯一，且不區分大小寫。
+* `df_fid` 必須存在於有效的 `dms_folders.df_fid`。
+* 文件主檔為 `dd_status = 2` 時，不得再建立新版、預約版或執行撤回版本。
+* 手動廢止時，`dfi_id` 必填，且必須存在於 `dms_file.dfi_id`，並符合 `dfi_role = 4`。
+* 資料夾封存造成文件廢止時，需於同一交易內更新資料夾樹與底下文件主檔。
