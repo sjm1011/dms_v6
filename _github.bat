@@ -11,10 +11,10 @@ echo ===================================================
 echo.
 
 where git >nul 2>&1
-if errorlevel 1 (
-    echo [錯誤] 找不到 Git，請先安裝 Git 並確認 git.exe 已加入 PATH。
-    goto fail
-)
+if not errorlevel 1 goto git_found
+echo [錯誤] 找不到 Git，請先安裝 Git 並確認 git.exe 已加入 PATH。
+goto fail
+:git_found
 
 git rev-parse --is-inside-work-tree >nul 2>&1
 if not errorlevel 1 goto repo_ready
@@ -30,30 +30,28 @@ goto fail
 
 :branch_ready
 git remote get-url origin >nul 2>&1
-if errorlevel 1 (
-    echo [資訊] 偵測到尚未設定 GitHub remote origin。
-    echo        正在為您設定 remote origin 為 https://github.com/sjm1011/dms_v6.git...
-    git remote add origin https://github.com/sjm1011/dms_v6.git
-    if errorlevel 1 (
-        echo [錯誤] 無法新增 GitHub remote origin。
-        goto fail
-    )
-)
+if not errorlevel 1 goto origin_configured
+echo [資訊] 偵測到尚未設定 GitHub remote origin。
+echo        正在為您設定 remote origin 為 https://github.com/sjm1011/dms_v6.git...
+git remote add origin https://github.com/sjm1011/dms_v6.git
+if not errorlevel 1 goto origin_configured
+echo [錯誤] 無法新增 GitHub remote origin。
+goto fail
+:origin_configured
 
 for /f "usebackq delims=" %%u in (`git remote get-url origin`) do set "ORIGIN_URL=%%u"
 
-if not "!ORIGIN_URL!"=="https://github.com/sjm1011/dms_v6" (
-    if not "!ORIGIN_URL!"=="https://github.com/sjm1011/dms_v6.git" (
-        echo [資訊] 偵測到 GitHub remote 為舊版或不同網址：!ORIGIN_URL!
-        echo        正在將目的地更新為新版網址：https://github.com/sjm1011/dms_v6.git...
-        git remote set-url origin https://github.com/sjm1011/dms_v6.git
-        if errorlevel 1 (
-            echo [錯誤] 更新 GitHub remote 失敗。
-            goto fail
-        )
-        for /f "usebackq delims=" %%u in (`git remote get-url origin`) do set "ORIGIN_URL=%%u"
-    )
-)
+if "!ORIGIN_URL!"=="https://github.com/sjm1011/dms_v6" goto origin_url_ok
+if "!ORIGIN_URL!"=="https://github.com/sjm1011/dms_v6.git" goto origin_url_ok
+echo [資訊] 偵測到 GitHub remote 為舊版或不同網址：!ORIGIN_URL!
+echo        正在將目的地更新為新版網址：https://github.com/sjm1011/dms_v6.git...
+git remote set-url origin https://github.com/sjm1011/dms_v6.git
+if not errorlevel 1 goto origin_url_updated
+echo [錯誤] 更新 GitHub remote 失敗。
+goto fail
+:origin_url_updated
+for /f "usebackq delims=" %%u in (`git remote get-url origin`) do set "ORIGIN_URL=%%u"
+:origin_url_ok
 
 echo [資訊] 目前分支：!BRANCH!
 echo [資訊] GitHub remote：!ORIGIN_URL!
@@ -108,20 +106,21 @@ echo.
 
 echo [2/3] 本機尚未推送的 commit：
 git log --oneline origin/!BRANCH!..!BRANCH! >nul 2>&1
-if errorlevel 1 (
-    echo [資訊] 尚未取得遠端追蹤分支，將直接推送 !BRANCH!。
-) else (
-    git log --oneline origin/!BRANCH!..!BRANCH!
-)
+if not errorlevel 1 goto show_local_commits
+echo [資訊] 尚未取得遠端追蹤分支，將直接推送 !BRANCH!。
+goto local_commits_done
+:show_local_commits
+git log --oneline origin/!BRANCH!..!BRANCH!
+:local_commits_done
 echo.
 
 echo [3/3] 推送到 GitHub...
 git push -u origin !BRANCH!
-if errorlevel 1 (
-    echo [錯誤] git push 失敗。
-    echo        請確認 GitHub 權限、網路連線，或是否需要登入 Git Credential Manager。
-    goto fail
-)
+if not errorlevel 1 goto push_ok
+echo [錯誤] git push 失敗。
+echo        請確認 GitHub 權限、網路連線，或是否需要登入 Git Credential Manager。
+goto fail
+:push_ok
 
 echo.
 echo [成功] 已推送到 GitHub.
