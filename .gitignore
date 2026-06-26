@@ -1,0 +1,16 @@
+# DMS 文件管理系統 V6 - 根目錄 Git 忽略清單
+
+# Next.js 前端暫存與依賴排除
+dmsV6/node_modules/
+dmsV6/dist/
+dmsV6/.next/
+dmsV6/out/
+dmsV6/.env.local
+dmsV6/.env.development.local
+dmsV6/.env.test.local
+dmsV6/.env.production.local
+
+# 系統快取與日誌
+*.log
+Thumbs.db
+.DS_Store
