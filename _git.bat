@@ -1,4 +1,9 @@
 @echo off
+for /f "tokens=4" %%i in ('chcp') do if not "%%i"=="65001" (
+    chcp 65001 > nul
+    cmd /c "%~f0" %*
+    goto reinvoke_exit
+)
 :: 使用 UTF-8 編碼
 chcp 65001 > nul
 setlocal EnableExtensions EnableDelayedExpansion
@@ -39,14 +44,10 @@ echo [資訊] 尚未設定 Git user.email，改用本專案預設值。
 git config --local user.email "dms-local@example.com"
 
 :user_email_ready
-if exist ".gitignore" goto gitignore_ok
-echo [警告] 找不到 .gitignore，請確認不會把 node_modules、dist、Win64 等產物提交進 Git。
-:gitignore_ok
+if not exist ".gitignore" echo [警告] 找不到 .gitignore，請確認不會把 node_modules、dist、Win64 等產物提交進 Git。
 
-if not exist "dmsV6\.git" goto sub_git_ok
-echo [警告] 偵測到 dmsV6\.git。
-echo        這代表 dmsV6 可能是另一個 Git repository，本腳本不會刪除或合併它。
-:sub_git_ok
+if exist "dmsV6\.git" echo [警告] 偵測到 dmsV6\.git。
+if exist "dmsV6\.git" echo        這代表 dmsV6 可能是另一個 Git repository，本腳本不會刪除或合併它。
 
 echo [1/4] 目前 Git 狀態：
 git status --short
@@ -109,7 +110,6 @@ git log -1 --oneline
 echo.
 echo [成功] 已完成本機 Git 備份。
 echo        本腳本不會自動推送到 GitHub；需要同步遠端時請另外執行 git push。
-goto done
 
 :fail
 echo.
@@ -123,3 +123,6 @@ echo.
 if /I not "%DMS_GIT_NO_PAUSE%"=="1" pause
 endlocal
 exit /b 0
+
+:reinvoke_exit
+exit /b %errorlevel%

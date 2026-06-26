@@ -1,4 +1,9 @@
 @echo off
+for /f "tokens=4" %%i in ('chcp') do if not "%%i"=="65001" (
+    chcp 65001 > nul
+    cmd /c "%~f0" %*
+    goto reinvoke_exit
+)
 :: 使用 UTF-8 編碼
 chcp 65001 > nul
 setlocal EnableExtensions EnableDelayedExpansion
@@ -139,3 +144,6 @@ echo.
 if /I not "%DMS_GITHUB_NO_PAUSE%"=="1" pause
 endlocal
 exit /b 0
+
+:reinvoke_exit
+exit /b %errorlevel%
