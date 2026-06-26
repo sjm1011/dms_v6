@@ -304,7 +304,9 @@ ON dms_audit_log(managed_folder_id, event_at);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_audit_log IS '系統稽核紀錄';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_audit_log IS '系統稽核紀錄';
 COMMENT ON COLUMN dms_audit_log.id IS '稽核紀錄唯一識別碼';
 COMMENT ON COLUMN dms_audit_log.event_at IS '事件發生時間';
 COMMENT ON COLUMN dms_audit_log.actor_uid IS '操作者帳號';
@@ -325,6 +327,7 @@ COMMENT ON COLUMN dms_audit_log.reason IS '使用者填寫或系統產生的原�
 COMMENT ON COLUMN dms_audit_log.before_data IS '異動前資料快照';
 COMMENT ON COLUMN dms_audit_log.after_data IS '異動後資料快照';
 COMMENT ON COLUMN dms_audit_log.metadata IS '額外資料';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>依時間區間查詢稽核紀錄：</p>

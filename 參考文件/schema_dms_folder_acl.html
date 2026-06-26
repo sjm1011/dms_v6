@@ -264,7 +264,9 @@ CREATE INDEX idx_dms_folder_acl_target ON dms_folder_acl(dfa_type, dfa_target) W
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_folder_acl IS '資料夾存取控制表';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_folder_acl IS '資料夾存取控制表';
 COMMENT ON COLUMN dms_folder_acl.dfa_id IS '唯一識別碼，自動遞增';
 COMMENT ON COLUMN dms_folder_acl.df_fid IS '關聯至 dms_folders 的資料夾 ID';
 COMMENT ON COLUMN dms_folder_acl.dfa_type IS '授權類型。1: 群組 (部門), 2: 特定使用者';
@@ -274,6 +276,7 @@ COMMENT ON COLUMN dms_folder_acl.dfa_crtat IS '建立時間，預設為目前時
 COMMENT ON COLUMN dms_folder_acl.dfa_dc IS '作廢註記 (Y/N)';
 COMMENT ON COLUMN dms_folder_acl.dfa_dcby IS '執行作廢操作的操作者帳號';
 COMMENT ON COLUMN dms_folder_acl.dfa_dcat IS '作廢時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>查詢特定資料夾之有效 ACL 列表：</p>

@@ -271,7 +271,9 @@ ON dms_file(dfi_role, dfi_status);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_file IS '檔案後設資料';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_file IS '檔案後設資料';
 COMMENT ON COLUMN dms_file.dfi_id IS '檔案唯一識別碼';
 COMMENT ON COLUMN dms_file.dfi_role IS '檔案角色。1：正式發布檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文';
 COMMENT ON COLUMN dms_file.dfi_name IS '原始檔名';
@@ -283,6 +285,7 @@ COMMENT ON COLUMN dms_file.dfi_sha256 IS '檔案 SHA-256 雜湊值';
 COMMENT ON COLUMN dms_file.dfi_status IS '檔案狀態。0：作廢，1：有效，2：已取代';
 COMMENT ON COLUMN dms_file.dfi_crtby IS '上傳者帳號';
 COMMENT ON COLUMN dms_file.dfi_crtat IS '上傳時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>依檔案角色與狀態查詢檔案：</p>

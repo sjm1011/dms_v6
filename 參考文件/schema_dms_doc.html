@@ -278,7 +278,9 @@ WHERE dd_status = 2;</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_doc IS '文件主檔';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_doc IS '文件主檔';
 COMMENT ON COLUMN dms_doc.dd_id IS '文件主檔唯一識別碼';
 COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
 COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
@@ -293,6 +295,7 @@ COMMENT ON COLUMN dms_doc.dd_crtby IS '建立者帳號';
 COMMENT ON COLUMN dms_doc.dd_crtat IS '建立時間';
 COMMENT ON COLUMN dms_doc.dd_updby IS '最後異動者帳號';
 COMMENT ON COLUMN dms_doc.dd_updat IS '最後異動時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>依資料夾查詢有效文件清單：</p>

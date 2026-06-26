@@ -115,7 +115,7 @@ function markdownToHtml(md, title = '文件') {
         inDdlSection = false;
         ddlHeadingLevel = 0;
       }
-      if (/ddl/i.test(text)) {
+      if (/ddl|註解|comment/i.test(text)) {
         inDdlSection = true;
         ddlHeadingLevel = level;
       }

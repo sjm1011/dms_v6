@@ -261,7 +261,9 @@ CREATE INDEX idx_dms_folder_mgr_uid ON dms_folder_managers(usr_uid);</code></pre
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_folder_managers IS '資料夾管理員';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_folder_managers IS '資料夾管理員';
 COMMENT ON COLUMN dms_folder_managers.dfm_id IS '唯一識別碼，自動遞增';
 COMMENT ON COLUMN dms_folder_managers.df_fid IS '關聯至 dms_folders 的資料夾 ID';
 COMMENT ON COLUMN dms_folder_managers.usr_uid IS '被指派為管理員的使用者帳號';
@@ -270,6 +272,7 @@ COMMENT ON COLUMN dms_folder_managers.dfm_crtat IS '建立時間，預設為目�
 COMMENT ON COLUMN dms_folder_managers.dfm_dc IS '作廢註記 (Y/N)';
 COMMENT ON COLUMN dms_folder_managers.dfm_dcby IS '執行作廢操作的操作者帳號';
 COMMENT ON COLUMN dms_folder_managers.dfm_dcat IS '作廢時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>查詢特定資料夾之直接指派管理員列表：</p>

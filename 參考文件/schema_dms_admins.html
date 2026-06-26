@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>schema_admins</title>
+  <title>schema_dms_admins</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -213,11 +213,14 @@
 <body>
   <div class="container">
     <h1>資料表結構：dms_admins (系統管理員表)</h1>
-<p>本文件紀錄文件管理系統 V4 (DMS V4) 之系統管理員表結構定義。</p>
+<p>本文件紀錄 DMS V5 之 <code>dms_admins</code> 資料表結構定義。</p>
+<p>本文件依據 <code>system_specifications.md</code> 第 1.5 節「資料表與欄位命名規則」製作。資料表名稱與 schema 檔名一致，檔名前綴統一使用 <code>schema_</code>。</p>
+<p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
 <ul>
-  <li><strong>表名稱</strong>：dms_admins</li>
+  <li><strong>表名稱</strong>：<code>dms_admins</code></li>
+  <li><strong>schema 檔名</strong>：<code>schema_dms_admins.md</code>、<code>schema_dms_admins.html</code></li>
   <li><strong>用途</strong>：紀錄具備 DMS 系統最高管理權限之員工（系統管理員）。當使用者登入後，系統將比對此表以決定是否給予系統管理選單與全域管理權限。</li>
 </ul>
 <h3>欄位規劃</h3>
@@ -227,7 +230,7 @@
   </thead>
   <tbody>
     <tr><td><code>da_id</code></td><td>SERIAL (INT)</td><td>Primary Key</td><td>唯一識別碼，自動遞增。</td></tr>
-    <tr><td><code>emp_id</code></td><td>VARCHAR(8)</td><td>Not Null (邏輯外鍵)</td><td>員工編號，邏輯關聯至 <code>employee(emp_id)</code>。</td></tr>
+    <tr><td><code>emp_id</code></td><td>VARCHAR(8)</td><td>Not Null</td><td>員工編號，邏輯關聯至 <code>employee.emp_id</code>。</td></tr>
     <tr><td><code>da_crtby</code></td><td>VARCHAR(8)</td><td>Not Null</td><td>建立此管理員設定的操作者員編。</td></tr>
     <tr><td><code>da_crtat</code></td><td>TIMESTAMP</td><td>Not Null, Default</td><td>建立時間，預設為 <code>CURRENT_TIMESTAMP</code>。</td></tr>
     <tr><td><code>da_dc</code></td><td>VARCHAR(1)</td><td>Not Null, Default</td><td>作廢註記 (Y/N)。預設為 'N'。</td></tr>
@@ -239,8 +242,7 @@
 <h2>2. PostgreSQL DDL 語法</h2>
 <div class="ddl-code-block">
   <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
-  <pre><code class="language-sql">-- 建立系統管理員資料表
-CREATE TABLE dms_admins (
+  <pre><code class="language-sql">CREATE TABLE dms_admins (
     da_id SERIAL PRIMARY KEY,
     emp_id VARCHAR(8) NOT NULL,
     da_crtby VARCHAR(8) NOT NULL,
@@ -251,10 +253,13 @@ CREATE TABLE dms_admins (
 );
 
 -- 建立唯一部分索引，確保未作廢的員工在管理員名單中不重複
-CREATE UNIQUE INDEX uidx_dms_admins_emp ON dms_admins(emp_id) WHERE da_dc = 'N';
-
--- 欄位與資料表註解
-COMMENT ON TABLE dms_admins IS '系統管理員表';
+CREATE UNIQUE INDEX uidx_dms_admins_emp ON dms_admins(emp_id) WHERE da_dc = 'N';</code></pre>
+</div>
+<p>---</p>
+<h2>3. 欄位與資料表註解</h2>
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_admins IS '系統管理員表';
 COMMENT ON COLUMN dms_admins.da_id IS '唯一識別碼，自動遞增';
 COMMENT ON COLUMN dms_admins.emp_id IS '員工編號，關聯至 employee(emp_id)';
 COMMENT ON COLUMN dms_admins.da_crtby IS '建立此管理員設定的操作者員編';
@@ -263,6 +268,32 @@ COMMENT ON COLUMN dms_admins.da_dc IS '作廢註記 (Y/N)';
 COMMENT ON COLUMN dms_admins.da_dcby IS '執行作廢操作的操作者員編';
 COMMENT ON COLUMN dms_admins.da_dcat IS '作廢時間';</code></pre>
 </div>
+<p>---</p>
+<h2>4. 常用查詢方向</h2>
+<p>查詢特定員工是否為有效系統管理員：</p>
+<pre><code class="language-sql">SELECT da_id,
+       emp_id
+  FROM dms_admins
+ WHERE emp_id = :emp_id
+   AND da_dc = 'N';</code></pre>
+<p>查詢所有有效系統管理員列表：</p>
+<pre><code class="language-sql">SELECT a.da_id,
+       a.emp_id,
+       e.emp_name,
+       a.da_crtat
+  FROM dms_admins a
+  JOIN employee e ON e.emp_id = a.emp_id
+ WHERE a.da_dc = 'N'
+   AND e.emp_status = 1;</code></pre>
+<p>---</p>
+<h2>5. 後端檢核規則</h2>
+<ul>
+  <li><code>emp_id</code> 必須存在於有效的 <code>employee.emp_id</code>。</li>
+  <li>同一員工在未作廢狀態（<code>da_dc = 'N'</code>）下，只能有一筆關聯紀錄。</li>
+  <li>作廢管理員權限時，必須寫入作廢執行者員編 <code>da_dcby</code> 與作廢時間 <code>da_dcat</code>，且將 <code>da_dc</code> 設為 <code>'Y'</code>。</li>
+  <li>系統不提供物理刪除（DELETE）系統管理員設定，異動一律以作廢（da_dc = 'Y'）處理。</li>
+  <li>當使用者登入時，後端應依據此表判斷並返回其系統管理員身分。</li>
+</ul>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

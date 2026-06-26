@@ -292,7 +292,9 @@ WHERE ddv_cancel_at IS NOT NULL;</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_doc_ver IS '文件版本';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_doc_ver IS '文件版本';
 COMMENT ON COLUMN dms_doc_ver.ddv_id IS '文件版本唯一識別碼';
 COMMENT ON COLUMN dms_doc_ver.dd_id IS '文件主檔 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_seq IS '系統版次流水號';
@@ -310,6 +312,7 @@ COMMENT ON COLUMN dms_doc_ver.ddv_crtby IS '建立者帳號';
 COMMENT ON COLUMN dms_doc_ver.ddv_crtat IS '建立時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_updby IS '最後異動者帳號';
 COMMENT ON COLUMN dms_doc_ver.ddv_updat IS '最後異動時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>一般使用者查詢目前有效版本時，後端需額外套用資料夾狀態、資料夾 ACL 與 PDF 下載限制。下列 SQL 只表示版本時間條件：</p>

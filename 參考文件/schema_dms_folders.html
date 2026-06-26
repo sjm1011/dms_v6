@@ -279,7 +279,9 @@ ON dms_folders(df_access_type);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_folders IS '資料夾';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_folders IS '資料夾';
 COMMENT ON COLUMN dms_folders.df_fid IS '資料夾唯一識別碼，自動遞增編號';
 COMMENT ON COLUMN dms_folders.df_pid IS '父資料夾 ID。若為根目錄則為 NULL。對應至 dms_folders(df_fid)';
 COMMENT ON COLUMN dms_folders.df_root_fid IS '根目錄的第一層資料夾 ID。若為第一層資料夾則等於 df_fid。用於 ACL 權限極速比對';
@@ -292,6 +294,7 @@ COMMENT ON COLUMN dms_folders.df_updby IS '最後執行異動操作的使用者�
 COMMENT ON COLUMN dms_folders.df_updat IS '最後異動時間';
 COMMENT ON COLUMN dms_folders.df_arcby IS '執行封存操作的管理員帳號';
 COMMENT ON COLUMN dms_folders.df_arcat IS '執行封存操作的時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>查詢子資料夾清單：</p>

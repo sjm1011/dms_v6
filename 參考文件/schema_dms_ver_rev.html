@@ -267,7 +267,9 @@ ON dms_ver_rev(dfi_id);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
-<pre><code class="language-sql">COMMENT ON TABLE dms_ver_rev IS '版本修訂對照表';
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">COMMENT ON TABLE dms_ver_rev IS '版本修訂對照表';
 COMMENT ON COLUMN dms_ver_rev.dvr_id IS '修訂對照表唯一識別碼';
 COMMENT ON COLUMN dms_ver_rev.ddv_id IS '本次文件版本 ID';
 COMMENT ON COLUMN dms_ver_rev.dvr_base_ddv_id IS '比較基準版本 ID';
@@ -278,6 +280,7 @@ COMMENT ON COLUMN dms_ver_rev.dvr_crtby IS '建立者帳號';
 COMMENT ON COLUMN dms_ver_rev.dvr_crtat IS '建立時間';
 COMMENT ON COLUMN dms_ver_rev.dvr_dcby IS '作廢者帳號';
 COMMENT ON COLUMN dms_ver_rev.dvr_dcat IS '作廢時間';</code></pre>
+</div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
 <p>查詢特定版本對應的有效修訂對照表檔案資訊：</p>
