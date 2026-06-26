@@ -10,12 +10,40 @@ function markdownToHtml(md, title = '文件') {
   let inCode = false;
   let codeLang = '';
   let codeBlock = [];
-  let inList = false;
   let inTable = false;
   let tableHeader = true;
   let tableRows = [];
   let inDdlSection = false;
   let ddlHeadingLevel = 0;
+
+  const listStack = []; // 元素格式：{ indent: number, type: 'ul'|'ol', hasOpenLi: boolean }
+
+  function closeListsTo(targetIndent) {
+    let closedHtml = '';
+    while (listStack.length > 0 && listStack[listStack.length - 1].indent > targetIndent) {
+      const top = listStack.pop();
+      if (top.hasOpenLi) {
+        closedHtml += '</li>\n';
+      }
+      closedHtml += `</${top.type}>\n`;
+      if (listStack.length > 0) {
+        listStack[listStack.length - 1].hasOpenLi = true;
+      }
+    }
+    return closedHtml;
+  }
+
+  function closeAllLists() {
+    let closedHtml = '';
+    while (listStack.length > 0) {
+      const top = listStack.pop();
+      if (top.hasOpenLi) {
+        closedHtml += '</li>\n';
+      }
+      closedHtml += `</${top.type}>\n`;
+    }
+    return closedHtml;
+  }
 
   // 輔助函式：解析行內 HTML 標記
   function parseInline(text) {
@@ -64,6 +92,7 @@ function markdownToHtml(md, title = '文件') {
         codeBlock = [];
         inCode = false;
       } else {
+        html += closeAllLists();
         inCode = true;
         codeLang = trimmed.substring(3).trim();
       }
@@ -80,6 +109,8 @@ function markdownToHtml(md, title = '文件') {
       if (trimmed.replace(/[\s|:-]/g, '') === '') {
         continue;
       }
+
+      html += closeAllLists();
 
       const cells = trimmed.substring(1, trimmed.length - 1).split('|').map(c => c.trim());
       
@@ -107,7 +138,7 @@ function markdownToHtml(md, title = '文件') {
 
     // 3. 標題解析
     if (trimmed.startsWith('#')) {
-      if (inList) { html += '</ul>\n'; inList = false; }
+      html += closeAllLists();
       
       const level = trimmed.match(/^#+/)[0].length;
       const text = trimmed.substring(level).trim();
@@ -124,19 +155,38 @@ function markdownToHtml(md, title = '文件') {
     }
 
     // 4. 清單解析
-    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      if (!inList) {
-        inList = true;
-        html += '<ul>\n';
+    const listMatch = line.match(/^(\s*)([*+-]|\d+\.)\s+(.*)$/);
+    if (listMatch) {
+      const indent = listMatch[1].length;
+      const marker = listMatch[2];
+      const text = listMatch[3];
+      const type = (marker === '*' || marker === '-' || marker === '+') ? 'ul' : 'ol';
+
+      html += closeListsTo(indent);
+
+      if (listStack.length > 0) {
+        const top = listStack[listStack.length - 1];
+        if (top.indent === indent && top.type === type) {
+          if (top.hasOpenLi) {
+            html += '</li>\n';
+          }
+          html += `  <li>${parseInline(text)}`;
+          top.hasOpenLi = true;
+        } else if (top.indent === indent && top.type !== type) {
+          html += closeListsTo(indent - 1);
+          html += `<${type}>\n  <li>${parseInline(text)}`;
+          listStack.push({ indent, type, hasOpenLi: true });
+        } else {
+          html += `\n<${type}>\n  <li>${parseInline(text)}`;
+          listStack.push({ indent, type, hasOpenLi: true });
+        }
+      } else {
+        html += `<${type}>\n  <li>${parseInline(text)}`;
+        listStack.push({ indent, type, hasOpenLi: true });
       }
-      const text = trimmed.substring(2).trim();
-      html += `  <li>${parseInline(text)}</li>\n`;
       continue;
     } else {
-      if (inList) {
-        html += '</ul>\n';
-        inList = false;
-      }
+      html += closeAllLists();
     }
 
     // 5. 空行與段落
@@ -150,9 +200,7 @@ function markdownToHtml(md, title = '文件') {
   if (inTable) {
     html += `<table>\n${tableRows.join('\n')}\n  </tbody>\n</table>\n`;
   }
-  if (inList) {
-    html += '</ul>\n';
-  }
+  html += closeAllLists();
 
   // 美化 CSS 套件 (Premium 毛玻璃與暗色高質感主題)
   return `<!DOCTYPE html>

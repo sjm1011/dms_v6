@@ -1,30 +1,29 @@
-# DMS 文件管理系統 V5 - 系統功能規格說明書
+# DMS 文件管理系統 V6 - 系統功能規格說明書
 
-本文件詳列「文件管理系統 V5（DMS V5）」之系統規格、架構設計、核心業務邏輯、API 對接機制、狀態管理與版本控管規劃。
+本文件詳列「文件管理系統 V6（DMS V6）」之系統規格、架構設計、核心業務邏輯、API 與資料庫對接機制、狀態管理與版本控管規劃。
 
 ---
 
 ## 1. 系統技術堆疊
 
-### 1.1. 前端開發框架
+### 1.1. 前端與後端整合框架（Next.js 全端架構）
 
-  * HTML 5、TypeScript、React 19、Next.js 16。
-  * 前端畫面、同源 API 入口與伺服器端 API 中介層均由 Next.js App Router 承載。
+  * 前端畫面與後端 API 均由 **Next.js 16**（搭配 **React 19**、**TypeScript**）App Router 統一承載。
+  * 伺服器端進入點（Route Handlers，位於 `app/api/` 目錄）直接處理後端業務邏輯，並直接與 PostgreSQL 資料庫對接，無須依賴獨立的後端 API 伺服器。
   * 正式部署採 Next.js standalone 輸出，由 Node.js runtime 執行，再由 IIS / Apache / Nginx 反向代理對外提供服務。
 
 ### 1.2. 前端樣式設計
 
-  * Vanilla CSS 系統（不使用 TailwindCSS 框架，採本地端 HSL 顏色變數與毛玻璃效果之 Premium 視覺設計）。
+  * Vanilla CSS 系統（不使用 TailwindCSS 框架，採本地端 HSL 顏色變數與毛玻璃效果之 Premium 視覺設計，以 `app/globals.css` 作為全域樣式基礎）。
 
-### 1.3. 後端開發環境
-
-  * Delphi 12，以 uniDAC 元件庫連接資料庫，提供內部 WebAPI 服務。
-  * 測試期間後端服務以 `dmsapiGUI.exe` 為主；正式部署時則以 ISAPI (Internet Server API，網際網路伺服器應用程式介面) 方式部署。
-  * 瀏覽器端不直接呼叫 Delphi 後端 API；正式架構由 Next.js route handler 轉發請求並管理登入 session。
-
-### 1.4. 資料庫系統
+### 1.3. 資料庫系統
 
   * PostgreSQL。
+
+### 1.4. 伺服器端資料庫與檔案處理
+
+  * **資料庫連接**：使用 PostgreSQL 官方 `pg` 程式庫之連接池（`Pool`）進行資料庫操作（透過 `lib/server/db.ts` 統一管理，並以 `BEGIN / COMMIT / ROLLBACK` 實現交易機制）。
+  * **檔案與文件處理**：伺服器端獨立處理實體檔案儲存、副檔名與 MIME Type 白名單檢核，並使用 `pdf-lib` 進行 PDF 檔案處理與浮水印動態生成。
 
 ### 1.5. 資料表與欄位命名規則
 
@@ -618,10 +617,11 @@ PostgreSQL
 
 ### 6.2. 正式環境設定檔
 
-V5 不再使用 `dms\public\config.js`，也不再部署 Vite `dist`。正式環境設定改由 Next.js server 讀取 `.env.production`。
+V6 不再使用獨立後端主機網址。正式環境設定改由 Next.js server 讀取 `.env.production`（或環境變數）。
 
 ```text
-BACKEND_API_BASE_URL=http://內部後端主機:8080
+DATABASE_URL=postgres://user:password@host:port/database
+PGPOOL_MAX=10
 SESSION_COOKIE_NAME=dms_session
 SESSION_SECRET=請改成至少 32 字元的隨機字串
 SESSION_MAX_AGE_SECONDS=28800
@@ -630,7 +630,8 @@ DMS_NEXT_HOST=127.0.0.1
 DMS_NEXT_PORT=3000
 ```
 
-* `BACKEND_API_BASE_URL` 指向 Delphi 內部後端 API，不是 Web Server 對外網址。
+* `DATABASE_URL` PostgreSQL 資料庫連線字串（包含帳密、主機、埠與資料庫名稱）。
+* `PGPOOL_MAX` 連線池最大連線數，預設為 `10`。
 * `SESSION_SECRET` 必須使用正式環境專用隨機字串。
 * `SESSION_COOKIE_SECURE=true` 時，Web Server 對外入口必須使用 HTTPS。
 * `DMS_NEXT_HOST` 建議固定為 `127.0.0.1`，避免 Next.js server 直接暴露到使用者網段。
@@ -643,11 +644,11 @@ DMS_NEXT_PORT=3000
     * **Method**：`POST`
     * **Payload (Body)**：`{"uid": "使用者帳號", "pwd": "使用者密碼"}`
     * **Content-Type**：`application/json`
-* **Next.js 中介行為**：
-    * Route Handler 讀取 `BACKEND_API_BASE_URL`。
-    * Route Handler 對內呼叫 Delphi 後端 `POST /login`。
-    * 後端登入成功後，Next.js 將後端 token 與使用者資訊封裝成 session payload。
-    * session payload 以 `HttpOnly Cookie` 保存，瀏覽器端 JavaScript 不可讀取 token。
+* **Next.js 伺服器端行為**：
+    * Route Handler 解析請求中的帳號密碼。
+    * Route Handler 直接查詢 PostgreSQL 資料庫中的使用者與系統管理員資料（透過 `lib/server/auth.ts`）。
+    * 驗證通過後，將使用者資訊與管理員身分封裝成 session payload。
+    * session payload 以 `HttpOnly Cookie` 加密保存，瀏覽器端 JavaScript 不可讀取敏感資料。
 * **登入頁面欄位**：
     * 進入登入畫面時，帳號與密碼輸入欄位預設保持空白。
     * 網頁初次載入、或點選登出時，滑鼠游標會自動定位在「使用者帳號」輸入框。
@@ -658,62 +659,61 @@ DMS_NEXT_PORT=3000
 ### 6.4. Token (權杖)、Session 與路由管理
 
 * **Session 保存方式**：
-    * 後端 token 不存放於 `sessionStorage`。
-    * 後端 token 不放在 URL 參數中傳遞。
+    * 使用者登入資訊不存放於 `sessionStorage`，防止 XSS 竊取。
+    * 登入驗證資訊不放在 URL 參數中傳遞。
     * 登入狀態由 Next.js `HttpOnly Cookie` 管理。
     * `SESSION_MAX_AGE_SECONDS` 用於伺服器端驗證 session payload 的最長有效時間。
 * **請求授權驗證**：
     * 瀏覽器呼叫同源 `/api/*` 時自動帶上 cookie。
-    * Next.js route handler 從 cookie 解析 session。
-    * Next.js route handler 對內部後端 API 補上後端相容的 `Authorization: Bearer <token>`。
+    * Next.js route handler 從 cookie 解析並解密驗證 session，確認當前使用者身分。
+    * 所有的資料庫查詢與權限限制（例如資料夾 ACL）皆在 Next.js 伺服器端根據解密後的 session 資訊直接執行。
 * **前端路由機制**：
     * 前端畫面由 Next.js App Router 承載。
     * 切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。
     * `GET /api/session` 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 `success: false` 與空資料，不視為 API 例外錯誤。
 
-### 6.5. Next.js Route Handler 對接清單
+### 6.5. Next.js Route Handler 路由與處理服務清單
 
-| 瀏覽器端呼叫 | Next.js Route Handler | 內部 Delphi API |
+| 瀏覽器端呼叫 | Next.js Route Handler | 伺服器端核心服務與邏輯 (`lib/server/`) |
 |---|---|---|
-| `POST /api/login` | `app/api/login/route.ts` | `POST /login` |
-| `POST /api/logout` | `app/api/logout/route.ts` | 無，清除 session cookie |
-| `GET /api/session` | `app/api/session/route.ts` | 無，讀取 session cookie 並回傳登入狀態 |
-| `GET /api/test` | `app/api/test/route.ts` | `GET /test` |
-| `GET /api/folders` | `app/api/folders/route.ts` | `GET /folders` |
-| `POST /api/folders` | `app/api/folders/route.ts` | `POST /folders` |
-| `PUT /api/folders` | `app/api/folders/route.ts` | `PUT /folders` |
-| `DELETE /api/folders` | `app/api/folders/route.ts` | `DELETE /folders` |
-| `GET /api/folders/acl` | `app/api/folders/acl/route.ts` | `GET /folders/acl` |
-| `POST /api/folders/acl` | `app/api/folders/acl/route.ts` | `POST /folders/acl` |
-| `GET /api/employee?uid=...` | `app/api/employee/route.ts` | `GET /employee?uid=...` |
-| `GET /api/departments` | `app/api/departments/route.ts` | `GET /departments` |
-| `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | `GET /documents?folder_id=...` |
-| `POST /api/documents` | `app/api/documents/route.ts` | `POST /documents` |
-| `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | `GET /documents?action=download&version_id=...` |
-| `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | `GET /documents?action=preview&version_id=...` |
+| `POST /api/login` | `app/api/login/route.ts` | 透過 `auth.ts` 驗證帳密並寫入 session cookie |
+| `POST /api/logout` | `app/api/logout/route.ts` | 清除 session cookie |
+| `GET /api/session` | `app/api/session/route.ts` | 讀取 session cookie 並回傳登入狀態與身分 |
+| `GET /api/test` | `app/api/test/route.ts` | 進行伺服器端資料庫連線測試 |
+| `GET /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 查詢資料夾樹與 ACL |
+| `POST /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 建立新資料夾 |
+| `PUT /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 重新命名或移動資料夾 |
+| `DELETE /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 封存或刪除空資料夾 |
+| `GET /api/folders/acl` | `app/api/folders/acl/route.ts` | 透過 `folderService.ts` 查詢資料夾有效 ACL 規則 |
+| `POST /api/folders/acl` | `app/api/folders/acl/route.ts` | 透過 `folderService.ts` 新增或修改資料夾 ACL 授權 |
+| `GET /api/employee?uid=...` | `app/api/employee/route.ts` | 透過 `employeeService.ts` 以 UID 精準檢索員工資料 |
+| `GET /api/departments` | `app/api/departments/route.ts` | 透過 `employeeService.ts` 查詢所有部門 |
+| `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | 透過 `documentService.ts` 查詢指定資料夾下之有效文件 |
+| `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件、上傳新版本或修訂 |
+| `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
+| `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
 
 `DELETE /api/folders` 透過 JSON body 的 `action` 欄位區分資料夾生命週期操作：`action = "archive"` 代表封存資料夾；`action = "delete"` 代表刪除（作廢）空資料夾。若未提供 `action`，後端為相容既有呼叫，視為封存資料夾。
 
-### 6.6. 檔案下載、PDF 預覽與 HTML 預覽轉發規格
+### 6.6. 檔案下載、PDF 預覽與 HTML 預覽處理規格
 
-檔案下載、PDF 預覽與 HTML 預覽不得使用單純 JSON proxy 處理，必須由 Next.js route handler 轉發 stream 與必要 response header。
+檔案下載、PDF 預覽與 HTML 預覽由 Next.js Route Handler 直接讀取磁碟實體檔案並處理，向瀏覽器輸出 binary stream 與必要 response header。
 
 * **非 PDF、非 HTML 文件下載**：
     * 瀏覽器呼叫 `GET /api/documents/download?version_id=...`。
-    * Next.js 對內呼叫 `GET /documents?action=download&version_id=...`。
-    * Next.js 必須保留 `content-type`、`content-disposition`、`content-length`、`cache-control`、`etag` 與 `last-modified` 等檔案回應 header。
+    * Route Handler 呼叫 `documentService.downloadDocument` 取得磁碟實體檔案與元資料。
+    * Next.js 必須保留並設定 `content-type`、`content-disposition`（含原始檔名）、`content-length`、`cache-control` 等檔案回應 header。
 * **PDF 文件預覽**：
     * 瀏覽器呼叫 `GET /api/documents/preview?version_id=...`。
-    * Next.js 對內呼叫 `GET /documents?action=preview&version_id=...`。
+    * Route Handler 呼叫 `documentService.previewDocument` 取得 PDF 串流，並透過 `fileStorage.applyWatermark` 動態利用 `pdf-lib` 套用浮水印。
     * PDF 預覽仍須遵守第 4 節規則：一般使用者僅可線上預覽，不提供 PDF 正式原檔下載。
 * **HTML 文件格式預覽**：
     * 瀏覽器呼叫 `GET /api/documents/preview?version_id=...`。
-    * Next.js 對內呼叫 `GET /documents?action=preview&version_id=...`。
+    * Route Handler 直接以 `text/html` 回應檔案內容。
     * 瀏覽器端以開新視窗方式承載 `.html`、`.htm`、`.mhtml` 預覽內容。
 * **禁止事項**：
-    * 不得把後端 token 放入下載 URL。
-    * 不得讓瀏覽器端知道 `BACKEND_API_BASE_URL`。
-    * 不得讓使用者直接呼叫內部 Delphi 後端 API。
+    * 不得將敏感之資料庫密碼或密鑰洩漏至瀏覽器端。
+    * 不得在客戶端暴露檔案伺服器的實體儲存絕對路徑（如磁碟目錄路徑）。
 
 ### 6.7. 使用者即時檢索 (Lazy Lookup，即時檢索) 規格
 

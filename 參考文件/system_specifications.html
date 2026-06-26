@@ -212,29 +212,28 @@
 </head>
 <body>
   <div class="container">
-    <h1>DMS 文件管理系統 V5 - 系統功能規格說明書</h1>
-<p>本文件詳列「文件管理系統 V5（DMS V5）」之系統規格、架構設計、核心業務邏輯、API 對接機制、狀態管理與版本控管規劃。</p>
+    <h1>DMS 文件管理系統 V6 - 系統功能規格說明書</h1>
+<p>本文件詳列「文件管理系統 V6（DMS V6）」之系統規格、架構設計、核心業務邏輯、API 與資料庫對接機制、狀態管理與版本控管規劃。</p>
 <p>---</p>
 <h2>1. 系統技術堆疊</h2>
-<h3>1.1. 前端開發框架</h3>
+<h3>1.1. 前端與後端整合框架（Next.js 全端架構）</h3>
 <ul>
-  <li>HTML 5、TypeScript、React 19、Next.js 16。</li>
-  <li>前端畫面、同源 API 入口與伺服器端 API 中介層均由 Next.js App Router 承載。</li>
+  <li>前端畫面與後端 API 均由 <strong>Next.js 16</strong>（搭配 <strong>React 19</strong>、<strong>TypeScript</strong>）App Router 統一承載。</li>
+  <li>伺服器端進入點（Route Handlers，位於 <code>app/api/</code> 目錄）直接處理後端業務邏輯，並直接與 PostgreSQL 資料庫對接，無須依賴獨立的後端 API 伺服器。</li>
   <li>正式部署採 Next.js standalone 輸出，由 Node.js runtime 執行，再由 IIS / Apache / Nginx 反向代理對外提供服務。</li>
 </ul>
 <h3>1.2. 前端樣式設計</h3>
 <ul>
-  <li>Vanilla CSS 系統（不使用 TailwindCSS 框架，採本地端 HSL 顏色變數與毛玻璃效果之 Premium 視覺設計）。</li>
+  <li>Vanilla CSS 系統（不使用 TailwindCSS 框架，採本地端 HSL 顏色變數與毛玻璃效果之 Premium 視覺設計，以 <code>app/globals.css</code> 作為全域樣式基礎）。</li>
 </ul>
-<h3>1.3. 後端開發環境</h3>
-<ul>
-  <li>Delphi 12，以 uniDAC 元件庫連接資料庫，提供內部 WebAPI 服務。</li>
-  <li>測試期間後端服務以 <code>dmsapiGUI.exe</code> 為主；正式部署時則以 ISAPI (Internet Server API，網際網路伺服器應用程式介面) 方式部署。</li>
-  <li>瀏覽器端不直接呼叫 Delphi 後端 API；正式架構由 Next.js route handler 轉發請求並管理登入 session。</li>
-</ul>
-<h3>1.4. 資料庫系統</h3>
+<h3>1.3. 資料庫系統</h3>
 <ul>
   <li>PostgreSQL。</li>
+</ul>
+<h3>1.4. 伺服器端資料庫與檔案處理</h3>
+<ul>
+  <li><strong>資料庫連接</strong>：使用 PostgreSQL 官方 <code>pg</code> 程式庫之連接池（<code>Pool</code>）進行資料庫操作（透過 <code>lib/server/db.ts</code> 統一管理，並以 <code>BEGIN / COMMIT / ROLLBACK</code> 實現交易機制）。</li>
+  <li><strong>檔案與文件處理</strong>：伺服器端獨立處理實體檔案儲存、副檔名與 MIME Type 白名單檢核，並使用 <code>pdf-lib</code> 進行 PDF 檔案處理與浮水印動態生成。</li>
 </ul>
 <h3>1.5. 資料表與欄位命名規則</h3>
 <p>本系統資料表與欄位採短表名與短欄位前綴。命名需符合既有 schema 文件風格，例如 <code>dms_folders</code> 使用 <code>df_</code> 前綴、<code>dms_folder_acl</code> 使用 <code>dfa_</code> 前綴、<code>dms_folder_managers</code> 使用 <code>dfm_</code> 前綴。</p>
@@ -311,10 +310,13 @@
   <li><strong>身分定義</strong>：資料夾管理員不是帳戶角色。只要使用者被寫入某資料夾節點的 <code>dms_folder_managers</code>，即為該節點的直接管理員。</li>
   <li><strong>有效管理員計算</strong>：某資料夾節點的有效管理員為「該節點本身與所有祖先節點直接管理員的聯集」。因此，上層資料夾管理員可管理其轄下所有子資料夾與文件。</li>
   <li><strong>空管理員清單規則</strong>：空管理員清單只代表該節點不設定直接管理員，不代表取消上層繼承，也不代表改由一般使用者管理。</li>
-  <li><strong>權限範圍</strong>：</li>
+  <li><strong>權限範圍</strong>：
+<ul>
   <li>在其有效管理範圍內，可建立子資料夾、修改資料夾名稱、設定資料夾直接管理員、封存資料夾、建立文件、上傳新版、版更、作廢文件與維護 ACL。</li>
   <li>不得建立第一層資料夾；第一層資料夾建立固定由 ADMIN 執行。</li>
   <li>不得於根目錄建立文件；根目錄文件建立固定由 ADMIN 執行。</li>
+</ul>
+</li>
   <li><strong>ACL 授權管理</strong>：資料夾管理員可將其有效管理範圍內的資料夾設定為公開或限閱。限閱時可授權特定部門或特定使用者。</li>
 </ul>
 <h3>2.3. 一般使用者 (USER)</h3>
@@ -384,9 +386,12 @@
   <li>版本未被撤回。</li>
   <li><code>effective_at</code> (生效時間) 欄位值小於或等於目前時間。</li>
   <li><code>effective_until</code> (結束時間) 為空白，或目前時間小於 <code>effective_until</code> (結束時間)。</li>
-  <li>位置權限符合下列任一條件：</li>
+  <li>位置權限符合下列任一條件：
+<ul>
   <li>位於根目錄 (<code>folder_id = 0</code>)。</li>
   <li>所屬一般資料夾為正常狀態，且使用者符合該管理資料夾節點 ACL 授權規則。</li>
+</ul>
+</li>
 </ul>
 <p>版本有效期間採半開區間：</p>
 <pre><code class="language-text">effective_at (生效時間), effective_until (結束時間)
@@ -402,7 +407,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li><strong>修訂日期</strong>：必填，代表該文件內容正式修訂日期。</li>
   <li><strong>生效日期 <code>effective_at</code> (生效時間)</strong>：必填，可指定今天或未來日期，不允許早於上傳日期。</li>
   <li><strong>結束日期 <code>effective_until</code> (結束時間)</strong>：由系統於預約新版或立即版更時寫入，不提供使用者手動填寫。</li>
-  <li><strong>異動說明</strong>：必填，欄位需支援下拉片語選擇與手動輸入。使用者可從下拉選單選取常用異動說明項目，也可直接輸入自訂說明內容。下拉選單至少包含：</li>
+  <li><strong>異動說明</strong>：必填，欄位需支援下拉片語選擇與手動輸入。使用者可從下拉選單選取常用異動說明項目，也可直接輸入自訂說明內容。下拉選單至少包含：
+<ul>
   <li><code>初版發行</code></li>
   <li><code>內容修訂</code></li>
   <li><code>格式調整</code></li>
@@ -416,6 +422,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li><code>文件整併</code></li>
   <li><code>文件拆分</code></li>
   <li><code>替代舊版文件</code></li>
+</ul>
+</li>
   <li><strong>正式發佈檔案</strong>：必填，代表該版本對外流通的正式檔案。</li>
   <li><strong>撤回日期 <code>cancelled_at</code> (撤回日期)</strong>：資料夾管理員執行「撤回版本並回復前版」時自動寫入。</li>
   <li><strong>撤回人員 <code>cancelled_by</code> (撤回人員)</strong>：資料夾管理員執行「撤回版本並回復前版」時自動寫入。</li>
@@ -511,26 +519,31 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li><strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息，同時寫入權限不足稽核紀錄。</li>
 </ul>
 <p>管理員建立文件時：</p>
-<p>1. 建立文件主檔。</p>
-<p>2. 上傳第一個正式發佈檔案。</p>
-<p>3. 填寫修訂日期、生效日期，並選取或輸入異動說明。</p>
+<ol>
+  <li>建立文件主檔。</li>
+  <li>上傳第一個正式發佈檔案。</li>
+  <li>填寫修訂日期、生效日期，並選取或輸入異動說明。
 <ul>
   <li>生效日期預設為當下日期。</li>
 </ul>
-<p>4. 版本號可填寫或留空。</p>
-<p>5. 文件主檔狀態設為 <code>Effective</code> (有效的)。</p>
-<p>6. 第一個文件版本寫入 <code>effective_at</code> (生效時間)。</p>
-<p>7. 第一個文件版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
-<p>8. 若第一個版本尚未到生效日期，一般使用者不可看到該文件；資料夾管理員可看到此尚未生效版本。</p>
+</li>
+  <li>版本號可填寫或留空。</li>
+  <li>文件主檔狀態設為 <code>Effective</code> (有效的)。</li>
+  <li>第一個文件版本寫入 <code>effective_at</code> (生效時間)。</li>
+  <li>第一個文件版本的 <code>effective_until</code> (結束時間) 保持空白。</li>
+  <li>若第一個版本尚未到生效日期，一般使用者不可看到該文件；資料夾管理員可看到此尚未生效版本。</li>
+</ol>
 <h3>4.9. 文件版更與預約生效</h3>
 <p>資料夾管理員上傳新版文件時：</p>
-<p>1. 新增一筆文件版本。</p>
-<p>2. 上傳新的正式發佈檔案。</p>
-<p>3. 填寫修訂日期、生效日期，並選取或輸入異動說明。</p>
-<p>4. 版本號可填寫或留空。</p>
-<p>5. 新版本寫入 <code>effective_at</code> (生效時間)。</p>
-<p>6. 新版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
-<p>7. 系統將上一個未撤回版本的 <code>effective_until</code> (結束時間) 設為新版本的 <code>effective_at</code> (生效時間)。</p>
+<ol>
+  <li>新增一筆文件版本。</li>
+  <li>上傳新的正式發佈檔案。</li>
+  <li>填寫修訂日期、生效日期，並選取或輸入異動說明。</li>
+  <li>版本號可填寫或留空。</li>
+  <li>新版本寫入 <code>effective_at</code> (生效時間)。</li>
+  <li>新版本的 <code>effective_until</code> (結束時間) 保持空白。</li>
+  <li>系統將上一個未撤回版本的 <code>effective_until</code> (結束時間) 設為新版本的 <code>effective_at</code> (生效時間)。</li>
+</ol>
 <p>若新版本生效日期晚於目前時間：</p>
 <ul>
   <li>一般使用者在新版本生效前仍看到上一個版本。</li>
@@ -755,8 +768,9 @@ PostgreSQL</code></pre>
   <li><strong>Web Server 責任</strong>：IIS / Apache / Nginx 僅作為正式環境對外入口，將請求反向代理到 Next.js server。</li>
 </ul>
 <h3>6.2. 正式環境設定檔</h3>
-<p>V5 不再使用 <code>dms\public\config.js</code>，也不再部署 Vite <code>dist</code>。正式環境設定改由 Next.js server 讀取 <code>.env.production</code>。</p>
-<pre><code class="language-text">BACKEND_API_BASE_URL=http://內部後端主機:8080
+<p>V6 不再使用獨立後端主機網址。正式環境設定改由 Next.js server 讀取 <code>.env.production</code>（或環境變數）。</p>
+<pre><code class="language-text">DATABASE_URL=postgres://user:password@host:port/database
+PGPOOL_MAX=10
 SESSION_COOKIE_NAME=dms_session
 SESSION_SECRET=請改成至少 32 字元的隨機字串
 SESSION_MAX_AGE_SECONDS=28800
@@ -764,7 +778,8 @@ SESSION_COOKIE_SECURE=true
 DMS_NEXT_HOST=127.0.0.1
 DMS_NEXT_PORT=3000</code></pre>
 <ul>
-  <li><code>BACKEND_API_BASE_URL</code> 指向 Delphi 內部後端 API，不是 Web Server 對外網址。</li>
+  <li><code>DATABASE_URL</code> PostgreSQL 資料庫連線字串（包含帳密、主機、埠與資料庫名稱）。</li>
+  <li><code>PGPOOL_MAX</code> 連線池最大連線數，預設為 <code>10</code>。</li>
   <li><code>SESSION_SECRET</code> 必須使用正式環境專用隨機字串。</li>
   <li><code>SESSION_COOKIE_SECURE=true</code> 時，Web Server 對外入口必須使用 HTTPS。</li>
   <li><code>DMS_NEXT_HOST</code> 建議固定為 <code>127.0.0.1</code>，避免 Next.js server 直接暴露到使用者網段。</li>
@@ -772,97 +787,138 @@ DMS_NEXT_PORT=3000</code></pre>
 </ul>
 <h3>6.3. 登入連線規格與失敗處理</h3>
 <ul>
-  <li><strong>瀏覽器登入請求</strong>：</li>
+  <li><strong>瀏覽器登入請求</strong>：
+<ul>
   <li><strong>Request URL</strong>：<code>/api/login</code></li>
   <li><strong>Method</strong>：<code>POST</code></li>
   <li><strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼"}</code></li>
   <li><strong>Content-Type</strong>：<code>application/json</code></li>
-  <li><strong>Next.js 中介行為</strong>：</li>
-  <li>Route Handler 讀取 <code>BACKEND_API_BASE_URL</code>。</li>
-  <li>Route Handler 對內呼叫 Delphi 後端 <code>POST /login</code>。</li>
-  <li>後端登入成功後，Next.js 將後端 token 與使用者資訊封裝成 session payload。</li>
-  <li>session payload 以 <code>HttpOnly Cookie</code> 保存，瀏覽器端 JavaScript 不可讀取 token。</li>
-  <li><strong>登入頁面欄位</strong>：</li>
+</ul>
+</li>
+  <li><strong>Next.js 伺服器端行為</strong>：
+<ul>
+  <li>Route Handler 解析請求中的帳號密碼。</li>
+  <li>Route Handler 直接查詢 PostgreSQL 資料庫中的使用者與系統管理員資料（透過 <code>lib/server/auth.ts</code>）。</li>
+  <li>驗證通過後，將使用者資訊與管理員身分封裝成 session payload。</li>
+  <li>session payload 以 <code>HttpOnly Cookie</code> 加密保存，瀏覽器端 JavaScript 不可讀取敏感資料。</li>
+</ul>
+</li>
+  <li><strong>登入頁面欄位</strong>：
+<ul>
   <li>進入登入畫面時，帳號與密碼輸入欄位預設保持空白。</li>
   <li>網頁初次載入、或點選登出時，滑鼠游標會自動定位在「使用者帳號」輸入框。</li>
-  <li><strong>驗證失敗處理</strong>：</li>
+</ul>
+</li>
+  <li><strong>驗證失敗處理</strong>：
+<ul>
   <li>當 API 回傳 <code>success: false</code> 時，系統會於介面顯示後端返回的 <code>error</code> 訊息。</li>
   <li>自動將「使用者帳號」與「密碼」輸入框之內容清空，且游標焦點會重新自動定位於「使用者帳號」輸入框。</li>
 </ul>
+</li>
+</ul>
 <h3>6.4. Token (權杖)、Session 與路由管理</h3>
 <ul>
-  <li><strong>Session 保存方式</strong>：</li>
-  <li>後端 token 不存放於 <code>sessionStorage</code>。</li>
-  <li>後端 token 不放在 URL 參數中傳遞。</li>
+  <li><strong>Session 保存方式</strong>：
+<ul>
+  <li>使用者登入資訊不存放於 <code>sessionStorage</code>，防止 XSS 竊取。</li>
+  <li>登入驗證資訊不放在 URL 參數中傳遞。</li>
   <li>登入狀態由 Next.js <code>HttpOnly Cookie</code> 管理。</li>
   <li><code>SESSION_MAX_AGE_SECONDS</code> 用於伺服器端驗證 session payload 的最長有效時間。</li>
-  <li><strong>請求授權驗證</strong>：</li>
+</ul>
+</li>
+  <li><strong>請求授權驗證</strong>：
+<ul>
   <li>瀏覽器呼叫同源 <code>/api/*</code> 時自動帶上 cookie。</li>
-  <li>Next.js route handler 從 cookie 解析 session。</li>
-  <li>Next.js route handler 對內部後端 API 補上後端相容的 <code>Authorization: Bearer &lt;token&gt;</code>。</li>
-  <li><strong>前端路由機制</strong>：</li>
+  <li>Next.js route handler 從 cookie 解析並解密驗證 session，確認當前使用者身分。</li>
+  <li>所有的資料庫查詢與權限限制（例如資料夾 ACL）皆在 Next.js 伺服器端根據解密後的 session 資訊直接執行。</li>
+</ul>
+</li>
+  <li><strong>前端路由機制</strong>：
+<ul>
   <li>前端畫面由 Next.js App Router 承載。</li>
   <li>切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</li>
   <li><code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤。</li>
 </ul>
-<h3>6.5. Next.js Route Handler 對接清單</h3>
+</li>
+</ul>
+<h3>6.5. Next.js Route Handler 路由與處理服務清單</h3>
 <table>
   <thead>
-    <tr><th>瀏覽器端呼叫</th><th>Next.js Route Handler</th><th>內部 Delphi API</th></tr>
+    <tr><th>瀏覽器端呼叫</th><th>Next.js Route Handler</th><th>伺服器端核心服務與邏輯 (<code>lib/server/</code>)</th></tr>
   </thead>
   <tbody>
-    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td><code>POST /login</code></td></tr>
-    <tr><td><code>POST /api/logout</code></td><td><code>app/api/logout/route.ts</code></td><td>無，清除 session cookie</td></tr>
-    <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>無，讀取 session cookie 並回傳登入狀態</td></tr>
-    <tr><td><code>GET /api/test</code></td><td><code>app/api/test/route.ts</code></td><td><code>GET /test</code></td></tr>
-    <tr><td><code>GET /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td><code>GET /folders</code></td></tr>
-    <tr><td><code>POST /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td><code>POST /folders</code></td></tr>
-    <tr><td><code>PUT /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td><code>PUT /folders</code></td></tr>
-    <tr><td><code>DELETE /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td><code>DELETE /folders</code></td></tr>
-    <tr><td><code>GET /api/folders/acl</code></td><td><code>app/api/folders/acl/route.ts</code></td><td><code>GET /folders/acl</code></td></tr>
-    <tr><td><code>POST /api/folders/acl</code></td><td><code>app/api/folders/acl/route.ts</code></td><td><code>POST /folders/acl</code></td></tr>
-    <tr><td><code>GET /api/employee?uid=...</code></td><td><code>app/api/employee/route.ts</code></td><td><code>GET /employee?uid=...</code></td></tr>
-    <tr><td><code>GET /api/departments</code></td><td><code>app/api/departments/route.ts</code></td><td><code>GET /departments</code></td></tr>
-    <tr><td><code>GET /api/documents?folder_id=...</code></td><td><code>app/api/documents/route.ts</code></td><td><code>GET /documents?folder_id=...</code></td></tr>
-    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td><code>POST /documents</code></td></tr>
-    <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td><code>GET /documents?action=download&amp;version_id=...</code></td></tr>
-    <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td><code>GET /documents?action=preview&amp;version_id=...</code></td></tr>
+    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>透過 <code>auth.ts</code> 驗證帳密並寫入 session cookie</td></tr>
+    <tr><td><code>POST /api/logout</code></td><td><code>app/api/logout/route.ts</code></td><td>清除 session cookie</td></tr>
+    <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>讀取 session cookie 並回傳登入狀態與身分</td></tr>
+    <tr><td><code>GET /api/test</code></td><td><code>app/api/test/route.ts</code></td><td>進行伺服器端資料庫連線測試</td></tr>
+    <tr><td><code>GET /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 查詢資料夾樹與 ACL</td></tr>
+    <tr><td><code>POST /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 建立新資料夾</td></tr>
+    <tr><td><code>PUT /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 重新命名或移動資料夾</td></tr>
+    <tr><td><code>DELETE /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 封存或刪除空資料夾</td></tr>
+    <tr><td><code>GET /api/folders/acl</code></td><td><code>app/api/folders/acl/route.ts</code></td><td>透過 <code>folderService.ts</code> 查詢資料夾有效 ACL 規則</td></tr>
+    <tr><td><code>POST /api/folders/acl</code></td><td><code>app/api/folders/acl/route.ts</code></td><td>透過 <code>folderService.ts</code> 新增或修改資料夾 ACL 授權</td></tr>
+    <tr><td><code>GET /api/employee?uid=...</code></td><td><code>app/api/employee/route.ts</code></td><td>透過 <code>employeeService.ts</code> 以 UID 精準檢索員工資料</td></tr>
+    <tr><td><code>GET /api/departments</code></td><td><code>app/api/departments/route.ts</code></td><td>透過 <code>employeeService.ts</code> 查詢所有部門</td></tr>
+    <tr><td><code>GET /api/documents?folder_id=...</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 查詢指定資料夾下之有效文件</td></tr>
+    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件、上傳新版本或修訂</td></tr>
+    <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 讀取實體檔案並傳送下載串流</td></tr>
+    <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得預覽串流，PDF 檔案則動態加入浮水印</td></tr>
   </tbody>
 </table>
 <p><code>DELETE /api/folders</code> 透過 JSON body 的 <code>action</code> 欄位區分資料夾生命週期操作：<code>action = "archive"</code> 代表封存資料夾；<code>action = "delete"</code> 代表刪除（作廢）空資料夾。若未提供 <code>action</code>，後端為相容既有呼叫，視為封存資料夾。</p>
-<h3>6.6. 檔案下載、PDF 預覽與 HTML 預覽轉發規格</h3>
-<p>檔案下載、PDF 預覽與 HTML 預覽不得使用單純 JSON proxy 處理，必須由 Next.js route handler 轉發 stream 與必要 response header。</p>
+<h3>6.6. 檔案下載、PDF 預覽與 HTML 預覽處理規格</h3>
+<p>檔案下載、PDF 預覽與 HTML 預覽由 Next.js Route Handler 直接讀取磁碟實體檔案並處理，向瀏覽器輸出 binary stream 與必要 response header。</p>
 <ul>
-  <li><strong>非 PDF、非 HTML 文件下載</strong>：</li>
+  <li><strong>非 PDF、非 HTML 文件下載</strong>：
+<ul>
   <li>瀏覽器呼叫 <code>GET /api/documents/download?version_id=...</code>。</li>
-  <li>Next.js 對內呼叫 <code>GET /documents?action=download&amp;version_id=...</code>。</li>
-  <li>Next.js 必須保留 <code>content-type</code>、<code>content-disposition</code>、<code>content-length</code>、<code>cache-control</code>、<code>etag</code> 與 <code>last-modified</code> 等檔案回應 header。</li>
-  <li><strong>PDF 文件預覽</strong>：</li>
+  <li>Route Handler 呼叫 <code>documentService.downloadDocument</code> 取得磁碟實體檔案與元資料。</li>
+  <li>Next.js 必須保留並設定 <code>content-type</code>、<code>content-disposition</code>（含原始檔名）、<code>content-length</code>、<code>cache-control</code> 等檔案回應 header。</li>
+</ul>
+</li>
+  <li><strong>PDF 文件預覽</strong>：
+<ul>
   <li>瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</li>
-  <li>Next.js 對內呼叫 <code>GET /documents?action=preview&amp;version_id=...</code>。</li>
+  <li>Route Handler 呼叫 <code>documentService.previewDocument</code> 取得 PDF 串流，並透過 <code>fileStorage.applyWatermark</code> 動態利用 <code>pdf-lib</code> 套用浮水印。</li>
   <li>PDF 預覽仍須遵守第 4 節規則：一般使用者僅可線上預覽，不提供 PDF 正式原檔下載。</li>
-  <li><strong>HTML 文件格式預覽</strong>：</li>
+</ul>
+</li>
+  <li><strong>HTML 文件格式預覽</strong>：
+<ul>
   <li>瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</li>
-  <li>Next.js 對內呼叫 <code>GET /documents?action=preview&amp;version_id=...</code>。</li>
+  <li>Route Handler 直接以 <code>text/html</code> 回應檔案內容。</li>
   <li>瀏覽器端以開新視窗方式承載 <code>.html</code>、<code>.htm</code>、<code>.mhtml</code> 預覽內容。</li>
-  <li><strong>禁止事項</strong>：</li>
-  <li>不得把後端 token 放入下載 URL。</li>
-  <li>不得讓瀏覽器端知道 <code>BACKEND_API_BASE_URL</code>。</li>
-  <li>不得讓使用者直接呼叫內部 Delphi 後端 API。</li>
+</ul>
+</li>
+  <li><strong>禁止事項</strong>：
+<ul>
+  <li>不得將敏感之資料庫密碼或密鑰洩漏至瀏覽器端。</li>
+  <li>不得在客戶端暴露檔案伺服器的實體儲存絕對路徑（如磁碟目錄路徑）。</li>
+</ul>
+</li>
 </ul>
 <h3>6.7. 使用者即時檢索 (Lazy Lookup，即時檢索) 規格</h3>
 <p>為避免使用者人數過大時造成網路頻寬與資料庫效能耗損，本系統全面禁止一次撈出所有使用者資料的行為。</p>
 <ul>
-  <li><strong>API 限制</strong>：後端 <code>/employee</code> API 僅限單一使用者 UID 精準檢索。</li>
+  <li><strong>API 限制</strong>：後端 <code>/employee</code> API 僅限單一使用者 UID 精準檢索。
+<ul>
   <li><strong>檢索端點</strong>：<code>GET /api/employee?uid=&lt;使用者代碼&gt;</code>。</li>
   <li><strong>空參數處理</strong>：若未傳入 <code>uid</code> 參數，系統不得執行完整使用者清單查詢。</li>
-  <li><strong>前端輸入與防呆</strong>：</li>
+</ul>
+</li>
+  <li><strong>前端輸入與防呆</strong>：
+<ul>
   <li><strong>動態多列輸入框 (Dynamic Row Inputs)</strong>：在指派「授權特定同仁」時，使用者以手動逐列輸入使用者代碼，並捨棄傳統的「+ 新增列」按鈕以提升操作流暢度。當輸入框失去焦點 (Blur) 時，系統將自動以非同步方式進行姓名匹配。</li>
   <li><strong>自動追加與聚焦 (Auto-append &amp; Focus)</strong>：代碼輸入完成並成功檢索出姓名後，系統會自動於下方追加一列新的空白輸入列，並將游標焦點 (Focus) 自動轉移至新欄位，讓使用者能雙手不離鍵盤連續輸入多位同仁代碼。</li>
   <li><strong>視覺反饋</strong>：若檢索成功，以綠色粗體顯示姓名並標記該列有效；若查無此人，以紅色字樣顯示「查無此使用者」並標記該列無效。</li>
-  <li><strong>嚴格防呆與強制對話框</strong>：</li>
+  <li><strong>嚴格防呆與強制對話框</strong>：
+<ul>
   <li>若至少一列輸入了代碼但未成功檢索姓名（無效代碼），則系統會顯示紅字警告阻擋存檔，且「確定」按鈕會被禁用。</li>
   <li>權限設定等重要對話框 (Modal) 採用強制遮罩 (<code>closeOnOverlayClick=false</code>)，禁止使用者因誤觸背景而關閉視窗導致設定資料遺失。</li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 <p>---</p>
 <h2>7. 版本控管與自動紀錄腳本</h2>
