@@ -110,6 +110,7 @@ git log -1 --oneline
 echo.
 echo [成功] 已完成本機 Git 備份。
 echo        本腳本不會自動推送到 GitHub；需要同步遠端時請另外執行 git push。
+goto done
 
 :fail
 echo.
