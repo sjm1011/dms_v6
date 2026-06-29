@@ -46,11 +46,28 @@ const mimeByExt: Record<string, string> = {
 
 const allowedExts = new Set(Object.keys(mimeByExt));
 
-export const getStorageRoot = () =>
-  process.env.DMS_STORAGE_ROOT || './storage';
+const resolveConfiguredRoot = (value: string, fallback = '') => {
+  const configuredPath = value.trim() || fallback;
+
+  if (!configuredPath) {
+    return '';
+  }
+
+  return path.isAbsolute(configuredPath)
+    ? path.normalize(configuredPath)
+    : path.resolve(
+        /*turbopackIgnore: true*/ process.cwd(),
+        configuredPath
+      );
+};
+
+export const getStorageRoot = () => resolveConfiguredRoot(
+  process.env.DMS_STORAGE_ROOT || '',
+  './storage'
+);
 
 const getLegacyStorageRoot = () =>
-  process.env.DMS_LEGACY_STORAGE_ROOT || '';
+  resolveConfiguredRoot(process.env.DMS_LEGACY_STORAGE_ROOT || '');
 
 export const getFileExt = (fileName: string) => {
   const ext = path.extname(fileName || '').replace(/^\./, '').toLowerCase();
@@ -80,7 +97,11 @@ export const saveUploadedFile = async (file: UploadPayload): Promise<StoredFile>
   const yyyyMm = new Date().toISOString().slice(0, 7).replace('-', '');
   const fileName = `${new Date().toISOString().replace(/[-:.TZ]/g, '')}_${randomUUID()}.${ext}`;
   const relativePath = path.join('storage', yyyyMm, fileName);
-  const absolutePath = path.join(getStorageRoot(), yyyyMm, fileName);
+  const absolutePath = path.join(
+    /*turbopackIgnore: true*/ getStorageRoot(),
+    yyyyMm,
+    fileName
+  );
 
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, bytes);
@@ -100,13 +121,21 @@ export const resolveStoredPath = async (storedPath: string) => {
   const candidates = path.isAbsolute(storedPath)
     ? [storedPath]
     : [
-        path.join(getStorageRoot(), storedPath.replace(/^storage[\\/]/i, '')),
-        getLegacyStorageRoot() ? path.join(getLegacyStorageRoot(), storedPath) : ''
+        path.join(
+          /*turbopackIgnore: true*/ getStorageRoot(),
+          storedPath.replace(/^storage[\\/]/i, '')
+        ),
+        getLegacyStorageRoot()
+          ? path.join(
+              /*turbopackIgnore: true*/ getLegacyStorageRoot(),
+              storedPath
+            )
+          : ''
       ].filter(Boolean);
 
   for (const candidate of candidates) {
     try {
-      await stat(candidate);
+      await stat(/*turbopackIgnore: true*/ candidate);
       return candidate;
     } catch {
       // 繼續嘗試下一個候選路徑。
@@ -118,10 +147,10 @@ export const resolveStoredPath = async (storedPath: string) => {
 
 export const createFileStream = async (storedPath: string) => {
   const absolutePath = await resolveStoredPath(storedPath);
-  const info = await stat(absolutePath);
+  const info = await stat(/*turbopackIgnore: true*/ absolutePath);
 
   return {
-    stream: createReadStream(absolutePath),
+    stream: createReadStream(/*turbopackIgnore: true*/ absolutePath),
     size: info.size
   };
 };

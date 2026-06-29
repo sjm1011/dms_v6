@@ -218,11 +218,9 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_doc_ver</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_doc_ver.md</code>、<code>schema_dms_doc_ver.html</code></li>
-  <li><strong>用途</strong>：保存文件每一次正式發布版本的版本號、修訂日期、生效期間、正式發布檔案、PDF 原始編修檔案與撤回紀錄。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_doc_ver</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_doc_ver.md</code>、<code>schema_dms_doc_ver.html</code></p>
+<p>* <strong>用途</strong>：保存文件每一次正式發布版本的版本號、修訂日期、生效期間、正式發布檔案、PDF 原始編修檔案與撤回紀錄。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -288,7 +286,7 @@ WHERE ddv_cancel_at IS NULL;
 
 CREATE INDEX idx_dms_doc_ver_cancel
 ON dms_doc_ver(ddv_cancel_at)
-WHERE ddv_cancel_at IS NOT NULL;</code></pre>
+WHERE ddv_cancel_at IS NOT NULL;</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -311,7 +309,7 @@ COMMENT ON COLUMN dms_doc_ver.ddv_cancel_reason IS '撤回原因';
 COMMENT ON COLUMN dms_doc_ver.ddv_crtby IS '建立者帳號';
 COMMENT ON COLUMN dms_doc_ver.ddv_crtat IS '建立時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_updby IS '最後異動者帳號';
-COMMENT ON COLUMN dms_doc_ver.ddv_updat IS '最後異動時間';</code></pre>
+COMMENT ON COLUMN dms_doc_ver.ddv_updat IS '最後異動時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -334,18 +332,16 @@ COMMENT ON COLUMN dms_doc_ver.ddv_updat IS '最後異動時間';</code></pre>
  WHERE d.dd_status = 1
    AND v.ddv_cancel_at IS NULL
    AND v.ddv_eff_at &lt;= CURRENT_TIMESTAMP
-   AND (v.ddv_eff_to IS NULL OR CURRENT_TIMESTAMP &lt; v.ddv_eff_to);</code></pre>
+   AND (v.ddv_eff_to IS NULL OR CURRENT_TIMESTAMP &lt; v.ddv_eff_to);</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li>文件版本不設 <code>ddv_status</code> 欄位。版本狀態由 <code>ddv_eff_at</code>、<code>ddv_eff_to</code> 與 <code>ddv_cancel_at</code> 推導。</li>
-  <li><code>dd_id</code> 必須存在於有效的 <code>dms_doc.dd_id</code>。</li>
-  <li>上傳新版本時，同一 <code>dd_id</code> 不得存在未撤回且尚未生效的預約版本。</li>
-  <li>上傳新版本時，需於同一交易內更新前一個未撤回版本的 <code>ddv_eff_to</code>。</li>
-  <li>撤回最新版本時，需於同一交易內寫入被撤回版本的撤回欄位，並清空前一版本的 <code>ddv_eff_to</code>。</li>
-  <li><code>ddv_pub_dfi_id</code> 必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 1</code>。</li>
-  <li><code>ddv_src_dfi_id</code> 若有值，必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 2</code>，且僅 PDF 正式發布檔案可掛原始編修檔。</li>
-</ul>
+<p>* 文件版本不設 <code>ddv_status</code> 欄位。版本狀態由 <code>ddv_eff_at</code>、<code>ddv_eff_to</code> 與 <code>ddv_cancel_at</code> 推導。</p>
+<p>* <code>dd_id</code> 必須存在於有效的 <code>dms_doc.dd_id</code>。</p>
+<p>* 上傳新版本時，同一 <code>dd_id</code> 不得存在未撤回且尚未生效的預約版本。</p>
+<p>* 上傳新版本時，需於同一交易內更新前一個未撤回版本的 <code>ddv_eff_to</code>。</p>
+<p>* 撤回最新版本時，需於同一交易內寫入被撤回版本的撤回欄位，並清空前一版本的 <code>ddv_eff_to</code>。</p>
+<p>* <code>ddv_pub_dfi_id</code> 必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 1</code>。</p>
+<p>* <code>ddv_src_dfi_id</code> 若有值，必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 2</code>，且僅 PDF 正式發布檔案可掛原始編修檔。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

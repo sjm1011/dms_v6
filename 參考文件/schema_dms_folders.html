@@ -218,11 +218,9 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_folders</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_folders.md</code>、<code>schema_dms_folders.html</code></li>
-  <li><strong>用途</strong>：儲存資料夾樹狀結構，並包含狀態、追蹤與封存紀錄。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_folders</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_folders.md</code>、<code>schema_dms_folders.html</code></p>
+<p>* <strong>用途</strong>：儲存資料夾樹狀結構，並包含狀態、追蹤與封存紀錄。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -266,7 +264,7 @@
 CREATE INDEX idx_dms_folders_pid ON dms_folders(df_pid);
 CREATE INDEX idx_dms_folders_root ON dms_folders(df_root_fid);
 CREATE INDEX idx_dms_folders_status ON dms_folders(df_status);
-CREATE INDEX idx_dms_folders_access_type ON dms_folders(df_access_type);</code></pre>
+CREATE INDEX idx_dms_folders_access_type ON dms_folders(df_access_type);</code></pre>
 </div>
 <h3>既有資料庫升級語法</h3>
 <div class="ddl-code-block">
@@ -275,7 +273,7 @@ CREATE INDEX idx_dms_folders_access_type ON dms_folders(df_access_type);</code><
 ADD COLUMN IF NOT EXISTS df_access_type SMALLINT NOT NULL DEFAULT 2;
 
 CREATE INDEX IF NOT EXISTS idx_dms_folders_access_type
-ON dms_folders(df_access_type);</code></pre>
+ON dms_folders(df_access_type);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -293,7 +291,7 @@ COMMENT ON COLUMN dms_folders.df_crtat IS '建立時間，預設為目前時間'
 COMMENT ON COLUMN dms_folders.df_updby IS '最後執行異動操作的使用者帳號';
 COMMENT ON COLUMN dms_folders.df_updat IS '最後異動時間';
 COMMENT ON COLUMN dms_folders.df_arcby IS '執行封存操作的管理員帳號';
-COMMENT ON COLUMN dms_folders.df_arcat IS '執行封存操作的時間';</code></pre>
+COMMENT ON COLUMN dms_folders.df_arcat IS '執行封存操作的時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -307,20 +305,18 @@ COMMENT ON COLUMN dms_folders.df_arcat IS '執行封存操作的時間';</code><
   FROM dms_folders
  WHERE df_pid = :parent_id
    AND df_status = 1
- ORDER BY df_name ASC;</code></pre>
+ ORDER BY df_name ASC;</code></pre>
 <p>查閱特定資料夾的根目錄節點 ID：</p>
 <pre><code class="language-sql">SELECT df_root_fid
   FROM dms_folders
- WHERE df_fid = :folder_id;</code></pre>
+ WHERE df_fid = :folder_id;</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li>父資料夾 ID <code>df_pid</code> 若非 NULL，必須存在於 <code>dms_folders.df_fid</code>。</li>
-  <li>第一層資料夾（根目錄）的 <code>df_pid</code> 為 NULL，其 <code>df_root_fid</code> 必須等於自身的 <code>df_fid</code>。其餘子資料夾的 <code>df_root_fid</code> 必須繼承父資料夾的 <code>df_root_fid</code>。</li>
-  <li>當資料夾狀態 <code>df_status</code> 由 1（正常）變更為 2（封存）時，後端應以短交易遞迴更新其下所有子資料夾之 <code>df_status = 2</code>，並將底下所有文件的 <code>dd_status</code> 設為 2（廢止，且 <code>dd_obs_src = 2</code>）。</li>
-  <li>資料夾狀態為 2（封存）或 0（刪除）時，不允許在底下建立新的子資料夾或上傳文件。</li>
-  <li>系統一般功能不提供物理刪除（DELETE）資料夾，異動一律以狀態註記變更為 0（刪除）或 2（封存）處理。</li>
-</ul>
+<p>* 父資料夾 ID <code>df_pid</code> 若非 NULL，必須存在於 <code>dms_folders.df_fid</code>。</p>
+<p>* 第一層資料夾（根目錄）的 <code>df_pid</code> 為 NULL，其 <code>df_root_fid</code> 必須等於自身的 <code>df_fid</code>。其餘子資料夾的 <code>df_root_fid</code> 必須繼承父資料夾的 <code>df_root_fid</code>。</p>
+<p>* 當資料夾狀態 <code>df_status</code> 由 1（正常）變更為 2（封存）時，後端應以短交易遞迴更新其下所有子資料夾之 <code>df_status = 2</code>，並將底下所有文件的 <code>dd_status</code> 設為 2（廢止，且 <code>dd_obs_src = 2</code>）。</p>
+<p>* 資料夾狀態為 2（封存）或 0（刪除）時，不允許在底下建立新的子資料夾或上傳文件。</p>
+<p>* 系統一般功能不提供物理刪除（DELETE）資料夾，異動一律以狀態註記變更為 0（刪除）或 2（封存）處理。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

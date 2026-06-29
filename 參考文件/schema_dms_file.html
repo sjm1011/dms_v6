@@ -218,11 +218,9 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。其他資料表對 <code>dms_file</code> 的引用皆屬邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_file</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_file.md</code>、<code>schema_dms_file.html</code></li>
-  <li><strong>用途</strong>：集中保存正式發布檔案、PDF 原始編修檔案、修訂對照表與廢止公文的檔案後設資料。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_file</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_file.md</code>、<code>schema_dms_file.html</code></p>
+<p>* <strong>用途</strong>：集中保存正式發布檔案、PDF 原始編修檔案、修訂對照表與廢止公文的檔案後設資料。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -267,7 +265,7 @@ CREATE INDEX idx_dms_file_sha256
 ON dms_file(dfi_sha256);
 
 CREATE INDEX idx_dms_file_role
-ON dms_file(dfi_role, dfi_status);</code></pre>
+ON dms_file(dfi_role, dfi_status);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -284,7 +282,7 @@ COMMENT ON COLUMN dms_file.dfi_size IS '檔案大小，單位為 bytes';
 COMMENT ON COLUMN dms_file.dfi_sha256 IS '檔案 SHA-256 雜湊值';
 COMMENT ON COLUMN dms_file.dfi_status IS '檔案狀態。0：作廢，1：有效，2：已取代';
 COMMENT ON COLUMN dms_file.dfi_crtby IS '上傳者帳號';
-COMMENT ON COLUMN dms_file.dfi_crtat IS '上傳時間';</code></pre>
+COMMENT ON COLUMN dms_file.dfi_crtat IS '上傳時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -297,23 +295,21 @@ COMMENT ON COLUMN dms_file.dfi_crtat IS '上傳時間';</code></pre>
        dfi_crtat
   FROM dms_file
  WHERE dfi_role = :file_role
-   AND dfi_status = 1;</code></pre>
+   AND dfi_status = 1;</code></pre>
 <p>依雜湊值（SHA-256）查詢重複檔案：</p>
 <pre><code class="language-sql">SELECT dfi_id,
        dfi_name,
        dfi_path,
        dfi_status
   FROM dms_file
- WHERE dfi_sha256 = :file_sha256;</code></pre>
+ WHERE dfi_sha256 = :file_sha256;</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li>上傳檔案時，副檔名與 MIME Type 必須同時符合第 4.5 節白名單。</li>
-  <li><code>dfi_role = 1</code> 用於正式發布檔案。</li>
-  <li><code>dfi_role = 2</code> 用於 PDF 原始編修檔案。</li>
-  <li><code>dfi_role = 3</code> 用於修訂對照表檔案。</li>
-  <li><code>dfi_role = 4</code> 用於廢止公文檔案。</li>
-</ul>
+<p>* 上傳檔案時，副檔名與 MIME Type 必須同時符合第 4.5 節白名單。</p>
+<p>* <code>dfi_role = 1</code> 用於正式發布檔案。</p>
+<p>* <code>dfi_role = 2</code> 用於 PDF 原始編修檔案。</p>
+<p>* <code>dfi_role = 3</code> 用於修訂對照表檔案。</p>
+<p>* <code>dfi_role = 4</code> 用於廢止公文檔案。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

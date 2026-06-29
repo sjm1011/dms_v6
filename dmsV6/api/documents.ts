@@ -56,107 +56,6 @@ const buildPreviewPdfFileName = (documentName = 'document', revisionDate?: strin
   return ensurePdfExtension(baseName);
 };
 
-const getWatermarkLines = (documentCode?: string, userText = '未知使用者', clientIp = '無法判定') => {
-  return [
-    `使用者：${userText}`,
-    `預覽時間：${new Date().toLocaleString('zh-TW')}`,
-    `IP：${clientIp}`,
-    `文件編號：${documentCode || '-'}`,
-    '內部文件，禁止外流'
-  ];
-};
-
-const getClientIpForWatermark = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/session`, {
-      cache: 'no-store',
-      credentials: 'same-origin'
-    });
-    const result = await handleResponse(response);
-    const ip = result?.data?.clientIp;
-    return typeof ip === 'string' && ip.trim() ? ip.trim() : '無法判定';
-  } catch {
-    return '無法判定';
-  }
-};
-
-const createWatermarkPngDataUrl = (documentCode?: string, userText?: string, clientIp?: string) => {
-  const scale = Math.max(window.devicePixelRatio || 1, 1);
-  const width = 960;
-  const height = 430;
-  const canvas = document.createElement('canvas');
-  canvas.width = width * scale;
-  canvas.height = height * scale;
-  canvas.style.width = `${width}px`;
-  canvas.style.height = `${height}px`;
-
-  const context = canvas.getContext('2d');
-  if (!context) {
-    throw new Error('瀏覽器無法建立 PDF 浮水印畫布。');
-  }
-
-  context.scale(scale, scale);
-  context.clearRect(0, 0, width, height);
-  context.translate(width / 2, height / 2);
-  context.rotate((-24 * Math.PI) / 180);
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillStyle = 'rgba(17, 24, 39, 0.22)';
-  context.font = '700 36px "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif';
-
-  const lines = getWatermarkLines(documentCode, userText, clientIp);
-  const lineHeight = 51;
-  const startY = -((lines.length - 1) * lineHeight) / 2;
-
-  lines.forEach((line, index) => {
-    context.fillText(line, 0, startY + index * lineHeight, width * 0.82);
-  });
-
-  return canvas.toDataURL('image/png');
-};
-
-const createPreviewPdfWithWatermark = async (blob: Blob, documentCode?: string, userText?: string) => {
-  const { PDFDocument } = await import('pdf-lib');
-  const pdfDoc = await PDFDocument.load(await blob.arrayBuffer());
-  const clientIp = await getClientIpForWatermark();
-  const watermarkImage = await pdfDoc.embedPng(createWatermarkPngDataUrl(documentCode, userText, clientIp));
-  const imageRatio = watermarkImage.height / watermarkImage.width;
-
-  pdfDoc.getPages().forEach(page => {
-    const { width, height } = page.getSize();
-    const maxImageWidth = Math.min(width * 0.82, height * 0.58 / imageRatio);
-    const imageWidth = Math.min(Math.max(width * 0.7, 280), maxImageWidth);
-    const imageHeight = imageWidth * imageRatio;
-    const stepY = imageHeight * 1.35;
-    const startX = (width - imageWidth) / 2;
-    const startY = (height - imageHeight) / 2;
-    const yPositions: number[] = [];
-
-    for (let y = startY; y >= 0; y -= stepY) {
-      yPositions.unshift(y);
-    }
-
-    for (let y = startY + stepY; y <= height - imageHeight; y += stepY) {
-      yPositions.push(y);
-    }
-
-    yPositions.forEach(y => {
-      page.drawImage(watermarkImage, {
-        x: startX,
-        y,
-        width: imageWidth,
-        height: imageHeight,
-        opacity: 0.78
-      });
-    });
-  });
-
-  const bytes = await pdfDoc.save();
-  const buffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(buffer).set(bytes);
-  return new Blob([buffer], { type: 'application/pdf' });
-};
-
 const writePreviewLoading = (previewWindow: Window | null) => {
   if (!previewWindow) return;
 
@@ -355,8 +254,6 @@ const downloadBlob = async (
   url: string,
   fallbackFileName: string,
   inline: boolean,
-  documentCode?: string,
-  userText?: string,
   previewWindow?: Window | null
 ) => {
   const response = await fetch(url, {
@@ -376,10 +273,9 @@ const downloadBlob = async (
 
   const blob = await response.blob();
   const isPdf = contentType.toLowerCase().includes('application/pdf');
-  const previewBlob = inline && isPdf ? await createPreviewPdfWithWatermark(blob, documentCode, userText) : blob;
   const objectBlob = inline && isPdf
-    ? new File([previewBlob], fallbackFileName, { type: 'application/pdf' })
-    : previewBlob;
+    ? new File([blob], fallbackFileName, { type: 'application/pdf' })
+    : blob;
   const objectUrl = URL.createObjectURL(objectBlob);
 
   if (inline) {
@@ -524,8 +420,6 @@ export const DocumentsAPI = {
 
   previewVersion: async (
     versionId: string,
-    documentCode?: string,
-    userText?: string,
     documentName?: string,
     revisionDate?: string
   ): Promise<void> => {
@@ -534,7 +428,7 @@ export const DocumentsAPI = {
 
     try {
       const fileName = buildPreviewPdfFileName(documentName, revisionDate);
-      await downloadBlob(`${API_BASE}/documents/preview?version_id=${encodeURIComponent(versionId)}`, fileName, true, documentCode, userText, previewWindow);
+      await downloadBlob(`${API_BASE}/documents/preview?version_id=${encodeURIComponent(versionId)}`, fileName, true, previewWindow);
     } catch (err) {
       if (previewWindow && !previewWindow.closed) {
         previewWindow.close();

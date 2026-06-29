@@ -218,11 +218,9 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_ver_rev</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_ver_rev.md</code>、<code>schema_dms_ver_rev.html</code></li>
-  <li><strong>用途</strong>：保存文件版本之修訂前後對照表檔案，以及本次版本對照的比較基準版本。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_ver_rev</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_ver_rev.md</code>、<code>schema_dms_ver_rev.html</code></p>
+<p>* <strong>用途</strong>：保存文件版本之修訂前後對照表檔案，以及本次版本對照的比較基準版本。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -263,7 +261,7 @@ ON dms_ver_rev(ddv_id)
 WHERE dvr_dc = 'N';
 
 CREATE INDEX idx_dms_ver_rev_file
-ON dms_ver_rev(dfi_id);</code></pre>
+ON dms_ver_rev(dfi_id);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -279,7 +277,7 @@ COMMENT ON COLUMN dms_ver_rev.dvr_dc IS '作廢註記，Y：作廢，N：有效'
 COMMENT ON COLUMN dms_ver_rev.dvr_crtby IS '建立者帳號';
 COMMENT ON COLUMN dms_ver_rev.dvr_crtat IS '建立時間';
 COMMENT ON COLUMN dms_ver_rev.dvr_dcby IS '作廢者帳號';
-COMMENT ON COLUMN dms_ver_rev.dvr_dcat IS '作廢時間';</code></pre>
+COMMENT ON COLUMN dms_ver_rev.dvr_dcat IS '作廢時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -295,17 +293,15 @@ COMMENT ON COLUMN dms_ver_rev.dvr_dcat IS '作廢時間';</code></pre>
   JOIN dms_file f ON f.dfi_id = r.dfi_id
  WHERE r.ddv_id = :version_id
    AND r.dvr_dc = 'N'
-   AND f.dfi_status = 1;</code></pre>
+   AND f.dfi_status = 1;</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li>修訂對照表可後補或更新。</li>
-  <li><code>ddv_id</code> 必須存在於 <code>dms_doc_ver.ddv_id</code>。</li>
-  <li>每一版本同一時間只保留 1 筆未作廢的修訂對照表。</li>
-  <li><code>dfi_id</code> 必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 3</code>。</li>
-  <li><code>dvr_base_ddv_id</code> 若有值，必須存在於 <code>dms_doc_ver.ddv_id</code>；應為本次版本的比較基準版本。第一版無比較基準時可空白。</li>
-  <li>系統一般功能不提供物理刪除（DELETE）對照表紀錄，異動一律以作廢（dvr_dc = 'Y'）處理。</li>
-</ul>
+<p>* 修訂對照表可後補或更新。</p>
+<p>* <code>ddv_id</code> 必須存在於 <code>dms_doc_ver.ddv_id</code>。</p>
+<p>* 每一版本同一時間只保留 1 筆未作廢的修訂對照表。</p>
+<p>* <code>dfi_id</code> 必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 3</code>。</p>
+<p>* <code>dvr_base_ddv_id</code> 若有值，必須存在於 <code>dms_doc_ver.ddv_id</code>；應為本次版本的比較基準版本。第一版無比較基準時可空白。</p>
+<p>* 系統一般功能不提供物理刪除（DELETE）對照表紀錄，異動一律以作廢（dvr_dc = 'Y'）處理。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

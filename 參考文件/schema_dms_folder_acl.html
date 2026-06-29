@@ -218,13 +218,11 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_folder_acl</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_folder_acl.md</code>、<code>schema_dms_folder_acl.html</code></li>
-  <li><strong>用途</strong>：紀錄限閱資料夾授權給哪些部門或使用者。資料夾是否公開或限閱由 <code>dms_folders.df_access_type</code> 決定。</li>
-  <li><strong>授權類型</strong>：可設定為特定群組、特定使用者。</li>
-  <li><strong>資安規則</strong>：沒有 ACL 紀錄不代表公開。若 <code>df_access_type = 2</code> 且沒有任何有效 ACL 紀錄，一般使用者不可見。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_folder_acl</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_folder_acl.md</code>、<code>schema_dms_folder_acl.html</code></p>
+<p>* <strong>用途</strong>：紀錄限閱資料夾授權給哪些部門或使用者。資料夾是否公開或限閱由 <code>dms_folders.df_access_type</code> 決定。</p>
+<p>* <strong>授權類型</strong>：可設定為特定群組、特定使用者。</p>
+<p>* <strong>資安規則</strong>：沒有 ACL 紀錄不代表公開。若 <code>df_access_type = 2</code> 且沒有任何有效 ACL 紀錄，一般使用者不可見。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -260,7 +258,7 @@
 
 -- 建立索引以提升查詢效能 (僅計算未作廢者)
 CREATE INDEX idx_dms_folder_acl_fid ON dms_folder_acl(df_fid) WHERE dfa_dc = 'N';
-CREATE INDEX idx_dms_folder_acl_target ON dms_folder_acl(dfa_type, dfa_target) WHERE dfa_dc = 'N';</code></pre>
+CREATE INDEX idx_dms_folder_acl_target ON dms_folder_acl(dfa_type, dfa_target) WHERE dfa_dc = 'N';</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -275,7 +273,7 @@ COMMENT ON COLUMN dms_folder_acl.dfa_crtby IS '建立此權限規則的資料夾
 COMMENT ON COLUMN dms_folder_acl.dfa_crtat IS '建立時間，預設為目前時間';
 COMMENT ON COLUMN dms_folder_acl.dfa_dc IS '作廢註記 (Y/N)';
 COMMENT ON COLUMN dms_folder_acl.dfa_dcby IS '執行作廢操作的操作者帳號';
-COMMENT ON COLUMN dms_folder_acl.dfa_dcat IS '作廢時間';</code></pre>
+COMMENT ON COLUMN dms_folder_acl.dfa_dcat IS '作廢時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -288,7 +286,7 @@ COMMENT ON COLUMN dms_folder_acl.dfa_dcat IS '作廢時間';</code></pre>
        dfa_crtat
   FROM dms_folder_acl
  WHERE df_fid = :folder_id
-   AND dfa_dc = 'N';</code></pre>
+   AND dfa_dc = 'N';</code></pre>
 <p>查詢特定使用者/部門對某資料夾的 ACL 授權：</p>
 <pre><code class="language-sql">SELECT dfa_id,
        df_fid,
@@ -298,16 +296,14 @@ COMMENT ON COLUMN dms_folder_acl.dfa_dcat IS '作廢時間';</code></pre>
  WHERE df_fid = :folder_id
    AND dfa_dc = 'N'
    AND ((dfa_type = 1 AND dfa_target = :department_id)
-        OR (dfa_type = 2 AND dfa_target = :user_uid));</code></pre>
+        OR (dfa_type = 2 AND dfa_target = :user_uid));</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li><code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</li>
-  <li><code>dfa_type</code> 必須為 <code>1</code>（群組/部門）或 <code>2</code>（特定使用者）。</li>
-  <li>當 <code>dfa_type = 1</code> 時，<code>dfa_target</code> 應為有效的部門 ID；當 <code>dfa_type = 2</code> 時，<code>dfa_target</code> 應為有效的使用者帳號。</li>
-  <li>作廢權限規則時，必須寫入作廢執行者帳號 <code>dfa_dcby</code> 與作廢時間 <code>dfa_dcat</code>，且將 <code>dfa_dc</code> 設為 <code>'Y'</code>。</li>
-  <li>系統一般功能不提供物理刪除（DELETE）ACL 紀錄，異動一律以作廢（dfa_dc = 'Y'）處理。</li>
-</ul>
+<p>* <code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</p>
+<p>* <code>dfa_type</code> 必須為 <code>1</code>（群組/部門）或 <code>2</code>（特定使用者）。</p>
+<p>* 當 <code>dfa_type = 1</code> 時，<code>dfa_target</code> 應為有效的部門 ID；當 <code>dfa_type = 2</code> 時，<code>dfa_target</code> 應為有效的使用者帳號。</p>
+<p>* 作廢權限規則時，必須寫入作廢執行者帳號 <code>dfa_dcby</code> 與作廢時間 <code>dfa_dcat</code>，且將 <code>dfa_dc</code> 設為 <code>'Y'</code>。</p>
+<p>* 系統一般功能不提供物理刪除（DELETE）ACL 紀錄，異動一律以作廢（dfa_dc = 'Y'）處理。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

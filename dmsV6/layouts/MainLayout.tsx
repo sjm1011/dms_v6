@@ -249,8 +249,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     try {
       await DocumentsAPI.previewVersion(
         item.ver_id,
-        item.code,
-        `${user.name || ''} ${user.id || ''}`.trim(),
         item.name,
         item.revision_date
       );

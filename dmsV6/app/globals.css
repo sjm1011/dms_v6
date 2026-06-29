@@ -494,6 +494,9 @@ select {
 .input-icon {
   position: absolute;
   left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
   color: var(--text-muted);
   font-size: 1.25rem;
 }
@@ -1194,6 +1197,11 @@ tr.table-row:hover .action-cell-buttons {
   outline: none;
   transition: var(--transition-fast);
   margin-top: 8px;
+}
+
+.modal-body .input-wrapper input {
+  padding-left: 40px;
+  margin-top: 0;
 }
 
 .modal-body input:focus {

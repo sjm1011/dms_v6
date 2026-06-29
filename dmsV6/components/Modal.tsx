@@ -9,6 +9,7 @@ interface ModalProps {
   closeOnOverlayClick?: boolean;
   contentClassName?: string;
   useNativeDialog?: boolean;
+  showCloseButton?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({ 
@@ -19,9 +20,62 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   closeOnOverlayClick = true,
   contentClassName = '',
-  useNativeDialog = false
+  useNativeDialog = false,
+  showCloseButton = true
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const getEditableInputs = () => {
+    if (!contentRef.current) return [];
+
+    return Array.from(
+      contentRef.current.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+        'input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select'
+      )
+    ).filter(element =>
+      !element.disabled &&
+      (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) || !element.readOnly) &&
+      element.getClientRects().length > 0
+    );
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) &&
+        !(target instanceof HTMLTextAreaElement) &&
+        !(target instanceof HTMLSelectElement)) return;
+
+    const inputs = getEditableInputs();
+    const currentIndex = inputs.indexOf(target);
+    if (currentIndex < 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const nextInput = inputs[currentIndex + 1];
+    if (nextInput) {
+      nextInput.focus();
+      return;
+    }
+
+    const defaultButton = contentRef.current?.querySelector<HTMLButtonElement>(
+      '.modal-footer .btn-primary:not(:disabled), .modal-footer .btn-danger:not(:disabled)'
+    );
+    defaultButton?.click();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const focusTimer = window.setTimeout(() => {
+      getEditableInputs()[0]?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!useNativeDialog) return;
@@ -41,10 +95,15 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   const modalContent = (
-    <div className={`modal-content ${contentClassName}`.trim()} onClick={(e) => e.stopPropagation()}>
+    <div
+      ref={contentRef}
+      className={`modal-content ${contentClassName}`.trim()}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDownCapture={handleInputKeyDown}
+    >
       <div className="modal-header">
         <h3>{title}</h3>
-        <button className="close-btn" onClick={onClose}>&times;</button>
+        {showCloseButton && <button className="close-btn" onClick={onClose}>&times;</button>}
       </div>
       <div className="modal-body">
         {children}

@@ -218,11 +218,9 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_admins</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_admins.md</code>、<code>schema_dms_admins.html</code></li>
-  <li><strong>用途</strong>：紀錄具備 DMS 系統最高管理權限之員工（系統管理員）。當使用者登入後，系統將比對此表以決定是否給予系統管理選單與全域管理權限。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_admins</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_admins.md</code>、<code>schema_dms_admins.html</code></p>
+<p>* <strong>用途</strong>：紀錄具備 DMS 系統最高管理權限之員工（系統管理員）。當使用者登入後，系統將比對此表以決定是否給予系統管理選單與全域管理權限。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -253,7 +251,7 @@
 );
 
 -- 建立唯一部分索引，確保未作廢的員工在管理員名單中不重複
-CREATE UNIQUE INDEX uidx_dms_admins_emp ON dms_admins(emp_id) WHERE da_dc = 'N';</code></pre>
+CREATE UNIQUE INDEX uidx_dms_admins_emp ON dms_admins(emp_id) WHERE da_dc = 'N';</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -266,7 +264,7 @@ COMMENT ON COLUMN dms_admins.da_crtby IS '建立此管理員設定的操作者�
 COMMENT ON COLUMN dms_admins.da_crtat IS '建立時間，預設為目前時間';
 COMMENT ON COLUMN dms_admins.da_dc IS '作廢註記 (Y/N)';
 COMMENT ON COLUMN dms_admins.da_dcby IS '執行作廢操作的操作者員編';
-COMMENT ON COLUMN dms_admins.da_dcat IS '作廢時間';</code></pre>
+COMMENT ON COLUMN dms_admins.da_dcat IS '作廢時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -275,7 +273,7 @@ COMMENT ON COLUMN dms_admins.da_dcat IS '作廢時間';</code></pre>
        emp_id
   FROM dms_admins
  WHERE emp_id = :emp_id
-   AND da_dc = 'N';</code></pre>
+   AND da_dc = 'N';</code></pre>
 <p>查詢所有有效系統管理員列表：</p>
 <pre><code class="language-sql">SELECT a.da_id,
        a.emp_id,
@@ -284,16 +282,14 @@ COMMENT ON COLUMN dms_admins.da_dcat IS '作廢時間';</code></pre>
   FROM dms_admins a
   JOIN employee e ON e.emp_id = a.emp_id
  WHERE a.da_dc = 'N'
-   AND e.emp_status = 1;</code></pre>
+   AND e.emp_status = 1;</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li><code>emp_id</code> 必須存在於有效的 <code>employee.emp_id</code>。</li>
-  <li>同一員工在未作廢狀態（<code>da_dc = 'N'</code>）下，只能有一筆關聯紀錄。</li>
-  <li>作廢管理員權限時，必須寫入作廢執行者員編 <code>da_dcby</code> 與作廢時間 <code>da_dcat</code>，且將 <code>da_dc</code> 設為 <code>'Y'</code>。</li>
-  <li>系統不提供物理刪除（DELETE）系統管理員設定，異動一律以作廢（da_dc = 'Y'）處理。</li>
-  <li>當使用者登入時，後端應依據此表判斷並返回其系統管理員身分。</li>
-</ul>
+<p>* <code>emp_id</code> 必須存在於有效的 <code>employee.emp_id</code>。</p>
+<p>* 同一員工在未作廢狀態（<code>da_dc = 'N'</code>）下，只能有一筆關聯紀錄。</p>
+<p>* 作廢管理員權限時，必須寫入作廢執行者員編 <code>da_dcby</code> 與作廢時間 <code>da_dcat</code>，且將 <code>da_dc</code> 設為 <code>'Y'</code>。</p>
+<p>* 系統不提供物理刪除（DELETE）系統管理員設定，異動一律以作廢（da_dc = 'Y'）處理。</p>
+<p>* 當使用者登入時，後端應依據此表判斷並返回其系統管理員身分。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

@@ -218,12 +218,10 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 與實體 <code>CONSTRAINT</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_folder_managers</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_folder_managers.md</code>、<code>schema_dms_folder_managers.html</code></li>
-  <li><strong>用途</strong>：紀錄任一資料夾節點被直接指派了哪些使用者作為資料夾管理員。</li>
-  <li><strong>關聯</strong>：對應至 <code>dms_folders</code> 的任一資料夾節點。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_folder_managers</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_folder_managers.md</code>、<code>schema_dms_folder_managers.html</code></p>
+<p>* <strong>用途</strong>：紀錄任一資料夾節點被直接指派了哪些使用者作為資料夾管理員。</p>
+<p>* <strong>關聯</strong>：對應至 <code>dms_folders</code> 的任一資料夾節點。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -257,7 +255,7 @@
 
 -- 建立索引以提升查詢效能與確保唯一性 (僅計算未作廢者)
 CREATE UNIQUE INDEX idx_dms_folder_mgr_uniq ON dms_folder_managers(df_fid, usr_uid) WHERE dfm_dc = 'N';
-CREATE INDEX idx_dms_folder_mgr_uid ON dms_folder_managers(usr_uid);</code></pre>
+CREATE INDEX idx_dms_folder_mgr_uid ON dms_folder_managers(usr_uid);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -271,7 +269,7 @@ COMMENT ON COLUMN dms_folder_managers.dfm_crtby IS '建立此設定的操作者�
 COMMENT ON COLUMN dms_folder_managers.dfm_crtat IS '建立時間，預設為目前時間';
 COMMENT ON COLUMN dms_folder_managers.dfm_dc IS '作廢註記 (Y/N)';
 COMMENT ON COLUMN dms_folder_managers.dfm_dcby IS '執行作廢操作的操作者帳號';
-COMMENT ON COLUMN dms_folder_managers.dfm_dcat IS '作廢時間';</code></pre>
+COMMENT ON COLUMN dms_folder_managers.dfm_dcat IS '作廢時間';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -283,23 +281,21 @@ COMMENT ON COLUMN dms_folder_managers.dfm_dcat IS '作廢時間';</code></pre>
        dfm_crtat
   FROM dms_folder_managers
  WHERE df_fid = :folder_id
-   AND dfm_dc = 'N';</code></pre>
+   AND dfm_dc = 'N';</code></pre>
 <p>查詢使用者直接管理的資料夾列表：</p>
 <pre><code class="language-sql">SELECT dfm_id,
        df_fid,
        usr_uid
   FROM dms_folder_managers
  WHERE usr_uid = :usr_uid
-   AND dfm_dc = 'N';</code></pre>
+   AND dfm_dc = 'N';</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li><code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</li>
-  <li><code>usr_uid</code> 必須是有效的系統使用者帳號。</li>
-  <li>同一資料夾與同一使用者帳號在未作廢狀態（<code>dfm_dc = 'N'</code>）下，只能有一筆關聯紀錄。</li>
-  <li>作廢管理員權限時，必須寫入作廢執行者帳號 <code>dfm_dcby</code> 與作廢時間 <code>dfm_dcat</code>，且將 <code>dfm_dc</code> 設為 <code>'Y'</code>。</li>
-  <li>系統不提供物理刪除（DELETE）管理員設定，異動一律以作廢（dfm_dc = 'Y'）處理。</li>
-</ul>
+<p>* <code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</p>
+<p>* <code>usr_uid</code> 必須是有效的系統使用者帳號。</p>
+<p>* 同一資料夾與同一使用者帳號在未作廢狀態（<code>dfm_dc = 'N'</code>）下，只能有一筆關聯紀錄。</p>
+<p>* 作廢管理員權限時，必須寫入作廢執行者帳號 <code>dfm_dcby</code> 與作廢時間 <code>dfm_dcat</code>，且將 <code>dfm_dc</code> 設為 <code>'Y'</code>。</p>
+<p>* 系統不提供物理刪除（DELETE）管理員設定，異動一律以作廢（dfm_dc = 'Y'）處理。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

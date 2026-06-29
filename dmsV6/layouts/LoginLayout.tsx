@@ -7,6 +7,7 @@ import {
 } from '../components/Icons';
 import type { AppTheme } from '../App';
 import { showRequiredFieldMessage } from '../lib/clientValidation';
+import { Modal } from '../components/Modal';
 
 interface LoginLayoutProps {
   loginError: string;
@@ -51,10 +52,37 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
 
   return (
     <div id="login-container" className="fade-in">
-      <div className="login-card">
+      <Modal
+        isOpen
+        onClose={() => undefined}
+        title="文件管理系統"
+        closeOnOverlayClick={false}
+        showCloseButton={false}
+        footer={
+          <button
+            type="submit"
+            form="login-form"
+            className="btn btn-primary btn-block"
+            disabled={isLoggingIn}
+          >
+            {isLoggingIn ? (
+              <>
+                <svg className="spinner" viewBox="0 0 50 50" style={{ width: 18, height: 18, marginRight: 8, stroke: 'currentColor' }}>
+                  <circle cx="25" cy="25" r="20" fill="none" strokeWidth="4" style={{ strokeDasharray: '90, 150', strokeDashoffset: 0 }}></circle>
+                </svg>
+                <span>正在登入...</span>
+              </>
+            ) : (
+              <>
+                <span>登入系統</span>
+                <ArrowForwardIcon size={18} />
+              </>
+            )}
+          </button>
+        }
+      >
         <div className="login-header">
           <img src="/logo.png" alt="Logo" style={{ width: 48, height: 48, marginBottom: 12, borderRadius: 8, objectFit: 'contain' }} />
-          <h1>文件管理系統</h1>
           <p>請輸入您的帳戶以存取平台</p>
         </div>
         <fieldset className="theme-selector" aria-label="佈景主題">
@@ -82,7 +110,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
             </label>
           </div>
         </fieldset>
-        <form onSubmit={handleSubmit}>
+        <form id="login-form" onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="uid">使用者帳號</label>
             <div className="input-wrapper">
@@ -117,23 +145,8 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
               <span>{loginError}</span>
             </div>
           )}
-          <button type="submit" className="btn btn-primary btn-block" disabled={isLoggingIn}>
-            {isLoggingIn ? (
-              <>
-                <svg className="spinner" viewBox="0 0 50 50" style={{ width: 18, height: 18, marginRight: 8, stroke: 'currentColor' }}>
-                  <circle cx="25" cy="25" r="20" fill="none" strokeWidth="4" style={{ strokeDasharray: '90, 150', strokeDashoffset: 0 }}></circle>
-                </svg>
-                <span>正在登入...</span>
-              </>
-            ) : (
-              <>
-                <span>登入系統</span>
-                <ArrowForwardIcon size={18} />
-              </>
-            )}
-          </button>
         </form>
-      </div>
+      </Modal>
     </div>
   );
 };
