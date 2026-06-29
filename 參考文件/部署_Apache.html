@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>部署_Apache</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS V6 Windows 部署：Apache HTTP Server</h1>
+<h2>1. 架構</h2>
+<p>Apache HTTP Server for Windows 負責 HTTPS 與反向代理。Next.js standalone 由獨立的 Node.js Windows 服務執行，僅監聽 <code>127.0.0.1:3000</code>。</p>
+<pre><code class="language-text">瀏覽器 -&gt; Apache HTTPS 443 -&gt; http://127.0.0.1:3000 -&gt; Next.js -&gt; PostgreSQL</code></pre>
+<h2>2. 前置條件</h2>
+<ol>
+  <li>安裝組織核准的 Apache HTTP Server 2.4 Windows 發行版。</li>
+  <li>安裝 Node.js LTS。</li>
+  <li>完成 PostgreSQL 部署。</li>
+  <li>準備正式網域與憑證檔案。</li>
+</ol>
+<h2>3. 部署 Next.js standalone</h2>
+<p>在原始碼主機執行：</p>
+<pre><code class="language-powershell">Set-Location D:\.我的專案\04.文件管理系統_V6_codex\dmsV6
+npm ci
+npm run build
+New-Item -ItemType Directory -Force C:\DMS\app | Out-Null
+New-Item -ItemType Directory -Force C:\DMS\storage | Out-Null
+Copy-Item -Recurse -Force .next\standalone\* C:\DMS\app\
+Copy-Item -Recurse -Force .next\static C:\DMS\app\.next\static
+Copy-Item -Recurse -Force public C:\DMS\app\public</code></pre>
+<p>Node.js Windows 服務的執行檔、參數與啟動目錄分別為：</p>
+<pre><code class="language-text">C:\Program Files\nodejs\node.exe
+C:\DMS\app\server.js
+C:\DMS\app</code></pre>
+<p>服務需設定 <code>NODE_ENV=production</code>、<code>HOSTNAME=127.0.0.1</code>、<code>PORT=3000</code>、<code>DATABASE_URL</code>、<code>DMS_STORAGE_ROOT=C:\DMS\storage</code>、<code>SESSION_SECRET</code>、<code>SESSION_MAX_AGE_SECONDS=28800</code> 與 <code>SESSION_COOKIE_SECURE=true</code>。</p>
+<h2>4. 啟用 Apache 模組</h2>
+<p>確認 <code>httpd.conf</code> 已載入：</p>
+<pre><code class="language-apache">LoadModule headers_module modules/mod_headers.so
+LoadModule proxy_module modules/mod_proxy.so
+LoadModule proxy_http_module modules/mod_proxy_http.so
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so</code></pre>
+<p>若前方還有其他 Proxy，才需要額外評估 <code>mod_remoteip</code>。不可在未限制可信 Proxy IP 的情況下直接信任外部傳入的轉送標頭。</p>
+<h2>5. VirtualHost 設定</h2>
+<p>在 Apache 的站台設定檔加入：</p>
+<pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName dms.example.com
+    Redirect permanent / https://dms.example.com/
+&lt;/VirtualHost&gt;
+
+&lt;VirtualHost *:443&gt;
+    ServerName dms.example.com
+
+    SSLEngine on
+    SSLCertificateFile "C:/Apache24/conf/certs/dms.crt"
+    SSLCertificateKeyFile "C:/Apache24/conf/certs/dms.key"
+
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass        / http://127.0.0.1:3000/ connectiontimeout=5 timeout=300
+    ProxyPassReverse / http://127.0.0.1:3000/
+
+    RequestHeader set X-Forwarded-Proto "https"
+    RequestHeader set X-Forwarded-Port "443"
+
+    LimitRequestBody 1073741824
+
+    ErrorLog  "logs/dms-error.log"
+    CustomLog "logs/dms-access.log" combined
+&lt;/VirtualHost&gt;</code></pre>
+<p><code>LimitRequestBody</code> 範例為 <code>1 GB</code>。必須依正式政策調整。Apache 2.4 的不同修訂版對允許值範圍可能不同，部署時必須以 <code>httpd -t</code> 驗證目前版本。</p>
+<h2>6. 設定檢查與服務重啟</h2>
+<pre><code class="language-powershell">Set-Location C:\Apache24\bin
+.\httpd.exe -t
+.\httpd.exe -k restart</code></pre>
+<p>若 Apache 尚未安裝成 Windows 服務：</p>
+<pre><code class="language-powershell">.\httpd.exe -k install -n "Apache2.4-DMS"
+Start-Service "Apache2.4-DMS"</code></pre>
+<h2>7. 驗證</h2>
+<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/
+Invoke-WebRequest -UseBasicParsing https://dms.example.com/
+Invoke-WebRequest -UseBasicParsing https://dms.example.com/api/test</code></pre>
+<p>再以瀏覽器驗證登入、上傳、預覽與下載。</p>
+<h2>8. 常見錯誤</h2>
+<h3>8.1 Apache 無法啟動</h3>
+<ul>
+  <li>Status：Windows 服務啟動後立即停止。</li>
+  <li>Root Cause：模組未載入、憑證路徑錯誤、設定語法錯誤或 <code>443</code> 已被占用。</li>
+  <li>Suggested Fix：執行 <code>httpd.exe -t</code>，再用 <code>Get-NetTCPConnection -LocalPort 443 -State Listen</code> 查明占用程序。</li>
+</ul>
+<h3>8.2 回傳 503 Service Unavailable</h3>
+<ul>
+  <li>Status：Apache <code>503</code>。</li>
+  <li>Root Cause：Node.js 服務未啟動或 <code>127.0.0.1:3000</code> 無監聽。</li>
+  <li>Suggested Fix：先直接測試 Node.js URL，再檢查 <code>ProxyPass</code> 目標。</li>
+</ul>
+<h3>8.3 大檔案上傳失敗</h3>
+<ul>
+  <li>Status：上傳被 Apache 拒絕或逾時。</li>
+  <li>Root Cause：<code>LimitRequestBody</code>、Proxy timeout 或組織網路設備限制小於檔案大小。</li>
+  <li>Suggested Fix：逐層檢查 Apache 錯誤日誌、反向代理限制及上游設備限制，不可只修改應用程式。</li>
+</ul>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

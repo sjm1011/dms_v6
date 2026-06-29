@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>部署_資料庫</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS V6 Windows 部署：PostgreSQL 資料庫</h1>
+<h2>1. 部署目標</h2>
+<p>本文件說明在 Windows Server 上建立 DMS V6 使用的 PostgreSQL 資料庫。應用程式實際使用 <code>pg</code> 套件連線，預設資料庫名稱為 <code>dms</code>，預設連接埠為 <code>5432</code>。</p>
+<p>正式環境不得讓應用程式使用 <code>postgres</code> 超級使用者。下列範例建立專用登入角色 <code>dms_app</code>。</p>
+<h2>2. 前置條件</h2>
+<ol>
+  <li>安裝 PostgreSQL 16 或組織核准版本。</li>
+  <li>確認 PostgreSQL Windows 服務已啟動。</li>
+  <li>確認 <code>psql.exe</code> 所在目錄已加入 <code>PATH</code>，或使用完整路徑執行。</li>
+  <li>準備一組只供 DMS 使用的強密碼。</li>
+</ol>
+<h2>3. 建立登入角色與資料庫</h2>
+<p>以 PostgreSQL 管理者身分開啟 PowerShell，先連入預設資料庫：</p>
+<pre><code class="language-powershell">psql -U postgres -h 127.0.0.1 -p 5432 -d postgres</code></pre>
+<p>執行下列 SQL。請先替換密碼，不要沿用範例值：</p>
+<pre><code class="language-sql">CREATE ROLE dms_app
+  WITH LOGIN
+       PASSWORD '請替換成正式環境強密碼';
+
+CREATE DATABASE dms
+  WITH OWNER = dms_app
+       ENCODING = 'UTF8'
+       TEMPLATE = template0;</code></pre>
+<p>本專案規範不建立外鍵與命名 <code>CONSTRAINT</code>。資料表的主鍵與資料一致性由既有 DDL 及應用程式流程管理。</p>
+<h2>4. 建立資料表與索引</h2>
+<p>依下列順序，使用 <code>dms_app</code> 連入 <code>dms</code> 資料庫，執行各文件「DDL」區段中的 SQL：</p>
+<ol>
+  <li><code>schema_department.md</code></li>
+  <li><code>schema_employee.md</code></li>
+  <li><code>schema_dms_admins.md</code></li>
+  <li><code>schema_dms_folders.md</code></li>
+  <li><code>schema_dms_folder_managers.md</code></li>
+  <li><code>schema_dms_folder_acl.md</code></li>
+  <li><code>schema_dms_doc.md</code></li>
+  <li><code>schema_dms_file.md</code></li>
+  <li><code>schema_dms_doc_ver.md</code></li>
+  <li><code>schema_dms_ver_rev.md</code></li>
+  <li><code>schema_dms_audit_log.md</code></li>
+</ol>
+<p>連線命令如下：</p>
+<pre><code class="language-powershell">psql -U dms_app -h 127.0.0.1 -p 5432 -d dms</code></pre>
+<p>若現場已有 <code>department</code> 與 <code>employee</code> 主檔，不可直接覆蓋。必須先比對欄位名稱、資料型別，以及 <code>employee.emp_id</code>、<code>employee.dept_id</code>、<code>department.dept_id</code> 是否符合本專案查詢需求。</p>
+<h2>5. 建立第一位系統管理者</h2>
+<p>登入驗證以 <code>employee</code> 為人員主檔，<code>dms_admins</code> 用於判斷系統管理員權限。先依 <code>schema_employee.md</code> 的欄位定義建立員工資料，再依 <code>schema_dms_admins.md</code> 建立管理員資料。</p>
+<p>正式匯入前必須確認現有密碼欄位格式符合 <code>dmsV6/lib/server/auth.ts</code> 的驗證邏輯，不可自行改成另一種雜湊格式。</p>
+<h2>6. 應用程式連線設定</h2>
+<p>建議設定單一 <code>DATABASE_URL</code>：</p>
+<pre><code class="language-text">DATABASE_URL=postgres://dms_app:URL編碼後的密碼@127.0.0.1:5432/dms
+PGPOOL_MAX=10</code></pre>
+<p>密碼若包含 <code>@</code>、<code>:</code>、<code>/</code>、<code>#</code> 或 <code>%</code>，必須先做 URL 編碼。也可以不用 <code>DATABASE_URL</code>，改設下列變數：</p>
+<pre><code class="language-text">PGHOST=127.0.0.1
+PGPORT=5432
+PGDATABASE=dms
+PGUSER=dms_app
+PGPASSWORD=正式環境密碼
+PGPOOL_MAX=10</code></pre>
+<h2>7. 遠端資料庫設定</h2>
+<p>資料庫與 Web Server 分開時，才需要調整遠端連線：</p>
+<ol>
+  <li>在 <code>postgresql.conf</code> 將 <code>listen_addresses</code> 設為資料庫伺服器實際內網 IP，不要直接使用 <code>*</code>。</li>
+  <li>在 <code>pg_hba.conf</code> 只允許 Web Server 的固定內網 IP 連入 <code>dms</code>。</li>
+  <li>Windows Defender 防火牆只允許該來源 IP 存取 TCP <code>5432</code>。</li>
+  <li>重新啟動 PostgreSQL Windows 服務。</li>
+</ol>
+<p><code>pg_hba.conf</code> 範例：</p>
+<pre><code class="language-text">host    dms    dms_app    192.168.10.25/32    scram-sha-256</code></pre>
+<h2>8. 驗證</h2>
+<h3>8.1 資料表驗證</h3>
+<pre><code class="language-powershell">psql -U dms_app -h 127.0.0.1 -p 5432 -d dms -c "\dt"</code></pre>
+<p>應至少看到第 4 節列出的 11 個資料表。</p>
+<h3>8.2 應用程式連線驗證</h3>
+<p>應用程式啟動後，在伺服器本機執行：</p>
+<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/test</code></pre>
+<p>若失敗，依下列格式判斷：</p>
+<ul>
+  <li>Status：HTTP <code>500</code> 或無法連線。</li>
+  <li>Root Cause：資料庫服務未啟動、連線字串錯誤、來源 IP 未被 <code>pg_hba.conf</code> 允許，或資料表尚未建立。</li>
+  <li>Suggested Fix：先用相同帳號執行 <code>psql</code> 連線測試，再檢查應用程式服務所取得的環境變數。</li>
+</ul>
+<h2>9. 備份與還原</h2>
+<p>每日備份命令範例：</p>
+<pre><code class="language-powershell">pg_dump -U dms_app -h 127.0.0.1 -p 5432 -d dms -F c -f C:\DMS\backup\dms.backup</code></pre>
+<p>還原至已建立的空白 <code>dms</code> 資料庫：</p>
+<pre><code class="language-powershell">pg_restore -U dms_app -h 127.0.0.1 -p 5432 -d dms --clean --if-exists C:\DMS\backup\dms.backup</code></pre>
+<p>資料庫備份不包含 <code>C:\DMS\storage</code> 的實體文件。資料庫與檔案儲存目錄必須使用同一個備份時間點，否則版本紀錄可能指向不存在的檔案。</p>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

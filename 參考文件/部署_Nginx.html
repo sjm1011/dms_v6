@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>部署_Nginx</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS V6 Windows 部署：Nginx</h1>
+<h2>1. 架構與限制</h2>
+<pre><code class="language-text">瀏覽器 -&gt; Nginx HTTPS 443 -&gt; http://127.0.0.1:3000 -&gt; Next.js -&gt; PostgreSQL</code></pre>
+<p>Nginx for Windows 可作為反向代理，但官方 Windows 版本以主控台應用程式執行，不原生提供 Windows Service 管理。正式環境若必須使用 Nginx，需使用組織核准的 Service Wrapper 管理 <code>nginx.exe</code>，並測試服務停止、重新載入與失敗復原流程。</p>
+<h2>2. 前置條件</h2>
+<ol>
+  <li>安裝組織核准的 Nginx Windows 版本，例如放置於 <code>C:\nginx</code>。</li>
+  <li>安裝 Node.js LTS。</li>
+  <li>完成 PostgreSQL 部署。</li>
+  <li>準備正式網域與 PEM 格式憑證。</li>
+</ol>
+<h2>3. 部署 Next.js standalone</h2>
+<pre><code class="language-powershell">Set-Location D:\.我的專案\04.文件管理系統_V6_codex\dmsV6
+npm ci
+npm run build
+New-Item -ItemType Directory -Force C:\DMS\app | Out-Null
+New-Item -ItemType Directory -Force C:\DMS\storage | Out-Null
+Copy-Item -Recurse -Force .next\standalone\* C:\DMS\app\
+Copy-Item -Recurse -Force .next\static C:\DMS\app\.next\static
+Copy-Item -Recurse -Force public C:\DMS\app\public</code></pre>
+<p>Node.js Windows 服務執行：</p>
+<pre><code class="language-text">執行檔：C:\Program Files\nodejs\node.exe
+參數：C:\DMS\app\server.js
+啟動目錄：C:\DMS\app</code></pre>
+<p>服務環境變數至少包含：</p>
+<pre><code class="language-text">NODE_ENV=production
+HOSTNAME=127.0.0.1
+PORT=3000
+DATABASE_URL=postgres://dms_app:URL編碼後的密碼@127.0.0.1:5432/dms
+PGPOOL_MAX=10
+DMS_STORAGE_ROOT=C:\DMS\storage
+SESSION_COOKIE_NAME=dms_session
+SESSION_SECRET=至少32字元且只供正式環境使用的隨機字串
+SESSION_MAX_AGE_SECONDS=28800
+SESSION_COOKIE_SECURE=true</code></pre>
+<h2>4. nginx.conf</h2>
+<p>將 <code>C:\nginx\conf\nginx.conf</code> 的 <code>http</code> 區段設定為包含下列內容：</p>
+<pre><code class="language-nginx">http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile on;
+    keepalive_timeout 65;
+    client_max_body_size 1g;
+
+    upstream dms_v6 {
+        server 127.0.0.1:3000;
+        keepalive 32;
+    }
+
+    server {
+        listen 80;
+        server_name dms.example.com;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name dms.example.com;
+
+        ssl_certificate     C:/nginx/conf/certs/dms-fullchain.pem;
+        ssl_certificate_key C:/nginx/conf/certs/dms-private-key.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        location / {
+            proxy_pass http://dms_v6;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Port $server_port;
+            proxy_connect_timeout 5s;
+            proxy_read_timeout 300s;
+            proxy_send_timeout 300s;
+            proxy_request_buffering off;
+        }
+    }
+}</code></pre>
+<p><code>client_max_body_size</code> 範例為 <code>1 GB</code>。必須依正式上傳政策調整。</p>
+<h2>5. 設定檢查與重新載入</h2>
+<pre><code class="language-powershell">Set-Location C:\nginx
+.\nginx.exe -t
+.\nginx.exe
+.\nginx.exe -s reload</code></pre>
+<p>正常停止：</p>
+<pre><code class="language-powershell">Set-Location C:\nginx
+.\nginx.exe -s quit</code></pre>
+<p>不可直接結束所有 <code>nginx.exe</code> 程序作為正常更新流程，否則進行中的上傳或下載會被中斷。</p>
+<h2>6. Windows 服務管理</h2>
+<p>使用組織核准的 NSSM、WinSW 或其他 Service Wrapper 時，服務必須符合：</p>
+<ul>
+  <li>執行檔：<code>C:\nginx\nginx.exe</code></li>
+  <li>啟動目錄：<code>C:\nginx</code></li>
+  <li>啟動類型：Automatic</li>
+  <li>失敗復原：重新啟動服務</li>
+  <li>服務帳號：只能讀取 Nginx 程式與憑證的專用帳號</li>
+</ul>
+<p>Node.js 與 Nginx 應建立為兩個獨立服務。Nginx 服務不應取得 PostgreSQL 密碼或 <code>C:\DMS\storage</code> 寫入權限。</p>
+<h2>7. 驗證</h2>
+<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/
+Invoke-WebRequest -UseBasicParsing https://dms.example.com/
+Invoke-WebRequest -UseBasicParsing https://dms.example.com/api/test</code></pre>
+<p>再以瀏覽器驗證登入、上傳、預覽與下載。</p>
+<h2>8. 常見錯誤</h2>
+<h3>8.1 nginx -t 失敗</h3>
+<ul>
+  <li>Status：設定檢查失敗。</li>
+  <li>Root Cause：Windows 路徑、憑證檔案、區塊括號或指令位置錯誤。</li>
+  <li>Suggested Fix：以 <code>nginx.exe -t</code> 顯示的檔案與行號修正，不要在語法未通過時重新載入。</li>
+</ul>
+<h3>8.2 回傳 502 Bad Gateway</h3>
+<ul>
+  <li>Status：Nginx <code>502</code>。</li>
+  <li>Root Cause：Node.js 服務未啟動，或 Nginx 無法連線至 <code>127.0.0.1:3000</code>。</li>
+  <li>Suggested Fix：先直接測試 Node.js URL，再檢查 <code>logs/error.log</code> 與 <code>upstream</code> 設定。</li>
+</ul>
+<h3>8.3 回傳 413 Request Entity Too Large</h3>
+<ul>
+  <li>Status：Nginx <code>413</code>。</li>
+  <li>Root Cause：<code>client_max_body_size</code> 小於上傳內容。</li>
+  <li>Suggested Fix：依正式政策調整大小，執行 <code>nginx.exe -t</code> 後再重新載入。</li>
+</ul>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
