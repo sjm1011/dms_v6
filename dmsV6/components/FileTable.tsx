@@ -139,6 +139,19 @@ export const FileTable = React.memo<FileTableProps>(({
     );
   };
 
+  const getManagerDisplay = (managerNames?: string) => {
+    const fullNames = managerNames?.trim() || '系統管理員';
+    const names = fullNames
+      .split('、')
+      .map(name => name.trim())
+      .filter(Boolean);
+
+    return {
+      fullNames,
+      displayNames: names.length > 1 ? `${names[0]} 等${names.length}位` : fullNames
+    };
+  };
+
   const getActionItems = (item: DMSItem): ActionMenuItem[] => {
     if (item.type === 'document') {
       const actions: ActionMenuItem[] = [
@@ -221,7 +234,7 @@ export const FileTable = React.memo<FileTableProps>(({
     if (onSetAcl) {
       actions.push({
         key: 'acl',
-        label: '權限設定',
+        label: '屬性設定',
         icon: <KeyIcon size={18} />,
         className: 'menu-item-accent',
         onClick: () => onSetAcl(item.id, item.name)
@@ -230,7 +243,7 @@ export const FileTable = React.memo<FileTableProps>(({
 
     actions.push({
       key: 'rename',
-      label: '修改名稱',
+      label: '修改資料夾',
       icon: <EditIcon size={18} />,
       onClick: () => onRename(item.id, item.name)
     });
@@ -386,6 +399,10 @@ export const FileTable = React.memo<FileTableProps>(({
         </thead>
         <tbody id="files-list">
           {items.map(item => {
+            const managerDisplay = item.type === 'folder'
+              ? getManagerDisplay(item.manager_names)
+              : null;
+
             return (
               <tr
                 key={`${item.type}-${item.id}`}
@@ -401,8 +418,11 @@ export const FileTable = React.memo<FileTableProps>(({
                   </div>
                 </td>
                 <td>
-                  <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.type === 'folder' ? (item.manager_names || '系統管理員') : (item.code || '-')}
+                  <span
+                    title={managerDisplay?.fullNames}
+                    style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {managerDisplay?.displayNames || item.code || '-'}
                   </span>
                 </td>
                 <td>

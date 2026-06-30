@@ -1,8 +1,6 @@
 import React from 'react';
 import { Folder, User } from '../types';
 import { 
-  FolderIcon, 
-  FolderOpenIcon, 
   ServerIcon, 
   ChevronRightIcon, 
   AccountCircleIcon, 
@@ -43,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [folders]);
 
   // 遞迴渲染資料夾節點
-  const renderFolderNode = (folder: Folder) => {
+  const renderFolderNode = (folder: Folder, depth = 0) => {
     const subFolders = foldersByParentId.get(folder.id) || [];
     const hasChildren = subFolders.length > 0;
     const isExpanded = expandedFolders.has(folder.id);
@@ -61,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }
           }}
         >
-          <div className="folder-link-content">
+          <div className="folder-link-content folder-node-content">
             {hasChildren ? (
               <div 
                 className={`folder-toggle-btn ${isExpanded ? 'expanded' : ''}`}
@@ -73,12 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <ChevronRightIcon size={18} />
               </div>
             ) : (
-              <div style={{ width: 20 }}></div>
-            )}
-            {isExpanded && hasChildren ? (
-              <FolderOpenIcon className="icon" size={20} />
-            ) : (
-              <FolderIcon className="icon" size={20} />
+              <div className="folder-toggle-placeholder"></div>
             )}
             <span>{folder.name}</span>
           </div>
@@ -86,7 +79,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {hasChildren && isExpanded && (
           <ul className="folder-children">
-            {subFolders.map(subFolder => renderFolderNode(subFolder))}
+            {subFolders.map(subFolder => renderFolderNode(subFolder, depth + 1))}
           </ul>
         )}
       </li>
@@ -106,7 +99,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="sidebar-menu">
-        <div className="menu-label">檔案庫</div>
         <div className="folder-tree-container">
           <ul className="folder-list">
             {/* 根目錄虛擬項目 */}

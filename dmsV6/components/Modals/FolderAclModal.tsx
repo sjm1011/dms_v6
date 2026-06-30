@@ -351,8 +351,9 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
 
   // 5. 使用者 UID 輸入框按下 Enter 進行查詢
   const handleUidKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
+      e.stopPropagation();
       (e.target as HTMLInputElement).blur();
     }
   };
@@ -460,7 +461,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
         onClose={onClose}
         closeOnOverlayClick={false}
         contentClassName="modal-content-wide"
-        title={`權限設定 - ${folderName}`}
+        title={`屬性設定 - ${folderName}`}
         footer={
           <>
             <button
@@ -537,6 +538,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
                       placeholder="請輸入同仁帳號"
                       value={row.uid}
                       onChange={e => handleUidChange(index, e.target.value)}
+                      data-enter-action="blur-or-submit"
                       onKeyDown={handleUidKeyDown}
                       onBlur={() => handleUidBlur(index)}
                       disabled={loading}

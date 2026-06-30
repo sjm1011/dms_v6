@@ -65,7 +65,7 @@ export const canManageFolder = async (user: SessionUser, folderId: number) => {
 
 export const listFolders = async (user: SessionUser) => {
   const result = await query<FolderRow>(
-    `WITH manager_summary AS (
+    `WITH RECURSIVE manager_summary AS (
         SELECT m.df_fid,
                STRING_AGG(m.usr_uid, ',' ORDER BY m.usr_uid) AS manager_ids,
                STRING_AGG(COALESCE(e.emp_name, m.usr_uid), '、' ORDER BY m.usr_uid) AS manager_names
@@ -73,6 +73,31 @@ export const listFolders = async (user: SessionUser) => {
           LEFT JOIN employee e ON UPPER(e.emp_id) = UPPER(m.usr_uid)
          WHERE m.dfm_dc = 'N'
          GROUP BY m.df_fid
+      ),
+      folder_ancestors AS (
+        SELECT f.df_fid,
+               f.df_fid AS ancestor_fid,
+               f.df_pid AS ancestor_pid
+          FROM dms_folders f
+        UNION ALL
+        SELECT fa.df_fid,
+               p.df_fid AS ancestor_fid,
+               p.df_pid AS ancestor_pid
+          FROM folder_ancestors fa
+          JOIN dms_folders p ON p.df_fid = fa.ancestor_pid
+      ),
+      effective_manager_summary AS (
+        SELECT inherited.df_fid,
+               STRING_AGG(COALESCE(e.emp_name, inherited.usr_uid), '、' ORDER BY inherited.usr_uid) AS manager_names
+          FROM (
+                SELECT DISTINCT fa.df_fid,
+                       m.usr_uid
+                  FROM folder_ancestors fa
+                  JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
+                 WHERE m.dfm_dc = 'N'
+               ) inherited
+          LEFT JOIN employee e ON UPPER(e.emp_id) = UPPER(inherited.usr_uid)
+         GROUP BY inherited.df_fid
       ),
       acl_summary AS (
         SELECT a.df_fid,
@@ -124,7 +149,7 @@ export const listFolders = async (user: SessionUser) => {
              f.df_status AS status,
              f.df_access_type AS access_type,
              ms.manager_ids,
-             ms.manager_names,
+             ems.manager_names,
              COALESCE(asu.acl_summary, '') AS acl_summary,
              (
                SELECT COUNT(*)
@@ -141,6 +166,7 @@ export const listFolders = async (user: SessionUser) => {
         FROM dms_folders f
         JOIN visible v ON v.df_fid = f.df_fid
         LEFT JOIN manager_summary ms ON ms.df_fid = f.df_fid
+        LEFT JOIN effective_manager_summary ems ON ems.df_fid = f.df_fid
         LEFT JOIN acl_summary asu ON asu.df_fid = f.df_fid
        WHERE f.df_status = 1
        ORDER BY f.df_pid NULLS FIRST,

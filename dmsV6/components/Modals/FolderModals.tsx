@@ -393,6 +393,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                         placeholder="請輸入用戶代碼"
                         value={row.uid}
                         onChange={(e) => handleUidChange(idx, e.target.value)}
+                        data-enter-action="blur-or-submit"
                         onKeyDown={handleUidKeyDown}
                         onBlur={() => handleUidBlur(idx)}
                       />
@@ -429,6 +430,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                     placeholder="請輸入用戶代碼 (選填)"
                     value={row.uid}
                     onChange={(e) => handleUidChange(idx, e.target.value)}
+                    data-enter-action="blur-or-submit"
                     onKeyDown={handleUidKeyDown}
                     onBlur={() => handleUidBlur(idx)}
                   />
@@ -475,6 +477,7 @@ interface RenameModalProps {
   isRoot?: boolean;
   initialManagers?: string[];
   userRole?: string;
+  managersOnly?: boolean;
   onRename: (newName: string, managers?: string[]) => Promise<boolean>;
 }
 
@@ -485,6 +488,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   isRoot = false,
   initialManagers = [],
   userRole = '',
+  managersOnly = false,
   onRename
 }) => {
   const [val, setVal] = useState('');
@@ -497,9 +501,11 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setVal(initialValue);
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
+      if (!managersOnly) {
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
+      }
 
       if (isRoot ? userRole === 'ADMIN' : true) {
         const isSysAdminOnly = isRoot ? (initialManagers.length === 0) : false;
@@ -529,13 +535,16 @@ export const RenameModal: React.FC<RenameModalProps> = ({
             );
             loadedRows.push({ uid: '', name: '', isValid: false, isChecking: false });
             setManagerRows(loadedRows);
+            if (managersOnly) {
+              setFocusIndex(0);
+            }
           };
 
           fetchInitialManagers();
         }
       }
     }
-  }, [isOpen, initialValue, isRoot, userRole, initialManagers]);
+  }, [isOpen, initialValue, isRoot, userRole, initialManagers, managersOnly]);
 
   useEffect(() => {
     if (focusIndex !== null && managerInputsRef.current[focusIndex]) {
@@ -688,7 +697,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
       closeOnOverlayClick={false}
       isOpen={isOpen}
       onClose={onClose}
-      title="修改資料夾"
+      title={managersOnly ? '編輯管理員' : '修改資料夾'}
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>取消</button>
@@ -697,16 +706,18 @@ export const RenameModal: React.FC<RenameModalProps> = ({
       }
     >
       <style>{styles}</style>
-      <div className="input-group" style={{ marginBottom: 0 }}>
-        <label>資料夾名稱</label>
-        <input
-          ref={inputRef}
-          type="text"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
-        />
-      </div>
+      {!managersOnly && (
+        <div className="input-group" style={{ marginBottom: 0 }}>
+          <label>資料夾名稱</label>
+          <input
+            ref={inputRef}
+            type="text"
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
+          />
+        </div>
+      )}
 
       {showManagers && (
         <div className="managers-section">
@@ -752,6 +763,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                         placeholder="請輸入用戶代碼"
                         value={row.uid}
                         onChange={(e) => handleUidChange(idx, e.target.value)}
+                        data-enter-action="blur-or-submit"
                         onKeyDown={handleUidKeyDown}
                         onBlur={() => handleUidBlur(idx)}
                       />
@@ -788,6 +800,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                     placeholder="請輸入用戶代碼 (選填)"
                     value={row.uid}
                     onChange={(e) => handleUidChange(idx, e.target.value)}
+                    data-enter-action="blur-or-submit"
                     onKeyDown={handleUidKeyDown}
                     onBlur={() => handleUidBlur(idx)}
                   />

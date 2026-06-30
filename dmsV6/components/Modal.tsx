@@ -55,6 +55,19 @@ export const Modal: React.FC<ModalProps> = ({
     event.preventDefault();
     event.stopPropagation();
 
+    if (target.dataset.enterAction === 'blur-or-submit') {
+      if (target.value.trim() !== '') {
+        target.blur();
+        return;
+      }
+
+      const defaultButton = contentRef.current?.querySelector<HTMLButtonElement>(
+        '.modal-footer .btn-primary:not(:disabled), .modal-footer .btn-danger:not(:disabled)'
+      );
+      defaultButton?.click();
+      return;
+    }
+
     const nextInput = inputs[currentIndex + 1];
     if (nextInput) {
       nextInput.focus();

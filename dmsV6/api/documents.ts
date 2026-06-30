@@ -85,11 +85,12 @@ const writePreviewLoading = (previewWindow: Window | null) => {
 
 const openPdfPreview = (objectUrl: string, fileName: string, targetWindow?: Window | null) => {
   const previewWindow = targetWindow || window.open('', '_blank');
+  const previewUrl = `${objectUrl}#page=1&toolbar=0&navpanes=0`;
   const objectUrlScriptValue = toScriptString(objectUrl);
   const fileNameScriptValue = toScriptString(fileName);
 
   if (!previewWindow || previewWindow.closed) {
-    window.open(objectUrl, '_blank');
+    window.open(previewUrl, '_blank');
     return null;
   }
 
@@ -147,7 +148,7 @@ const openPdfPreview = (objectUrl: string, fileName: string, targetWindow?: Wind
           <button id="printPdfButton" class="secondary-button" type="button">列印</button>
           <button id="downloadPdfButton" type="button">下載 PDF</button>
         </div>
-        <iframe id="pdfPreviewFrame" src="${escapeHtml(`${objectUrl}#toolbar=0&navpanes=0`)}" title="PDF 預覽"></iframe>
+        <iframe id="pdfPreviewFrame" src="${escapeHtml(previewUrl)}" title="PDF 預覽"></iframe>
         <script>
           (() => {
             const objectUrl = ${objectUrlScriptValue};

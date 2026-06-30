@@ -606,11 +606,19 @@ select {
 
 /* 資料夾樹狀結構 */
 .folder-tree-container {
+  --folder-level-indent: 18px;
+  --folder-tree-line-offset: 18px;
+  --folder-toggle-width: 16px;
+  --folder-icon-width: 20px;
+  --folder-column-gap: 6px;
+  --folder-text-line-height: 22px;
   margin-top: 8px;
 }
 
 .folder-list {
   list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .folder-item-wrapper {
@@ -633,17 +641,40 @@ select {
 
 .folder-link-content {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: var(--folder-column-gap);
   flex: 1;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.folder-link-content span.icon {
+.folder-node-content {
+  display: grid;
+  grid-template-columns:
+    var(--folder-toggle-width)
+    minmax(0, 1fr);
+  column-gap: var(--folder-column-gap);
+  align-items: start;
+}
+
+.folder-link-content > .icon {
+  flex: 0 0 var(--folder-icon-width);
+  width: var(--folder-icon-width);
+  height: var(--folder-icon-width);
   color: var(--text-muted);
-  font-size: 1.25rem;
+}
+
+.folder-link-content > span:not(.icon) {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: var(--folder-text-line-height);
+}
+
+.folder-node-content > .folder-toggle-btn,
+.folder-node-content > .folder-toggle-placeholder {
+  margin-top: calc((var(--folder-text-line-height) - var(--folder-toggle-width)) / 2);
 }
 
 .folder-link:hover {
@@ -670,15 +701,16 @@ select {
 
 .folder-children {
   list-style: none;
-  padding-left: 20px;
+  padding-left: calc(var(--folder-level-indent) - var(--folder-tree-line-offset));
   border-left: 1px dashed var(--glass-border);
-  margin-left: 18px;
+  margin: 0 0 0 var(--folder-tree-line-offset);
 }
 
 .folder-toggle-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 20px;
   width: 20px;
   height: 20px;
   cursor: pointer;
@@ -694,6 +726,11 @@ select {
   transform: rotate(90deg);
 }
 
+.folder-toggle-btn > svg {
+  width: var(--folder-toggle-width);
+  height: var(--folder-toggle-width);
+}
+
 /* 側欄底部使用者資訊 */
 .sidebar-footer {
   padding: 16px 20px;
@@ -702,6 +739,11 @@ select {
   align-items: center;
   justify-content: space-between;
   background-color: var(--surface-subtle);
+}
+
+.folder-toggle-placeholder {
+  width: var(--folder-toggle-width);
+  height: var(--folder-toggle-width);
 }
 
 .user-profile {

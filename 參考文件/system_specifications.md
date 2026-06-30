@@ -289,6 +289,8 @@ AND (effective_until IS NULL OR 目前時間 < effective_until)
 * 一般使用者不提供 PDF 下載按鈕。
 * 一般使用者即使直接呼叫 PDF 正式原檔下載 API (應用程式介面)，或以 URL (網址) 猜測檔案路徑，後端仍必須依角色與 ACL (存取控制清單) 拒絕下載。
 * PDF 預覽畫面必須顯示浮水印。
+* 浮水印必須由 Next.js Route Handler 在伺服器端讀取 PDF 原始檔後動態套用，不得由瀏覽器端產生或合成，避免客戶端繞過浮水印取得預覽內容。
+* 浮水印使用內建 `Noto Sans TC` 字型資源產生中文字形，並以半透明、斜向方式置中顯示於每一頁；輸出結果僅供當次預覽，不得覆寫磁碟上的正式 PDF 原檔。
 * 使用者如需紙本或另存 PDF，可使用瀏覽器列印功能。
 * 資料夾管理員可下載正式 PDF 原檔。
 * 資料夾管理員介面需顯示「上傳原始檔案」按鈕。
@@ -299,9 +301,8 @@ AND (effective_until IS NULL OR 目前時間 < effective_until)
 浮水印內容應包含：
 
 * 使用者姓名及帳號
-* 預覽時間
-* 電腦名稱
-* IP
+* 預覽時間，固定使用 `Asia/Taipei` 時區
+* 用戶端 IP；伺服器依序讀取 `X-Forwarded-For`、`X-Real-IP`、`CF-Connecting-IP`、`True-Client-IP` 與標準 `Forwarded` header，均無有效值時顯示「無法判定」
 * 文件編號
 * 「內部文件，禁止外流」
 
@@ -594,7 +595,7 @@ DMS 內所有會影響資料、權限、安全、文件流通或使用者存取�
 
 ## 6. API (應用程式介面) 對接與部署設定規格
 
-系統預設關閉 Mock (模擬) 模式，完全對接 Delphi 真實後端 API (應用程式介面)。V5 架構中，瀏覽器端只呼叫同源 Next.js `/api/*` 路由，不直接呼叫 Delphi 後端 API，也不直接持有後端 token。
+V6 採用 Next.js 全端架構。瀏覽器端只呼叫同源 Next.js `/api/*` 路由；Route Handler 於伺服器端直接執行 PostgreSQL 存取、權限判斷、檔案處理與稽核紀錄。瀏覽器不得直接連線資料庫，也不得持有資料庫帳密、session 密鑰或實體檔案路徑。
 
 ### 6.1. 目前正式架構
 
@@ -604,15 +605,12 @@ DMS 內所有會影響資料、權限、安全、文件流通或使用者存取�
 IIS / Apache / Nginx
   ↓
 Next.js standalone server
-  ↓
-Delphi 內部後端 API
-  ↓
-PostgreSQL
+  ├→ PostgreSQL
+  └→ 本機或指定磁碟上的文件儲存目錄
 ```
 
 * **瀏覽器責任**：渲染操作畫面、呼叫同源 `/api/*` 路由、接收下載或預覽檔案 stream。
-* **Next.js 責任**：提供 App Router 畫面、Route Handler API 中介、`HttpOnly Cookie` session 管理、對內部後端 API 轉發、檔案 stream 與 header 保留。
-* **Delphi 後端責任**：執行資料庫存取、權限判斷、文件版本生命週期、PDF / 非 PDF 規則、稽核紀錄與檔案存取控制。
+* **Next.js 責任**：提供 App Router 畫面、Route Handler API、`HttpOnly Cookie` session 管理，並於伺服器端執行 PostgreSQL 存取、權限判斷、文件版本生命週期、PDF / 非 PDF 規則、稽核紀錄、檔案存取控制，以及檔案 stream 與 response header 輸出。
 * **Web Server 責任**：IIS / Apache / Nginx 僅作為正式環境對外入口，將請求反向代理到 Next.js server。
 
 ### 6.2. 正式環境設定檔
@@ -622,6 +620,8 @@ V6 不再使用獨立後端主機網址。正式環境設定改由 Next.js serve
 ```text
 DATABASE_URL=postgres://user:password@host:port/database
 PGPOOL_MAX=10
+DMS_STORAGE_ROOT=.\storage
+DMS_LEGACY_STORAGE_ROOT=
 SESSION_COOKIE_NAME=dms_session
 SESSION_SECRET=請改成至少 32 字元的隨機字串
 SESSION_MAX_AGE_SECONDS=28800
@@ -631,7 +631,11 @@ DMS_NEXT_PORT=3000
 ```
 
 * `DATABASE_URL` PostgreSQL 資料庫連線字串（包含帳密、主機、埠與資料庫名稱）。
+* 未設定 `DATABASE_URL` 時，可改用 `PGHOST`、`PGPORT`、`PGDATABASE`、`PGUSER`、`PGPASSWORD` 分別設定 PostgreSQL 連線資訊。
 * `PGPOOL_MAX` 連線池最大連線數，預設為 `10`。
+* `DMS_STORAGE_ROOT` 為 V6 新上傳檔案的根目錄。完整路徑直接使用；相對路徑以 Next.js 執行目錄 `process.cwd()` 為基準解析；未設定時預設為 `./storage`。
+* `DMS_LEGACY_STORAGE_ROOT` 為既有 DMS 檔案的相容讀取根目錄，可使用完整路徑或相對路徑；不需讀取舊檔案時保持空白。
+* 新上傳檔案依 `YYYYMM` 月份建立子目錄，磁碟檔名使用時間戳記與 UUID 組合；資料庫保存相對儲存路徑，不向瀏覽器揭露實體絕對路徑。
 * `SESSION_SECRET` 必須使用正式環境專用隨機字串。
 * `SESSION_COOKIE_SECURE=true` 時，Web Server 對外入口必須使用 HTTPS。
 * `DMS_NEXT_HOST` 建議固定為 `127.0.0.1`，避免 Next.js server 直接暴露到使用者網段。
@@ -650,6 +654,7 @@ DMS_NEXT_PORT=3000
     * 驗證通過後，將使用者資訊與管理員身分封裝成 session payload。
     * session payload 以 `HttpOnly Cookie` 加密保存，瀏覽器端 JavaScript 不可讀取敏感資料。
 * **登入頁面欄位**：
+    * 登入畫面使用共用 `Modal` 元件顯示，禁止點擊背景遮罩關閉，且不顯示右上角關閉按鈕。
     * 進入登入畫面時，帳號與密碼輸入欄位預設保持空白。
     * 網頁初次載入、或點選登出時，滑鼠游標會自動定位在「使用者帳號」輸入框。
 * **驗證失敗處理**：
@@ -705,7 +710,8 @@ DMS_NEXT_PORT=3000
     * Next.js 必須保留並設定 `content-type`、`content-disposition`（含原始檔名）、`content-length`、`cache-control` 等檔案回應 header。
 * **PDF 文件預覽**：
     * 瀏覽器呼叫 `GET /api/documents/preview?version_id=...`。
-    * Route Handler 呼叫 `documentService.previewDocument` 取得 PDF 串流，並透過 `fileStorage.applyWatermark` 動態利用 `pdf-lib` 套用浮水印。
+    * Route Handler 透過 `documentService.ts` 與 `fileStorage.ts` 取得 PDF 原始檔，並呼叫 `pdfWatermark.ts`，使用 `pdf-lib` 與 `@pdf-lib/fontkit` 在伺服器端逐頁套用浮水印。
+    * 加入浮水印後，Route Handler 必須重新設定正確的 `content-length` 與 `content-type: application/pdf`，再將處理後內容回傳瀏覽器。
     * PDF 預覽仍須遵守第 4 節規則：一般使用者僅可線上預覽，不提供 PDF 正式原檔下載。
 * **HTML 文件格式預覽**：
     * 瀏覽器呼叫 `GET /api/documents/preview?version_id=...`。
@@ -729,6 +735,19 @@ DMS_NEXT_PORT=3000
     * **嚴格防呆與強制對話框**：
         * 若至少一列輸入了代碼但未成功檢索姓名（無效代碼），則系統會顯示紅字警告阻擋存檔，且「確定」按鈕會被禁用。
         * 權限設定等重要對話框 (Modal) 採用強制遮罩 (`closeOnOverlayClick=false`)，禁止使用者因誤觸背景而關閉視窗導致設定資料遺失。
+
+### 6.8. 輸入畫面、鍵盤導航與必填驗證規格
+
+* **統一顯示方式**：所有輸入畫面使用共用 `Modal` 元件顯示；工具列搜尋框不屬於輸入畫面，不適用此規則。
+* **開啟時焦點**：`Modal` 開啟後，焦點自動位於第一個可見且可編輯的輸入框。
+* **Enter 導航**：
+    * 在非最後一個可編輯輸入框按下 `Enter`，系統阻止預設提交，並將焦點移至下一個可編輯輸入框。
+    * 僅在最後一個可編輯輸入框按下 `Enter` 時，才觸發 `Modal` 底部操作區中第一個符合 `.btn-primary` 或 `.btn-danger` 且未停用的主要按鈕。
+    * 中文輸入法組字期間的 `Enter` 不得觸發欄位導航或提交。
+    * 隱藏、唯讀、停用、核取方塊、選項按鈕及檔案欄位不列入鍵盤導航順序。
+* **必填欄位驗證**：
+    * 使用者提交輸入畫面時，若必填欄位未填寫，系統必須顯示明確的錯誤訊息框，不得僅以停用主要按鈕或無訊息返回阻擋操作。
+    * 使用者關閉錯誤訊息框後，焦點必須回到第一個未通過驗證的必填欄位；檔案必填欄位則聚焦至對應的檔案選擇按鈕。
 
 ---
 

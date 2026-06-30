@@ -426,6 +426,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 一般使用者不提供 PDF 下載按鈕。</p>
 <p>* 一般使用者即使直接呼叫 PDF 正式原檔下載 API (應用程式介面)，或以 URL (網址) 猜測檔案路徑，後端仍必須依角色與 ACL (存取控制清單) 拒絕下載。</p>
 <p>* PDF 預覽畫面必須顯示浮水印。</p>
+<p>* 浮水印必須由 Next.js Route Handler 在伺服器端讀取 PDF 原始檔後動態套用，不得由瀏覽器端產生或合成，避免客戶端繞過浮水印取得預覽內容。</p>
+<p>* 浮水印使用內建 <code>Noto Sans TC</code> 字型資源產生中文字形，並以半透明、斜向方式置中顯示於每一頁；輸出結果僅供當次預覽，不得覆寫磁碟上的正式 PDF 原檔。</p>
 <p>* 使用者如需紙本或另存 PDF，可使用瀏覽器列印功能。</p>
 <p>* 資料夾管理員可下載正式 PDF 原檔。</p>
 <p>* 資料夾管理員介面需顯示「上傳原始檔案」按鈕。</p>
@@ -434,9 +436,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 原始檔案僅限資料夾管理員可見與下載，一般使用者不可見。</p>
 <p>浮水印內容應包含：</p>
 <p>* 使用者姓名及帳號</p>
-<p>* 預覽時間</p>
-<p>* 電腦名稱</p>
-<p>* IP</p>
+<p>* 預覽時間，固定使用 <code>Asia/Taipei</code> 時區</p>
+<p>* 用戶端 IP；伺服器依序讀取 <code>X-Forwarded-For</code>、<code>X-Real-IP</code>、<code>CF-Connecting-IP</code>、<code>True-Client-IP</code> 與標準 <code>Forwarded</code> header，均無有效值時顯示「無法判定」</p>
 <p>* 文件編號</p>
 <p>* 「內部文件，禁止外流」</p>
 <h3>4.7. 非 PDF 文件規則</h3>
@@ -646,25 +647,24 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 高權限維護人員若需進行資料庫層級維護，應另以資料庫備份、維護紀錄或外部程序留存軌跡，不得透過 DMS 一般功能竄改稽核紀錄。</p>
 <p>---</p>
 <h2>6. API (應用程式介面) 對接與部署設定規格</h2>
-<p>系統預設關閉 Mock (模擬) 模式，完全對接 Delphi 真實後端 API (應用程式介面)。V5 架構中，瀏覽器端只呼叫同源 Next.js <code>/api/*</code> 路由，不直接呼叫 Delphi 後端 API，也不直接持有後端 token。</p>
+<p>V6 採用 Next.js 全端架構。瀏覽器端只呼叫同源 Next.js <code>/api/*</code> 路由；Route Handler 於伺服器端直接執行 PostgreSQL 存取、權限判斷、檔案處理與稽核紀錄。瀏覽器不得直接連線資料庫，也不得持有資料庫帳密、session 密鑰或實體檔案路徑。</p>
 <h3>6.1. 目前正式架構</h3>
 <pre><code class="language-text">使用者瀏覽器
   ↓
 IIS / Apache / Nginx
   ↓
 Next.js standalone server
-  ↓
-Delphi 內部後端 API
-  ↓
-PostgreSQL</code></pre>
+  ├→ PostgreSQL
+  └→ 本機或指定磁碟上的文件儲存目錄</code></pre>
 <p>* <strong>瀏覽器責任</strong>：渲染操作畫面、呼叫同源 <code>/api/*</code> 路由、接收下載或預覽檔案 stream。</p>
-<p>* <strong>Next.js 責任</strong>：提供 App Router 畫面、Route Handler API 中介、<code>HttpOnly Cookie</code> session 管理、對內部後端 API 轉發、檔案 stream 與 header 保留。</p>
-<p>* <strong>Delphi 後端責任</strong>：執行資料庫存取、權限判斷、文件版本生命週期、PDF / 非 PDF 規則、稽核紀錄與檔案存取控制。</p>
+<p>* <strong>Next.js 責任</strong>：提供 App Router 畫面、Route Handler API、<code>HttpOnly Cookie</code> session 管理，並於伺服器端執行 PostgreSQL 存取、權限判斷、文件版本生命週期、PDF / 非 PDF 規則、稽核紀錄、檔案存取控制，以及檔案 stream 與 response header 輸出。</p>
 <p>* <strong>Web Server 責任</strong>：IIS / Apache / Nginx 僅作為正式環境對外入口，將請求反向代理到 Next.js server。</p>
 <h3>6.2. 正式環境設定檔</h3>
 <p>V6 不再使用獨立後端主機網址。正式環境設定改由 Next.js server 讀取 <code>.env.production</code>（或環境變數）。</p>
 <pre><code class="language-text">DATABASE_URL=postgres://user:password@host:port/database
 PGPOOL_MAX=10
+DMS_STORAGE_ROOT=.\storage
+DMS_LEGACY_STORAGE_ROOT=
 SESSION_COOKIE_NAME=dms_session
 SESSION_SECRET=請改成至少 32 字元的隨機字串
 SESSION_MAX_AGE_SECONDS=28800
@@ -672,7 +672,11 @@ SESSION_COOKIE_SECURE=true
 DMS_NEXT_HOST=127.0.0.1
 DMS_NEXT_PORT=3000</code></pre>
 <p>* <code>DATABASE_URL</code> PostgreSQL 資料庫連線字串（包含帳密、主機、埠與資料庫名稱）。</p>
+<p>* 未設定 <code>DATABASE_URL</code> 時，可改用 <code>PGHOST</code>、<code>PGPORT</code>、<code>PGDATABASE</code>、<code>PGUSER</code>、<code>PGPASSWORD</code> 分別設定 PostgreSQL 連線資訊。</p>
 <p>* <code>PGPOOL_MAX</code> 連線池最大連線數，預設為 <code>10</code>。</p>
+<p>* <code>DMS_STORAGE_ROOT</code> 為 V6 新上傳檔案的根目錄。完整路徑直接使用；相對路徑以 Next.js 執行目錄 <code>process.cwd()</code> 為基準解析；未設定時預設為 <code>./storage</code>。</p>
+<p>* <code>DMS_LEGACY_STORAGE_ROOT</code> 為既有 DMS 檔案的相容讀取根目錄，可使用完整路徑或相對路徑；不需讀取舊檔案時保持空白。</p>
+<p>* 新上傳檔案依 <code>YYYYMM</code> 月份建立子目錄，磁碟檔名使用時間戳記與 UUID 組合；資料庫保存相對儲存路徑，不向瀏覽器揭露實體絕對路徑。</p>
 <p>* <code>SESSION_SECRET</code> 必須使用正式環境專用隨機字串。</p>
 <p>* <code>SESSION_COOKIE_SECURE=true</code> 時，Web Server 對外入口必須使用 HTTPS。</p>
 <p>* <code>DMS_NEXT_HOST</code> 建議固定為 <code>127.0.0.1</code>，避免 Next.js server 直接暴露到使用者網段。</p>
@@ -689,6 +693,7 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 驗證通過後，將使用者資訊與管理員身分封裝成 session payload。</p>
 <p>* session payload 以 <code>HttpOnly Cookie</code> 加密保存，瀏覽器端 JavaScript 不可讀取敏感資料。</p>
 <p>* <strong>登入頁面欄位</strong>：</p>
+<p>* 登入畫面使用共用 <code>Modal</code> 元件顯示，禁止點擊背景遮罩關閉，且不顯示右上角關閉按鈕。</p>
 <p>* 進入登入畫面時，帳號與密碼輸入欄位預設保持空白。</p>
 <p>* 網頁初次載入、或點選登出時，滑鼠游標會自動定位在「使用者帳號」輸入框。</p>
 <p>* <strong>驗證失敗處理</strong>：</p>
@@ -741,7 +746,8 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* Next.js 必須保留並設定 <code>content-type</code>、<code>content-disposition</code>（含原始檔名）、<code>content-length</code>、<code>cache-control</code> 等檔案回應 header。</p>
 <p>* <strong>PDF 文件預覽</strong>：</p>
 <p>* 瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</p>
-<p>* Route Handler 呼叫 <code>documentService.previewDocument</code> 取得 PDF 串流，並透過 <code>fileStorage.applyWatermark</code> 動態利用 <code>pdf-lib</code> 套用浮水印。</p>
+<p>* Route Handler 透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得 PDF 原始檔，並呼叫 <code>pdfWatermark.ts</code>，使用 <code>pdf-lib</code> 與 <code>@pdf-lib/fontkit</code> 在伺服器端逐頁套用浮水印。</p>
+<p>* 加入浮水印後，Route Handler 必須重新設定正確的 <code>content-length</code> 與 <code>content-type: application/pdf</code>，再將處理後內容回傳瀏覽器。</p>
 <p>* PDF 預覽仍須遵守第 4 節規則：一般使用者僅可線上預覽，不提供 PDF 正式原檔下載。</p>
 <p>* <strong>HTML 文件格式預覽</strong>：</p>
 <p>* 瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</p>
@@ -762,6 +768,17 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* <strong>嚴格防呆與強制對話框</strong>：</p>
 <p>* 若至少一列輸入了代碼但未成功檢索姓名（無效代碼），則系統會顯示紅字警告阻擋存檔，且「確定」按鈕會被禁用。</p>
 <p>* 權限設定等重要對話框 (Modal) 採用強制遮罩 (<code>closeOnOverlayClick=false</code>)，禁止使用者因誤觸背景而關閉視窗導致設定資料遺失。</p>
+<h3>6.8. 輸入畫面、鍵盤導航與必填驗證規格</h3>
+<p>* <strong>統一顯示方式</strong>：所有輸入畫面使用共用 <code>Modal</code> 元件顯示；工具列搜尋框不屬於輸入畫面，不適用此規則。</p>
+<p>* <strong>開啟時焦點</strong>：<code>Modal</code> 開啟後，焦點自動位於第一個可見且可編輯的輸入框。</p>
+<p>* <strong>Enter 導航</strong>：</p>
+<p>* 在非最後一個可編輯輸入框按下 <code>Enter</code>，系統阻止預設提交，並將焦點移至下一個可編輯輸入框。</p>
+<p>* 僅在最後一個可編輯輸入框按下 <code>Enter</code> 時，才觸發 <code>Modal</code> 底部操作區中第一個符合 <code>.btn-primary</code> 或 <code>.btn-danger</code> 且未停用的主要按鈕。</p>
+<p>* 中文輸入法組字期間的 <code>Enter</code> 不得觸發欄位導航或提交。</p>
+<p>* 隱藏、唯讀、停用、核取方塊、選項按鈕及檔案欄位不列入鍵盤導航順序。</p>
+<p>* <strong>必填欄位驗證</strong>：</p>
+<p>* 使用者提交輸入畫面時，若必填欄位未填寫，系統必須顯示明確的錯誤訊息框，不得僅以停用主要按鈕或無訊息返回阻擋操作。</p>
+<p>* 使用者關閉錯誤訊息框後，焦點必須回到第一個未通過驗證的必填欄位；檔案必填欄位則聚焦至對應的檔案選擇按鈕。</p>
 <p>---</p>
 <h2>7. 版本控管與自動紀錄腳本</h2>
 <p>本專案使用 Git (版本控管工具) 保存本機版本，並以 GitHub (遠端程式碼代管服務) 作為遠端備份位置。根目錄提供兩個批次檔，分別處理「本機 commit (提交)」與「推送 GitHub (遠端程式碼代管服務)」。</p>

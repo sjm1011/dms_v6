@@ -69,6 +69,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isEditManagersOpen, setIsEditManagersOpen] = useState(false);
   const [renameId, setRenameId] = useState('');
   const [renameValue, setRenameValue] = useState('');
 
@@ -326,6 +327,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             <span className="badge" style={{ marginLeft: '8px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}>
               管理員：{currentFolderId === '' ? '系統管理員' : (folders.find(f => f.id === currentFolderId)?.manager_names || '系統管理員')}
             </span>
+            {currentFolderId !== '' && isCurrentFolderManager() && (
+              <button className="btn btn-secondary" onClick={() => setIsEditManagersOpen(true)}>
+                編輯管理員
+              </button>
+            )}
           </div>
           <div className="action-right">
             {canCreateFolder && (
@@ -469,6 +475,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           return success;
         }}
       />
+
+      {currentFolder && (
+        <RenameModal
+          isOpen={isEditManagersOpen}
+          onClose={() => setIsEditManagersOpen(false)}
+          initialValue={currentFolder.name}
+          isRoot={currentFolder.parent_id === null}
+          initialManagers={currentFolder.managers}
+          userRole={user.role}
+          managersOnly
+          onRename={async (folderName, managers) => {
+            return await handleRenameFolder(currentFolder.id, folderName, managers);
+          }}
+        />
+      )}
 
       <UploadVerModal
         isOpen={isUploadVerOpen}
