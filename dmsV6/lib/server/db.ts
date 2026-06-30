@@ -25,7 +25,12 @@ export const pool =
   new Pool({
     connectionString: buildConnectionString(),
     max: Number(process.env.PGPOOL_MAX || 10),
-    idleTimeoutMillis: 30_000
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 5_000),
+    statement_timeout: Number(process.env.PG_STATEMENT_TIMEOUT_MS || 10_000),
+    query_timeout: Number(process.env.PG_QUERY_TIMEOUT_MS || 12_000),
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10_000
   });
 
 if (process.env.NODE_ENV !== 'production') {

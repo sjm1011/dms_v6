@@ -11,23 +11,28 @@ export const useDocuments = (
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const requestSeqRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
 
   // 載入文件清單
   const fetchDocuments = async () => {
     const requestSeq = requestSeqRef.current + 1;
     requestSeqRef.current = requestSeq;
+    requestAbortRef.current?.abort();
 
     if (!enabled || !user) {
+      requestAbortRef.current = null;
       setDocuments([]);
       setIsLoadingDocuments(false);
       return;
     }
 
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setDocuments([]);
     setIsLoadingDocuments(true);
 
     try {
-      const res = await DocumentsAPI.getDocuments(currentFolderId || '0');
+      const res = await DocumentsAPI.getDocuments(currentFolderId || '0', controller.signal);
       if (requestSeq !== requestSeqRef.current) {
         return;
       }
@@ -38,7 +43,7 @@ export const useDocuments = (
         showToast(res.error, 'error');
       }
     } catch (err: unknown) {
-      if (requestSeq !== requestSeqRef.current) {
+      if (requestSeq !== requestSeqRef.current || (err instanceof DOMException && err.name === 'AbortError')) {
         return;
       }
 
@@ -47,6 +52,9 @@ export const useDocuments = (
     } finally {
       if (requestSeq === requestSeqRef.current) {
         setIsLoadingDocuments(false);
+        if (requestAbortRef.current === controller) {
+          requestAbortRef.current = null;
+        }
       }
     }
   };
@@ -54,12 +62,20 @@ export const useDocuments = (
   // 當前目錄或資料夾更新時，載入該層文件
   useEffect(() => {
     if (user && enabled) {
-      fetchDocuments();
+      void fetchDocuments();
     } else {
       requestSeqRef.current += 1;
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
       setDocuments([]);
       setIsLoadingDocuments(false);
     }
+
+    return () => {
+      requestSeqRef.current += 1;
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
+    };
   }, [currentFolderId, user, enabled]);
 
   // 新建文件與上傳第一版

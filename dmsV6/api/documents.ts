@@ -1,5 +1,5 @@
 import { Document, ApiResponse } from '../types';
-import { API_BASE, getAuthHeader, handleResponse } from './client';
+import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 interface UploadFilePayload {
   name: string;
@@ -303,8 +303,9 @@ const downloadBlob = async (
 };
 
 export const DocumentsAPI = {
-  getDocuments: async (folderId: string): Promise<ApiResponse<Document[]>> => {
-    const response = await fetch(`${API_BASE}/documents?folder_id=${encodeURIComponent(folderId)}`, {
+  getDocuments: async (folderId: string, signal?: AbortSignal): Promise<ApiResponse<Document[]>> => {
+    const response = await apiFetch(`${API_BASE}/documents?folder_id=${encodeURIComponent(folderId)}`, {
+      signal,
       headers: getAuthHeader()
     });
     return await handleResponse(response);

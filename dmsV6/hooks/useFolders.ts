@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Folder, User } from '../types';
 import { FoldersAPI } from '../api/folders';
 
@@ -11,6 +11,8 @@ export const useFolders = (
   const [hasLoadedFolders, setHasLoadedFolders] = useState(false);
   const [currentFolderId, _setCurrentFolderId] = useState<string>('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const requestSeqRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
 
   // 監聽網址 Hash 變更以支援上一頁/下一頁
   useEffect(() => {
@@ -43,32 +45,61 @@ export const useFolders = (
 
   // 載入資料夾結構
   const fetchFolders = async () => {
+    const requestSeq = requestSeqRef.current + 1;
+    requestSeqRef.current = requestSeq;
+    requestAbortRef.current?.abort();
+
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     setIsLoadingFolders(true);
+
     try {
-      const res = await FoldersAPI.getFolders();
+      const res = await FoldersAPI.getFolders(controller.signal);
+      if (requestSeq !== requestSeqRef.current) {
+        return;
+      }
+
       if (res.success) {
         setFolders(res.data);
       } else {
         showToast(res.error, 'error');
       }
     } catch (err: unknown) {
+      if (requestSeq !== requestSeqRef.current || (err instanceof DOMException && err.name === 'AbortError')) {
+        return;
+      }
+
       const msg = err instanceof Error ? err.message : String(err);
       showToast('載入資料夾結構失敗：' + msg, 'error');
     } finally {
-      setHasLoadedFolders(true);
-      setIsLoadingFolders(false);
+      if (requestSeq === requestSeqRef.current) {
+        setHasLoadedFolders(true);
+        setIsLoadingFolders(false);
+        if (requestAbortRef.current === controller) {
+          requestAbortRef.current = null;
+        }
+      }
     }
   };
 
   // 登入後自動加載資料夾
   useEffect(() => {
     if (user) {
-      fetchFolders();
+      void fetchFolders();
     } else {
+      requestSeqRef.current += 1;
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
       setFolders([]);
       setHasLoadedFolders(false);
       setIsLoadingFolders(false);
     }
+
+    return () => {
+      requestSeqRef.current += 1;
+      requestAbortRef.current?.abort();
+      requestAbortRef.current = null;
+    };
   }, [user]);
 
   // 當前目錄改變時，自動展開左側對應的樹狀目錄（僅展開所有祖先資料夾，不展開當前資料夾本身）

@@ -1,9 +1,10 @@
 import { Folder, ApiResponse, FolderACL } from '../types';
-import { API_BASE, getAuthHeader, handleResponse } from './client';
+import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 export const FoldersAPI = {
-  getFolders: async (): Promise<ApiResponse<Folder[]>> => {
-    const response = await fetch(`${API_BASE}/folders`, {
+  getFolders: async (signal?: AbortSignal): Promise<ApiResponse<Folder[]>> => {
+    const response = await apiFetch(`${API_BASE}/folders`, {
+      signal,
       headers: getAuthHeader()
     });
     const result = await handleResponse(response);
