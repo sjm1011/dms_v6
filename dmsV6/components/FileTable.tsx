@@ -139,19 +139,6 @@ export const FileTable = React.memo<FileTableProps>(({
     );
   };
 
-  const getManagerDisplay = (managerNames?: string) => {
-    const fullNames = managerNames?.trim() || '系統管理員';
-    const names = fullNames
-      .split('、')
-      .map(name => name.trim())
-      .filter(Boolean);
-
-    return {
-      fullNames,
-      displayNames: names.length > 1 ? `${names[0]} 等${names.length}位` : fullNames
-    };
-  };
-
   const getActionItems = (item: DMSItem): ActionMenuItem[] => {
     if (item.type === 'document') {
       const actions: ActionMenuItem[] = [
@@ -391,7 +378,7 @@ export const FileTable = React.memo<FileTableProps>(({
         <thead>
           <tr>
             <th style={{ width: '36%' }}>名稱</th>
-            <th style={{ width: '24%' }}>管理員 / 文件編號</th>
+            <th style={{ width: '24%' }}>文件編號</th>
             <th style={{ width: '10%' }}>屬性 / 版本</th>
             <th style={{ width: '14%' }}>修訂日期</th>
             <th style={{ width: '16%', textAlign: 'right' }}>操作</th>
@@ -399,10 +386,6 @@ export const FileTable = React.memo<FileTableProps>(({
         </thead>
         <tbody id="files-list">
           {items.map(item => {
-            const managerDisplay = item.type === 'folder'
-              ? getManagerDisplay(item.manager_names)
-              : null;
-
             return (
               <tr
                 key={`${item.type}-${item.id}`}
@@ -418,11 +401,8 @@ export const FileTable = React.memo<FileTableProps>(({
                   </div>
                 </td>
                 <td>
-                  <span
-                    title={managerDisplay?.fullNames}
-                    style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  >
-                    {managerDisplay?.displayNames || item.code || '-'}
+                  <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.type === 'document' ? (item.code || '-') : '-'}
                   </span>
                 </td>
                 <td>

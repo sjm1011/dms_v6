@@ -1,7 +1,20 @@
-import { Folder, ApiResponse, FolderACL } from '../types';
+import { Folder, ApiResponse, FolderACL, FolderAccessStatus, FolderManagerInfo } from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 export const FoldersAPI = {
+  getFolderAccessStatus: async (
+    fid: string,
+    signal?: AbortSignal
+  ): Promise<ApiResponse<FolderAccessStatus>> => {
+    const params = new URLSearchParams({ access_fid: fid });
+    const response = await apiFetch(`${API_BASE}/folders?${params.toString()}`, {
+      signal,
+      cache: 'no-store',
+      headers: getAuthHeader()
+    });
+    return await handleResponse(response);
+  },
+
   getFolders: async (signal?: AbortSignal): Promise<ApiResponse<Folder[]>> => {
     const response = await apiFetch(`${API_BASE}/folders`, {
       signal,
@@ -17,8 +30,9 @@ export const FoldersAPI = {
           root_id: f.root_id.toString(),
           name: f.name,
           status: f.status,
-          managers: f.managers || [],
-          manager_names: f.manager_names,
+          can_manage: Boolean(f.can_manage),
+          can_assign_co_managers: Boolean(f.can_assign_co_managers),
+          can_edit_primary_manager: Boolean(f.can_edit_primary_manager),
           access_type: f.access_type,
           acl_summary: f.acl_summary,
           child_folder_count: Number(f.child_folder_count || 0),
@@ -78,6 +92,42 @@ export const FoldersAPI = {
   getFolderACL: async (fid: string): Promise<ApiResponse<FolderACL>> => {
     const response = await fetch(`${API_BASE}/folders/acl?fid=${fid}`, {
       headers: getAuthHeader()
+    });
+    return await handleResponse(response);
+  },
+
+  getFolderManagers: async (
+    fid: string,
+    includeEmployeeIds = false,
+    signal?: AbortSignal,
+    assignmentType: 'PRIMARY' | 'CO_MANAGER' = 'CO_MANAGER'
+  ): Promise<ApiResponse<FolderManagerInfo>> => {
+    const params = new URLSearchParams({ fid });
+    if (includeEmployeeIds) {
+      params.set('include_employee_ids', '1');
+      params.set('assignment_type', assignmentType);
+    }
+    const response = await fetch(`${API_BASE}/folders/managers?${params.toString()}`, {
+      signal,
+      cache: 'no-store',
+      headers: getAuthHeader()
+    });
+    return await handleResponse(response);
+  },
+
+  updateFolderManagers: async (
+    fid: string,
+    assignmentType: 'PRIMARY' | 'CO_MANAGER',
+    managers: string[]
+  ): Promise<ApiResponse<null>> => {
+    const response = await fetch(`${API_BASE}/folders/managers`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({
+        folder_id: Number(fid),
+        assignment_type: assignmentType,
+        managers
+      })
     });
     return await handleResponse(response);
   },

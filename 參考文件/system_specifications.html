@@ -291,17 +291,34 @@
 <p>* <strong>職責</strong>：全域系統管理、第一層資料夾建立、權限結構維護與例外處理。</p>
 <p>* <strong>根目錄管理權</strong>：根目錄與第一層資料夾的建立權固定僅屬於系統管理員 (ADMIN)。根目錄文件建立權也固定僅屬於 ADMIN，系統需以 <code>folder_id = 0</code> 表示根目錄文件歸屬。根目錄文件查閱權固定為公開，任何已登入使用者皆可看見符合一般使用者文件生效條件的根目錄文件。</p>
 <p>* <strong>全站強制管理權</strong>：ADMIN 對所有資料夾、ACL、文件與版本生命週期保有最高層級的管理與編輯權限。即使資料夾已指定資料夾管理員，或資料夾被設定為限閱，ADMIN 仍可執行建立子資料夾、修改資料夾屬性、封存資料夾、設定 ACL 與文件管理操作。</p>
-<p>* <strong>資料夾管理員指派規則</strong>：ADMIN 可於任一資料夾節點指派一位或多位直接管理員。若清空某節點的直接管理員清單，表示該節點不新增獨立管理員，其有效管理員改由上層節點繼承而來。</p>
+<p>* <strong>第一層資料夾建立規則</strong>：ADMIN 建立第一層資料夾時，只需輸入資料夾名稱，不在建立畫面指派資料夾管理員。建立完成時允許沒有有效資料夾管理員，該資料夾及其子資料夾的管理權仍由 ADMIN 保留。</p>
+<p>* <strong>第一層資料夾管理員指派規則</strong>：每一個第一層資料夾可不指派資料夾管理員；一旦指派，同一時間僅能有一名有效資料夾管理員。後續異動只能以指派、更換或撤銷方式處理，不得同時保留兩名以上的有效資料夾管理員。</p>
+<p>* <strong>未指派顯示與操作規則</strong>：ADMIN 進入尚未指派資料夾管理員的第一層資料夾或其子資料夾時，畫面上方必須顯示紅色可點擊文字框「管理員：未指派」。ADMIN 點擊該文字框後，開啟資料夾管理員指派 Modal；指派成功後，文字框改為顯示該資料夾管理員姓名與一般管理員顯示樣式。</p>
+<p>* <strong>協同管理員例外處理權</strong>：協同管理員原則上由該第一層資料夾的資料夾管理員指派或撤銷。ADMIN 保有全站例外處理權，可在必要時撤銷協同管理員、指派、更換或撤銷第一層資料夾管理員，但不得破壞「第一層資料夾最多一名有效資料夾管理員」的限制。</p>
+<p>* <strong>管理員姓名顯示規則</strong>：ADMIN 進入任一資料夾後，可於畫面上方查看該資料夾的有效管理員姓名。除該受限情境外，前端不得取得或顯示資料夾直接管理員、繼承管理員或有效管理員的身分資料。</p>
 <p>* <strong>存取限制豁免</strong>：ADMIN 不受一般使用者 ACL 限制，且不得因錯誤 ACL 設定被鎖出系統管理範圍之外。</p>
 <h3>2.2. 資料夾管理員 (Folder Manager，計算型管理身分)</h3>
-<p>* <strong>身分定義</strong>：資料夾管理員不是帳戶角色。只要使用者被寫入某資料夾節點的 <code>dms_folder_managers</code>，即為該節點的直接管理員。</p>
-<p>* <strong>有效管理員計算</strong>：某資料夾節點的有效管理員為「該節點本身與所有祖先節點直接管理員的聯集」。因此，上層資料夾管理員可管理其轄下所有子資料夾與文件。</p>
-<p>* <strong>空管理員清單規則</strong>：空管理員清單只代表該節點不設定直接管理員，不代表取消上層繼承，也不代表改由一般使用者管理。</p>
+<p>* <strong>身分定義</strong>：資料夾管理員不是帳戶角色。每一個第一層資料夾可直接指派零名或一名資料夾管理員；該身分自第一層資料夾向下涵蓋其全部子資料夾與文件。未指派時，只有 ADMIN 具備該資料夾樹的管理權。</p>
+<p>* <strong>資料模型</strong>：<code>dms_folder_managers.dfm_type = 1</code> 表示第一層資料夾管理員，<code>dfm_type = 2</code> 表示協同管理員。後端不得只依資料夾與員工編號判斷其授權能力，必須同時檢查 <code>dfm_type</code>、<code>dfm_dc</code> 與資料夾階層。</p>
+<p>* <strong>協同管理員定義</strong>：第一層資料夾的資料夾管理員實際進入其可管理的任一資料夾後，可於該資料夾指派一位或多位協同管理員。協同管理員自被指派的資料夾節點起，向下管理該節點及其全部子資料夾與文件。</p>
+<p>* <strong>協同管理員顯示與指派</strong>：ADMIN、第一層資料夾管理員或協同管理員進入其可管理的資料夾時，畫面上方必須同時顯示「管理員」與「協同管理員」文字框及其姓名。「協同管理員」文字框顯示目前節點及所有上層節點仍有效的協同管理員聯集，相同人員需去除重複；沒有任何有效協同管理員時顯示「協同管理員：未指派」。ADMIN 或第一層資料夾管理員可點擊文字框開啟協同管理員指派 Modal，但 Modal 只編輯目前節點直接指派的協同管理員，不得作廢或改寫上層節點的繼承設定。協同管理員僅可檢視姓名，不得點擊或透過其他方式指派協同管理員。</p>
+<p>* <strong>有效管理員計算</strong>：某資料夾節點的有效管理員，為其所屬第一層資料夾的唯一資料夾管理員，加上該節點本身與所有祖先節點仍有效的協同管理員聯集。</p>
+<p>* <strong>空協同管理員清單規則</strong>：資料夾未指派協同管理員時，不影響第一層資料夾管理員的管理權，也不取消由祖先節點繼承而來的協同管理權。</p>
 <p>* <strong>權限範圍</strong>：</p>
-<p>- 在其有效管理範圍內，可建立子資料夾、修改資料夾名稱、設定資料夾直接管理員、封存資料夾、建立文件、上傳新版、版更、作廢文件與維護 ACL。</p>
+<p>- 第一層資料夾管理員在其有效範圍內，可建立子資料夾、修改資料夾名稱、指派或撤銷協同管理員、封存資料夾、建立文件、上傳新版、版更、作廢文件與維護 ACL。</p>
+<p>- 協同管理員具備前述資料夾與文件管理權限，但不得指派、撤銷或變更任何資料夾的資料夾管理員或協同管理員，也不得透過 API、前端參數或其他方式將協同管理權再授予其他人。</p>
 <p>- 不得建立第一層資料夾；第一層資料夾建立固定由 ADMIN 執行。</p>
 <p>- 不得於根目錄建立文件；根目錄文件建立固定由 ADMIN 執行。</p>
 <p>* <strong>ACL 授權管理</strong>：資料夾管理員可將其有效管理範圍內的資料夾設定為公開或限閱。限閱時可授權特定部門或特定使用者。</p>
+<p>* <strong>管理員身分資訊最小化</strong>：</p>
+<p>- 資料夾樹、資料夾清單、搜尋結果及文件清單均不得顯示或夾帶資料夾管理員身分資訊。</p>
+<p>- 只有 ADMIN，或對目前資料夾具有效管理權的資料夾管理員，在實際進入該資料夾後，才可於畫面上方看到該資料夾的有效管理員姓名。</p>
+<p>- 一般使用者，以及進入非其管理範圍資料夾的資料夾管理員，均不得取得或看到管理員姓名。</p>
+<p>- 一般資料夾畫面允許送往前端的管理員資料僅限顯示所需的姓名。員工編號、登入帳號、直接或繼承來源、內部關聯鍵及其他可識別資料均不得送往前端。</p>
+<p>- 員工編號僅可在具備指派權限的使用者開啟「指派資料夾管理員」、「指派協同管理員」或「編輯資料夾屬性」畫面時，按目前資料夾及本次權限授予作業需要送往前端。其他畫面不得取得資料夾管理員或協同管理員的員工編號。</p>
+<p>- 管理員姓名及上述受限員工編號只可暫存於目前資料夾或權限設定畫面的記憶體狀態；畫面關閉或切換資料夾時必須清除，不得寫入隱藏欄位、HTML data attribute、瀏覽器儲存空間、前端記錄或可重複利用的全域快取。</p>
+<p>- 除上述受限姓名顯示資料外，前端僅可接收目前登入者對該資料夾的操作能力，例如是否可修改、維護 ACL 或管理文件；不得接收完整管理員身分資料。</p>
+<p>- 管理權限必須由後端依 session 中的目前登入者身分、<code>dms_folder_managers</code> 與資料夾階層即時計算。前端傳入的角色、管理員旗標或員工編號不得作為授權依據。</p>
 <h3>2.3. 一般使用者 (USER)</h3>
 <p>* <strong>職責</strong>：文件查閱與下載。</p>
 <p>* <strong>預設權限</strong>：採資安優先原則。一般使用者預設無法看見任何資料夾與一般資料夾文件。例外：位於根目錄 (<code>folder_id = 0</code>) 的文件固定公開，任何已登入使用者皆可看見符合文件生效條件的根目錄文件。</p>
@@ -403,23 +420,24 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>文件類型暫不納入規格，不依規章、SOP、表單或 ISO 文件類型套用不同規則。</p>
 <h3>4.5. 正式發佈檔案格式規則</h3>
 <p>每一個文件版本必須上傳一個「正式發佈檔案」。</p>
-<p>系統採白名單方式限制可上傳格式，預設允許 PDF、Microsoft Office 常用文件格式、常用圖檔格式與常用 HTML 文件格式。</p>
+<p>系統採白名單方式限制可上傳格式，預設允許 PDF、Microsoft Office 常用文件格式與常用圖檔格式。</p>
 <p>允許之正式發佈檔案格式：</p>
 <p>* PDF：<code>.pdf</code></p>
 <p>* Word：<code>.docx</code>、<code>.doc</code></p>
 <p>* Excel：<code>.xlsx</code>、<code>.xls</code></p>
 <p>* PowerPoint：<code>.pptx</code>、<code>.ppt</code></p>
 <p>* 圖檔：<code>.jpg</code>、<code>.jpeg</code>、<code>.png</code>、<code>.gif</code>、<code>.tif</code>、<code>.tiff</code>、<code>.webp</code></p>
-<p>* HTML：<code>.html</code>、<code>.htm</code>、<code>.mhtml</code></p>
-<p>系統不提供 Word、Excel、PowerPoint、HTML 與 PDF 之間的自動轉檔功能，也不自動變更檔案格式。所有正式發佈檔案皆以資料夾管理員上傳之檔案為準。</p>
+<p>系統不提供 Word、Excel、PowerPoint 與 PDF 之間的自動轉檔功能，也不自動變更檔案格式。所有正式發佈檔案皆以資料夾管理員上傳之檔案為準。</p>
 <p>為降低資安風險，系統不允許上傳含巨集、可執行、腳本、安裝檔、捷徑或壓縮封裝類型檔案。</p>
 <p>禁止之高風險檔案類型包含但不限於：</p>
 <p>* Office 巨集格式：<code>.docm</code>、<code>.dotm</code>、<code>.xlsm</code>、<code>.xltm</code>、<code>.xlam</code>、<code>.pptm</code>、<code>.potm</code>、<code>.ppam</code></p>
 <p>* 可執行與系統檔：<code>.exe</code>、<code>.msi</code>、<code>.dll</code>、<code>.com</code>、<code>.scr</code></p>
-<p>* 腳本與指令檔：<code>.bat</code>、<code>.cmd</code>、<code>.ps1</code>、<code>.vbs</code>、<code>.js</code>、<code>.hta</code></p>
+<p>* HTML、腳本與指令檔：<code>.html</code>、<code>.htm</code>、<code>.mhtml</code>、<code>.bat</code>、<code>.cmd</code>、<code>.ps1</code>、<code>.vbs</code>、<code>.js</code>、<code>.hta</code></p>
 <p>* 捷徑與設定檔：<code>.lnk</code>、<code>.reg</code></p>
 <p>* 壓縮檔與封裝檔：<code>.zip</code>、<code>.rar</code>、<code>.7z</code>、<code>.tar</code>、<code>.gz</code></p>
-<p>檔案上傳時，系統應檢查副檔名與 MIME Type (媒體類型)；若副檔名或 MIME Type (媒體類型) 不符合白名單，應拒絕上傳。</p>
+<p>正式發佈檔案大小上限為 100 MB，以 Base64 解碼後的實際位元組數為準；超過上限時，後端必須拒絕上傳。</p>
+<p>後端必須拒絕 0 byte 的空檔案，以及格式不合法、無法完整解碼或含非 Base64 字元的 Base64 內容。不得僅依前端驗證結果接受檔案。</p>
+<p>檔案上傳時，系統必須交叉驗證副檔名、MIME Type (媒體類型) 與檔案特徵碼。三者必須互相一致，且同時符合允許格式白名單；任一項不符、無法辨識或具有偽裝格式時，後端必須拒絕上傳。</p>
 <h3>4.6. PDF 文件規則</h3>
 <p>若正式發佈檔案為 PDF (可攜式文件格式)：</p>
 <p>* 一般使用者僅能線上預覽 PDF。</p>
@@ -441,10 +459,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 文件編號</p>
 <p>* 「內部文件，禁止外流」</p>
 <h3>4.7. 非 PDF 文件規則</h3>
-<p>若正式發佈檔案為 HTML 文件格式 (<code>.html</code>、<code>.htm</code>、<code>.mhtml</code>)：</p>
-<p>* 系統提供開新視窗預覽。</p>
-<p>* 系統不套用浮水印。</p>
-<p>若正式發佈檔案不是 PDF (可攜式文件格式)，也不是 HTML 文件格式，例如 Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 或圖檔：</p>
+<p>若正式發佈檔案不是 PDF (可攜式文件格式)，例如 Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 或圖檔：</p>
 <p>* 系統不提供線上預覽。</p>
 <p>* 系統不套用浮水印。</p>
 <p>* 一般使用者僅提供下載。</p>
@@ -455,7 +470,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>文件可建立於一般資料夾或根目錄，但權限來源不同：</p>
 <p>* <strong>一般資料夾建立文件</strong>：有效資料夾管理員與 ADMIN 可在其管理範圍內建立文件。</p>
 <p>* <strong>根目錄建立文件</strong>：僅 ADMIN 可在根目錄建立文件。前端僅對 ADMIN 顯示根目錄「新建文件」入口；後端 API 必須再次驗證登入角色，不得只依賴前端防呆。</p>
-<p>* <strong>根目錄文件公開規則</strong>：位於根目錄的文件固定公開查閱。任何已登入使用者進入文件庫根層時，皆可看見符合文件主檔狀態、版本生效期間與 PDF / HTML / 非 PDF 操作規則的根目錄文件。</p>
+<p>* <strong>根目錄文件公開規則</strong>：位於根目錄的文件固定公開查閱。任何已登入使用者進入文件庫根層時，皆可看見符合文件主檔狀態、版本生效期間與 PDF / 非 PDF 操作規則的根目錄文件。</p>
 <p>* <strong>根目錄識別規則</strong>：建立或查詢根目錄文件時，系統以 <code>folder_id = 0</code> 表示根目錄。一般資料夾文件則使用實際 <code>dms_folders.df_fid</code>。</p>
 <p>* <strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息，同時寫入權限不足稽核紀錄。</p>
 <p>管理員建立文件時：</p>
@@ -533,15 +548,15 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 廢止公文。</p>
 <p>* PDF 原始檔。</p>
 <p>* PDF 文件之原始編修檔案。</p>
-<p>一般使用者對 PDF、HTML 與其他非 PDF 文件之操作如下：</p>
+<p>一般使用者對 PDF 與其他非 PDF 文件之操作如下：</p>
 <p>* PDF (可攜式文件格式)：僅可線上預覽，不提供下載按鈕；後端 API (應用程式介面) 亦不得提供一般使用者下載正式 PDF 原檔。</p>
-<p>* HTML 文件格式 (<code>.html</code>、<code>.htm</code>、<code>.mhtml</code>)：提供開新視窗預覽。</p>
-<p>* 其他非 PDF 文件 (不是可攜式文件格式，也不是 HTML 文件格式)：僅提供下載，不提供線上預覽。</p>
+<p>* 其他非 PDF 文件：僅提供下載，不提供線上預覽。</p>
 <p>一般使用者的資料夾瀏覽與搜尋結果均須套用上述規則；不得在搜尋結果中揭露無權限、尚未生效、歷史、已撤回或已廢止文件的標題、版本、檔名或其他可識別資訊。</p>
 <h3>4.14. 資料夾管理員權限</h3>
 <p>ADMIN 除具備所有資料夾管理員權限外，另可於根目錄建立文件。根目錄文件不屬於任何資料夾管理員繼承範圍，非 ADMIN 不得建立、版更、廢止或維護根目錄文件；非 ADMIN 僅可依一般使用者權限查閱符合生效條件的根目錄文件。</p>
 <p>資料夾管理員可：</p>
 <p>* 新增子資料夾。</p>
+<p>* 在其可管理的資料夾指派或撤銷多位協同管理員。</p>
 <p>* 建立文件。</p>
 <p>* 上傳新版。</p>
 <p>* 上傳預約生效版本。</p>
@@ -555,6 +570,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 查看廢止原因。</p>
 <p>* 下載廢止公文。</p>
 <p>* 手動廢止文件。</p>
+<p>協同管理員可執行上述資料夾與文件管理操作，但不得指派、撤銷或變更資料夾管理員及協同管理員。後端必須依目前登入者的管理身分類型執行授權檢查，不得只判斷其是否為有效管理員。</p>
 <h3>4.15. 修訂對照表</h3>
 <p>系統應支援修訂對照表功能。修訂對照表亦可稱為「修訂前後對照表」。</p>
 <p>依文件簽核流程原則，文件更版時應於簽核資料中附上修訂前後對照表。DMS 不負責產生修訂前後對照表，僅提供資料夾管理員於上傳新版時選擇是否一併保存修訂前後對照表。</p>
@@ -582,7 +598,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 驗證事件：<code>AUTH_LOGIN_SUCCESS</code> (登入成功)、<code>AUTH_LOGIN_FAILED</code> (登入失敗)、<code>AUTH_LOGOUT</code> (登出)。</p>
 <p>* 存取事件：<code>FOLDER_VIEWED</code> (資料夾瀏覽)、<code>DOCUMENT_PREVIEWED</code> (文件預覽)、<code>DOCUMENT_DOWNLOADED</code> (文件下載)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕)。</p>
 <p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
-<p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
+<p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
 <p>* 文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (建立文件版本)、<code>DOCUMENT_VERSION_SCHEDULED</code> (預約生效版本)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)、<code>DOCUMENT_PREVIOUS_VERSION_RESTORED</code> (回復前一版)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (手動廢止文件)、<code>DOCUMENT_AUTO_OBSOLETED_BY_FOLDER_ARCHIVE</code> (因資料夾封存自動廢止文件)。</p>
 <p>* 失敗與拒絕事件：<code>PERMISSION_DENIED</code> (權限不足)、<code>OPERATION_FAILED</code> (操作失敗)。</p>
 <h3>5.3. 稽核資料欄位</h3>
@@ -617,14 +633,14 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <h3>5.4. 查閱、預覽與下載紀錄</h3>
 <p>一般使用者與資料夾管理員的查閱、預覽、下載行為均需記錄。</p>
 <p>* PDF (可攜式文件格式) 預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (文件預覽)，並於 <code>metadata</code> (額外資料) 中保存文件編號、版本、預覽時間與浮水印相關資訊。</p>
-<p>* HTML 文件格式 (<code>.html</code>、<code>.htm</code>、<code>.mhtml</code>) 開新視窗預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (文件預覽)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與預覽結果。</p>
 <p>* 非 PDF 文件下載應記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。</p>
 <p>* 資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並於 <code>metadata</code> (額外資料) 中標示 <code>file_purpose</code> (檔案用途)，例如 <code>PUBLISHED_FILE</code> (正式發佈檔案)、<code>SOURCE_FILE</code> (原始編修檔)、<code>OBSOLETE_APPROVAL_FILE</code> (廢止公文)。</p>
 <p>* 一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕) 或 <code>PERMISSION_DENIED</code> (權限不足)。</p>
 <h3>5.5. 權限異動與資料夾異動紀錄</h3>
 <p>資料夾屬性、資料夾管理員與 ACL (存取控制清單) 異動需保留變更前後資料。</p>
 <p>* 建立、修改、作廢或封存資料夾時，應記錄資料夾名稱、父層資料夾、狀態、異動人員與異動結果。</p>
-<p>* 修改管理資料夾節點的資料夾管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存管理員清單差異。</p>
+<p>* 指派、更換或撤銷第一層資料夾的資料夾管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存異動前後的資料夾管理員；異動完成後允許零名或一名有效資料夾管理員，但不得超過一名。</p>
+<p>* 指派或撤銷協同管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存協同管理員清單差異、授權資料夾節點與操作者的管理身分類型。協同管理員嘗試再授權他人時，後端必須拒絕並寫入 <code>PERMISSION_DENIED</code> (權限不足)。</p>
 <p>* 修改管理資料夾節點 ACL (存取控制清單) 時，應保存授權模式，例如公開、特定群組或特定使用者，以及群組與使用者清單差異。</p>
 <p>* 若因權限不足導致資料夾或 ACL (存取控制清單) 修改被拒絕，仍需記錄拒絕事件。</p>
 <h3>5.6. 文件與版本生命週期紀錄</h3>
@@ -738,9 +754,19 @@ DMS_NEXT_PORT=3000</code></pre>
   </tbody>
 </table>
 <p><code>DELETE /api/folders</code> 透過 JSON body 的 <code>action</code> 欄位區分資料夾生命週期操作：<code>action = "archive"</code> 代表封存資料夾；<code>action = "delete"</code> 代表刪除（作廢）空資料夾。若未提供 <code>action</code>，後端為相容既有呼叫，視為封存資料夾。</p>
-<h3>6.6. 檔案下載、PDF 預覽與 HTML 預覽處理規格</h3>
-<p>檔案下載、PDF 預覽與 HTML 預覽由 Next.js Route Handler 直接讀取磁碟實體檔案並處理，向瀏覽器輸出 binary stream 與必要 response header。</p>
-<p>* <strong>非 PDF、非 HTML 文件下載</strong>：</p>
+<p>資料夾相關 API 必須遵守管理員身分資料最小化規則：</p>
+<p>* <code>GET /api/folders</code>、<code>GET /api/folders/acl</code>、文件清單與搜尋 API 的一般回應，不得包含資料夾管理員姓名、員工編號、登入帳號、直接管理員清單、繼承管理員清單或有效管理員清單。</p>
+<p>* 使用者實際進入單一資料夾後，前端才可另行要求該資料夾的管理員顯示資料。後端必須先依 session 驗證目前登入者為 ADMIN，或為該資料夾的有效管理員，驗證成功後才回傳有效管理員姓名。</p>
+<p>* 一般資料夾畫面的管理員顯示資料回應只可包含姓名陣列，不得包含員工編號、登入帳號、直接或繼承來源、內部關聯鍵或其他個人資料，並須設定為不可由瀏覽器或共用代理伺服器持久快取。</p>
+<p>* 只有 ADMIN 點擊「管理員：未指派」或執行第一層資料夾管理員更換時，或該第一層資料夾的資料夾管理員開啟「指派協同管理員」畫面時，後端才可回傳目前權限授予作業所需的員工編號。協同管理員不得取得指派畫面所需資料。回傳範圍不得擴大至其他資料夾、其他使用者清單或與本次授權無關的個人資料。</p>
+<p>* 員工編號查詢回應必須設定 <code>Cache-Control: no-store</code>。前端關閉權限設定畫面或切換資料夾時，必須立即清除相關員工編號與查詢結果。</p>
+<p>* 一般使用者，或不具目前資料夾管理權的資料夾管理員，直接呼叫管理員顯示資料或權限設定員工編號 API 時，後端必須拒絕且不得回傳部分姓名、員工編號、筆數或其他可推導管理員身分的資訊。</p>
+<p>* API 不得以縮寫欄位、巢狀物件、除錯欄位、顯示文字或其他替代欄位，向非上述授權畫面夾帶管理員員工編號或其他禁止送往前端的資料。</p>
+<p>* 除受限的管理員姓名顯示與權限設定畫面所需的員工編號外，前端只接收完成畫面操作所需的資料與目前登入者的操作能力旗標；管理員身分比對及權限判斷全數留在伺服器端。</p>
+<p>* 第一層資料夾管理員指派、更換或撤銷，以及協同管理員指派或撤銷請求，只能提交該次操作必要的目標員工編號。後端必須同時驗證操作者身分、目標資料夾層級及授權類型；協同管理員提出任何管理員授權異動請求時一律拒絕。資料異動完成後，回應僅包含成功狀態、錯誤代碼及不含個人資料的訊息；前端需另依本節受限查詢規則重新取得目前資料夾的權限設定資料。</p>
+<h3>6.6. 檔案下載與 PDF 預覽處理規格</h3>
+<p>檔案下載與 PDF 預覽由 Next.js Route Handler 直接讀取磁碟實體檔案並處理，向瀏覽器輸出 binary stream 與必要 response header。</p>
+<p>* <strong>非 PDF 文件下載</strong>：</p>
 <p>* 瀏覽器呼叫 <code>GET /api/documents/download?version_id=...</code>。</p>
 <p>* Route Handler 呼叫 <code>documentService.downloadDocument</code> 取得磁碟實體檔案與元資料。</p>
 <p>* Next.js 必須保留並設定 <code>content-type</code>、<code>content-disposition</code>（含原始檔名）、<code>content-length</code>、<code>cache-control</code> 等檔案回應 header。</p>
@@ -749,15 +775,12 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* Route Handler 透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得 PDF 原始檔，並呼叫 <code>pdfWatermark.ts</code>，使用 <code>pdf-lib</code> 與 <code>@pdf-lib/fontkit</code> 在伺服器端逐頁套用浮水印。</p>
 <p>* 加入浮水印後，Route Handler 必須重新設定正確的 <code>content-length</code> 與 <code>content-type: application/pdf</code>，再將處理後內容回傳瀏覽器。</p>
 <p>* PDF 預覽仍須遵守第 4 節規則：一般使用者僅可線上預覽，不提供 PDF 正式原檔下載。</p>
-<p>* <strong>HTML 文件格式預覽</strong>：</p>
-<p>* 瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</p>
-<p>* Route Handler 直接以 <code>text/html</code> 回應檔案內容。</p>
-<p>* 瀏覽器端以開新視窗方式承載 <code>.html</code>、<code>.htm</code>、<code>.mhtml</code> 預覽內容。</p>
 <p>* <strong>禁止事項</strong>：</p>
 <p>* 不得將敏感之資料庫密碼或密鑰洩漏至瀏覽器端。</p>
 <p>* 不得在客戶端暴露檔案伺服器的實體儲存絕對路徑（如磁碟目錄路徑）。</p>
 <h3>6.7. 使用者即時檢索 (Lazy Lookup，即時檢索) 規格</h3>
 <p>為避免使用者人數過大時造成網路頻寬與資料庫效能耗損，本系統全面禁止一次撈出所有使用者資料的行為。</p>
+<p>本節即時檢索僅適用於 ACL 的「授權特定同仁」，以及「指派資料夾管理員」、「指派協同管理員」與「編輯資料夾屬性」畫面的單一員工精準檢索，不得用於載入完整管理員或員工清單。資料夾管理員、協同管理員姓名與既有授權員工編號必須由第 6.5 節所定義的受限單一資料夾查詢流程取得；其他畫面不得使用 <code>/api/employee</code> 或其他端點反查管理員的姓名、員工編號或登入帳號。</p>
 <p>* <strong>API 限制</strong>：後端 <code>/employee</code> API 僅限單一使用者 UID 精準檢索。</p>
 <p>* <strong>檢索端點</strong>：<code>GET /api/employee?uid=&lt;使用者代碼&gt;</code>。</p>
 <p>* <strong>空參數處理</strong>：若未傳入 <code>uid</code> 參數，系統不得執行完整使用者清單查詢。</p>

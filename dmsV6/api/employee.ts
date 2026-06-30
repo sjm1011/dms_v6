@@ -6,9 +6,22 @@ export interface EmployeeItem {
   name: string;
 }
 
+export type EmployeeLookupPurpose = 'folder_manager' | 'folder_acl';
+
 export const EmployeeAPI = {
-  getEmployeeByUid: async (uid: string): Promise<ApiResponse<EmployeeItem[]>> => {
-    const response = await fetch(`${API_BASE}/employee?uid=${encodeURIComponent(uid)}`, {
+  getEmployeeByUid: async (
+    uid: string,
+    purpose: EmployeeLookupPurpose,
+    folderId?: string
+  ): Promise<ApiResponse<EmployeeItem[]>> => {
+    const params = new URLSearchParams({
+      uid,
+      purpose
+    });
+    if (folderId) {
+      params.set('fid', folderId);
+    }
+    const response = await fetch(`${API_BASE}/employee?${params.toString()}`, {
       headers: getAuthHeader()
     });
     return await handleResponse(response);

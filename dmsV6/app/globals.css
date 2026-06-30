@@ -354,6 +354,23 @@ select {
     var(--bg-primary);
 }
 
+.manager-assignment-badge {
+  font-family: inherit;
+  line-height: normal;
+  appearance: none;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.manager-assignment-badge:not(:disabled):hover,
+.manager-assignment-badge:not(:disabled):focus-visible {
+  border-color: currentColor;
+  outline: none;
+}
+
+.manager-assignment-badge:disabled {
+  opacity: 1;
+}
+
 .login-card {
   width: 100%;
   max-width: 420px;
@@ -894,7 +911,7 @@ select {
 .action-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -1179,6 +1196,33 @@ tr.table-row:hover .action-cell-buttons {
 
 .modal-content.modal-content-wide {
   max-width: min(640px, calc(100vw - 32px));
+}
+
+.modal-content.modal-content-history {
+  max-width: min(900px, calc(100vw - 32px));
+}
+
+.version-history-table-wrap {
+  max-height: 360px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.version-history-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.version-history-table th,
+.version-history-table td {
+  padding: 12px 10px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modal.show .modal-content {

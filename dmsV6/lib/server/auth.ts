@@ -46,7 +46,7 @@ export const requireSession = (request: NextRequest) => {
 };
 
 export const loginUser = async (uid: string, pwd: string) => {
-  const normalizedUid = String(uid || '').trim();
+  const normalizedUid = String(uid || '').trim().toUpperCase();
   const password = String(pwd || '');
 
   if (!normalizedUid || !password) {
@@ -63,12 +63,12 @@ export const loginUser = async (uid: string, pwd: string) => {
             EXISTS (
               SELECT 1
                 FROM dms_admins a
-               WHERE UPPER(a.emp_id) = UPPER(e.emp_id)
+               WHERE a.emp_id = e.emp_id
                  AND a.da_dc = 'N'
             ) AS is_admin
        FROM employee e
-       LEFT JOIN department d ON d.dept_id::text = e.dept_id::text
-      WHERE UPPER(e.emp_id) = UPPER($1)
+       LEFT JOIN department d ON d.dept_id = e.dept_id
+      WHERE e.emp_id = $1
         AND e.emp_incumbent = 0
       LIMIT 1`,
     [normalizedUid]

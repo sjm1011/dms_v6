@@ -7,7 +7,16 @@ interface UploadFilePayload {
   base64: string;
 }
 
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
 const fileToPayload = async (file: File): Promise<UploadFilePayload> => {
+  if (file.size === 0) {
+    throw new Error('不允許上傳空檔案。');
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error('正式發佈檔案大小不得超過 100 MB。');
+  }
+
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   let binary = '';

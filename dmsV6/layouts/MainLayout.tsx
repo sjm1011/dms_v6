@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { User, Folder, DMSItem, Document } from '../types';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { User, Folder, DMSItem, Document, FolderManagerAssignmentType } from '../types';
 import { Sidebar } from '../components/Sidebar';
 import { FileTable } from '../components/FileTable';
 import { useDocuments } from '../hooks/useDocuments';
 import { DocumentsAPI } from '../api/documents';
+import { FoldersAPI } from '../api/folders';
 import {
   SearchIcon,
   CreateNewFolderIcon,
@@ -14,7 +15,8 @@ import {
 import { NewFolderModal, RenameModal, ArchiveFolderModal, DeleteFolderModal } from '../components/Modals/FolderModals';
 import { ErrorDetailModal, TestResultModal } from '../components/Modals/FeedbackModals';
 import { FolderAclModal } from '../components/Modals/FolderAclModal';
-import { NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal } from '../components/Modals/DocumentModals';
+import { FolderManagerModal } from '../components/Modals/FolderManagerModal';
+import { ACCEPTED_DOCUMENT_FILE_TYPES, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal } from '../components/Modals/DocumentModals';
 
 interface MainLayoutProps {
   user: User;
@@ -72,6 +74,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [isEditManagersOpen, setIsEditManagersOpen] = useState(false);
   const [renameId, setRenameId] = useState('');
   const [renameValue, setRenameValue] = useState('');
+  const [editManagerIds, setEditManagerIds] = useState<string[]>([]);
+  const [managerAssignmentType, setManagerAssignmentType] = useState<FolderManagerAssignmentType>('CO_MANAGER');
+  const [currentManagerNames, setCurrentManagerNames] = useState<string[]>([]);
+  const [currentCoManagerNames, setCurrentCoManagerNames] = useState<string[]>([]);
+  const [loadedManagerFolderId, setLoadedManagerFolderId] = useState<string | null>(null);
 
   const [isArchiveFolderOpen, setIsArchiveFolderOpen] = useState(false);
   const [isDeleteFolderOpen, setIsDeleteFolderOpen] = useState(false);
@@ -87,6 +94,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [isCancelVersionOpen, setIsCancelVersionOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState<Document | null>(null);
+  const [newDocFile, setNewDocFile] = useState<File | null>(null);
+  const [uploadVerFile, setUploadVerFile] = useState<File | null>(null);
+  const newDocFileInputRef = useRef<HTMLInputElement>(null);
+  const uploadVerFileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user.role === 'ADMIN';
 
@@ -103,41 +114,88 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments);
   const isContentLoading = !hasLoadedFolders || isLoadingFolders || documentsHook.isLoadingDocuments;
 
-  // 判定當前使用者是否為當前資料夾的區段管理員 (支援遞迴繼承上級管理員與根目錄系統管理員判定)
+  // 管理權限由後端計算，前端只使用能力旗標，不接收管理員員工編號。
   const isFolderManager = useCallback((targetFolderId: string | null | undefined) => {
     if (user.role === 'ADMIN') return true;
     if (!targetFolderId) return false;
-
-    // 遞迴向上追溯當前資料夾及其所有祖先的 managers 聯集
-    let currentId: string | null | undefined = targetFolderId;
-    let isManager = false;
-
-    while (currentId) {
-      const folder = foldersById.get(currentId.toString());
-      if (!folder) break;
-
-      if (folder.managers?.includes(user.id)) {
-        isManager = true;
-        break;
-      }
-
-      if (folder.parent_id) {
-        currentId = folder.parent_id.toString();
-      } else {
-        break;
-      }
-    }
-
-    if (isManager) return true;
-
-    return false;
-  }, [user.id, user.role, foldersById]);
+    return Boolean(foldersById.get(targetFolderId.toString())?.can_manage);
+  }, [user.role, foldersById]);
 
   const isCurrentFolderManager = useCallback(() => isFolderManager(currentFolderId), [isFolderManager, currentFolderId]);
+
+  useEffect(() => {
+    setCurrentManagerNames([]);
+    setCurrentCoManagerNames([]);
+    setLoadedManagerFolderId(null);
+
+    if (!currentFolderId || !isFolderManager(currentFolderId)) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const loadManagerNames = async () => {
+      try {
+        const res = await FoldersAPI.getFolderManagers(currentFolderId, false, controller.signal);
+        if (res.success) {
+          setCurrentManagerNames(res.data.names || []);
+          setCurrentCoManagerNames(res.data.co_manager_names || []);
+          setLoadedManagerFolderId(currentFolderId);
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setCurrentManagerNames([]);
+          setCurrentCoManagerNames([]);
+          setLoadedManagerFolderId(currentFolderId);
+        }
+      }
+    };
+
+    void loadManagerNames();
+    return () => {
+      controller.abort();
+      setCurrentManagerNames([]);
+      setCurrentCoManagerNames([]);
+      setLoadedManagerFolderId(null);
+    };
+  }, [currentFolderId, isFolderManager]);
+
+  const loadManagerEditorIds = async (folderId: string, assignmentType: FolderManagerAssignmentType) => {
+    try {
+      const res = await FoldersAPI.getFolderManagers(folderId, true, undefined, assignmentType);
+      if (!res.success) {
+        showToast(res.error, 'error');
+        return null;
+      }
+
+      if (folderId === currentFolderId) {
+        setCurrentManagerNames(res.data.names || []);
+        setCurrentCoManagerNames(res.data.co_manager_names || []);
+        setLoadedManagerFolderId(folderId);
+      }
+      return res.data.employee_ids || [];
+    } catch (error) {
+      showToast('載入資料夾管理員設定失敗：' + (error instanceof Error ? error.message : String(error)), 'error');
+      return null;
+    }
+  };
+
+  const refreshCurrentManagerNames = async (folderId: string) => {
+    if (folderId !== currentFolderId || !isFolderManager(folderId)) {
+      return;
+    }
+
+    const res = await FoldersAPI.getFolderManagers(folderId);
+    if (res.success) {
+      setCurrentManagerNames(res.data.names || []);
+      setCurrentCoManagerNames(res.data.co_manager_names || []);
+      setLoadedManagerFolderId(folderId);
+    }
+  };
 
   // 根目錄下只有系統管理員可以新增第一層資料夾；子目錄下只有區段管理員可以新增子目錄
   const canCreateFolder = currentFolderIsActive && (currentFolderId === '' ? isAdmin : isCurrentFolderManager());
   const canCreateDocument = currentFolderIsActive && (currentFolderId === '' ? isAdmin : isCurrentFolderManager());
+  const hasLoadedCurrentManagerNames = loadedManagerFolderId === currentFolderId;
 
   const documentsById = useMemo(() => {
     const map = new Map<string, Document>();
@@ -192,14 +250,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         creator: '-',
         time: '-',
         status: 'Active',
-        manager_names: f.manager_names,
         access_type: f.access_type,
         acl_summary: f.acl_summary,
         child_folder_count: childFolderCount,
         document_count: documentCount,
         is_empty_folder: childFolderCount === 0 && documentCount === 0,
-        can_manage: isFolderManager(f.id)
-          && f.status === 1
+        can_manage: Boolean(f.can_manage) && f.status === 1
       });
     });
 
@@ -224,7 +280,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         file_name: currentVersion?.file_name,
         can_manage: !!doc.can_manage,
         is_pdf: !!doc.is_pdf || currentVersion?.ext?.toLowerCase() === '.pdf',
-        can_preview: !!doc.can_preview || ['.pdf', '.html', '.htm', '.mhtml'].includes(currentVersion?.ext?.toLowerCase() || '')
+        can_preview: !!doc.can_preview || currentVersion?.ext?.replace(/^\./, '').toLowerCase() === 'pdf'
       });
     });
 
@@ -235,7 +291,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     }
 
     return list;
-  }, [folders, currentFolderId, searchQuery, isFolderManager, documentsHook.documents]);
+  }, [folders, currentFolderId, searchQuery, documentsHook.documents]);
 
   const breadcrumbs = getBreadcrumbs();
 
@@ -269,6 +325,32 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   return (
     <div id="app-container">
+      <input
+        ref={newDocFileInputRef}
+        type="file"
+        accept={ACCEPTED_DOCUMENT_FILE_TYPES}
+        style={{ display: 'none' }}
+        onChange={(event) => {
+          const selectedFile = event.target.files?.[0] || null;
+          event.target.value = '';
+          if (!selectedFile) return;
+          setNewDocFile(selectedFile);
+          setIsNewDocOpen(true);
+        }}
+      />
+      <input
+        ref={uploadVerFileInputRef}
+        type="file"
+        accept={ACCEPTED_DOCUMENT_FILE_TYPES}
+        style={{ display: 'none' }}
+        onChange={(event) => {
+          const selectedFile = event.target.files?.[0] || null;
+          event.target.value = '';
+          if (!selectedFile) return;
+          setUploadVerFile(selectedFile);
+          setIsUploadVerOpen(true);
+        }}
+      />
       {/* 側邊欄 */}
       <Sidebar
         user={user}
@@ -324,12 +406,56 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           <div className="action-left">
             <h2>{getCurrentTitle()}</h2>
             <span className="badge">{combinedItems.length} 個項目</span>
-            <span className="badge" style={{ marginLeft: '8px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}>
-              管理員：{currentFolderId === '' ? '系統管理員' : (folders.find(f => f.id === currentFolderId)?.manager_names || '系統管理員')}
-            </span>
-            {currentFolderId !== '' && isCurrentFolderManager() && (
-              <button className="btn btn-secondary" onClick={() => setIsEditManagersOpen(true)}>
-                編輯管理員
+            {currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
+              <button
+                type="button"
+                className="badge manager-assignment-badge"
+                disabled={!currentFolder?.can_edit_primary_manager}
+                style={{
+                  marginLeft: 0,
+                  backgroundColor: currentManagerNames.length > 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.12)',
+                  borderColor: currentManagerNames.length > 0 ? 'var(--glass-border)' : '#ef4444',
+                  color: currentManagerNames.length > 0 ? 'var(--text-secondary)' : '#ef4444',
+                  cursor: currentFolder?.can_edit_primary_manager ? 'pointer' : 'default'
+                }}
+                onClick={() => {
+                  if (!currentFolder?.can_edit_primary_manager) return;
+                  void (async () => {
+                    const managerIds = await loadManagerEditorIds(currentFolder.id, 'PRIMARY');
+                    if (managerIds === null) return;
+                    setManagerAssignmentType('PRIMARY');
+                    setEditManagerIds(managerIds);
+                    setIsEditManagersOpen(true);
+                  })();
+                }}
+              >
+                管理員：{currentManagerNames.length > 0 ? currentManagerNames.join('、') : '未指派'}
+              </button>
+            )}
+            {currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
+              <button
+                type="button"
+                className="badge manager-assignment-badge"
+                disabled={!currentFolder?.can_assign_co_managers}
+                style={{
+                  marginLeft: 0,
+                  backgroundColor: currentCoManagerNames.length > 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(239, 68, 68, 0.12)',
+                  borderColor: currentCoManagerNames.length > 0 ? 'var(--glass-border)' : '#ef4444',
+                  color: currentCoManagerNames.length > 0 ? 'var(--text-secondary)' : '#ef4444',
+                  cursor: currentFolder?.can_assign_co_managers ? 'pointer' : 'default'
+                }}
+                onClick={() => {
+                  if (!currentFolder?.can_assign_co_managers) return;
+                  void (async () => {
+                    const managerIds = await loadManagerEditorIds(currentFolder.id, 'CO_MANAGER');
+                    if (managerIds === null) return;
+                    setManagerAssignmentType('CO_MANAGER');
+                    setEditManagerIds(managerIds);
+                    setIsEditManagersOpen(true);
+                  })();
+                }}
+              >
+                協同管理員：{currentCoManagerNames.length > 0 ? currentCoManagerNames.join('、') : '未指派'}
               </button>
             )}
           </div>
@@ -341,7 +467,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               </button>
             )}
             {canCreateDocument && (
-              <button className="btn btn-primary" onClick={() => setIsNewDocOpen(true)}>
+              <button className="btn btn-primary" onClick={() => newDocFileInputRef.current?.click()}>
                 <CloudUploadIcon size={18} />
                 <span>新建文件</span>
               </button>
@@ -393,7 +519,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 onDownloadDocument={handleDownloadDocument}
                 onUploadVersion={(item) => {
                   const doc = openDocument(item);
-                  if (doc) setIsUploadVerOpen(true);
+                  if (doc) uploadVerFileInputRef.current?.click();
                 }}
                 onCancelVersion={(item) => {
                   const doc = openDocument(item);
@@ -426,18 +552,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         onCreate={handleCreateFolder}
         isRoot={!currentFolderId}
         userRole={user.role}
+        lookupFolderId={currentFolderId || undefined}
       />
 
       <RenameModal
         isOpen={isRenameOpen}
-        onClose={() => setIsRenameOpen(false)}
+        onClose={() => {
+          setIsRenameOpen(false);
+        }}
         initialValue={renameValue}
         isRoot={folders.find(f => f.id === renameId)?.parent_id === null}
-        initialManagers={folders.find(f => f.id === renameId)?.managers}
+        initialManagers={[]}
         userRole={user.role}
-        onRename={async (newName, managers) => {
-          return await handleRenameFolder(renameId, newName, managers);
-        }}
+        lookupFolderId={renameId}
+        onRename={async (newName) => await handleRenameFolder(renameId, newName)}
       />
 
       <ArchiveFolderModal
@@ -466,7 +594,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
       <NewDocModal
         isOpen={isNewDocOpen}
-        onClose={() => setIsNewDocOpen(false)}
+        initialFile={newDocFile}
+        onClose={() => {
+          setIsNewDocOpen(false);
+          setNewDocFile(null);
+        }}
         onCreate={async (...args) => {
           const success = await documentsHook.handleCreateDocument(...args);
           if (success) {
@@ -477,23 +609,48 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       />
 
       {currentFolder && (
-        <RenameModal
+        <FolderManagerModal
           isOpen={isEditManagersOpen}
-          onClose={() => setIsEditManagersOpen(false)}
-          initialValue={currentFolder.name}
-          isRoot={currentFolder.parent_id === null}
-          initialManagers={currentFolder.managers}
-          userRole={user.role}
-          managersOnly
-          onRename={async (folderName, managers) => {
-            return await handleRenameFolder(currentFolder.id, folderName, managers);
+          onClose={() => {
+            setIsEditManagersOpen(false);
+            setEditManagerIds([]);
+          }}
+          initialManagers={editManagerIds}
+          folderId={currentFolder.id}
+          assignmentType={managerAssignmentType}
+          onSave={async (managers) => {
+            try {
+              const response = await FoldersAPI.updateFolderManagers(
+                currentFolder.id,
+                managerAssignmentType,
+                managers
+              );
+              if (!response.success) {
+                showToast(response.error, 'error');
+                return false;
+              }
+              showToast(
+                managerAssignmentType === 'PRIMARY' ? '資料夾管理員已更新。' : '協同管理員已更新。',
+                'success'
+              );
+              await fetchFolders();
+              await refreshCurrentManagerNames(currentFolder.id);
+              return true;
+            } catch (error) {
+              showToast('更新管理員失敗：' + (error instanceof Error ? error.message : String(error)), 'error');
+              return false;
+            }
           }}
         />
       )}
 
       <UploadVerModal
         isOpen={isUploadVerOpen}
-        onClose={() => setIsUploadVerOpen(false)}
+        initialFile={uploadVerFile}
+        onClose={() => {
+          setIsUploadVerOpen(false);
+          setUploadVerFile(null);
+        }}
         targetDoc={activeDoc}
         onUpload={documentsHook.handleUploadVersion}
       />
@@ -552,13 +709,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         historyDoc={activeDoc}
-        handleDownload={async (verId, fileName) => {
-          try {
-            await DocumentsAPI.downloadVersion(verId, fileName || activeDoc?.title || 'document');
-          } catch (err: unknown) {
-            showToast('下載版本檔案失敗：' + (err instanceof Error ? err.message : String(err)), 'error');
-          }
-        }}
       />
 
       {/* Feedback Modals */}

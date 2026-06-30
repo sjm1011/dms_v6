@@ -5,6 +5,7 @@ import {
   archiveFolder,
   createFolder,
   deleteEmptyFolder,
+  getFolderAccessStatus,
   listFolders,
   updateFolder
 } from '../../../lib/server/folderService';
@@ -14,6 +15,10 @@ export const dynamic = 'force-dynamic';
 export const GET = async (request: NextRequest) => {
   try {
     const session = requireSession(request);
+    const folderId = request.nextUrl.searchParams.get('access_fid');
+    if (folderId !== null) {
+      return ok(await getFolderAccessStatus(session.user, Number(folderId)));
+    }
     return ok(await listFolders(session.user));
   } catch (error) {
     return authOrServerError(error);
@@ -34,7 +39,7 @@ export const PUT = async (request: NextRequest) => {
   try {
     const session = requireSession(request);
     const body = await parseJsonBody<{ id: number; name: string; managers?: string[] }>(request);
-    await updateFolder(session.user, Number(body.id), body.name, body.managers);
+    await updateFolder(session.user, Number(body.id), body.name);
     return ok(null);
   } catch (error) {
     return error instanceof Error ? fail(error.message, 400) : serverError(error);

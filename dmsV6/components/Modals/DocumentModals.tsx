@@ -3,7 +3,6 @@ import { Document } from '../../types';
 import { Modal } from '../Modal';
 import {
   ErrorOutlineIcon,
-  CloudDownloadIcon,
   PdfIcon,
   ChevronRightIcon
 } from '../Icons';
@@ -25,7 +24,7 @@ const CHANGE_NOTE_OPTIONS = [
   '替代舊版文件'
 ];
 
-const ACCEPTED_FILE_TYPES = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.jpg,.jpeg,.png,.gif,.tif,.tiff,.webp,.html,.htm,.mhtml';
+export const ACCEPTED_DOCUMENT_FILE_TYPES = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.jpg,.jpeg,.png,.gif,.tif,.tiff,.webp';
 
 function getTodayString() {
   const d = new Date();
@@ -139,6 +138,7 @@ function ChangeNoteInput({ value, selectId, onChange, inputRef }: ChangeNoteInpu
 interface NewDocModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialFile: File | null;
   onCreate: (
     code: string,
     title: string,
@@ -151,7 +151,7 @@ interface NewDocModalProps {
   ) => Promise<boolean>;
 }
 
-export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, onCreate }) => {
+export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initialFile, onCreate }) => {
   const [code, setCode] = useState('');
   const [title, setTitle] = useState('');
   const [version, setVersion] = useState('');
@@ -178,10 +178,10 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, onCre
       setChangeNote('初版發行');
       setRevisionDate(getTodayString());
       setEffAt(getTodayString());
-      setFile(null);
+      setFile(initialFile);
       setSourceFile(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialFile]);
 
   const handleConfirm = async () => {
     if (!code.trim()) {
@@ -257,7 +257,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, onCre
           <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => fileInputRef.current?.click()}>
             {file ? file.name : '選擇檔案'}
           </button>
-          <input ref={fileInputRef} type="file" accept={ACCEPTED_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
+          <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
             const selected = e.target.files?.[0] || null;
             setFile(selected);
             if (!isPdfFile(selected)) setSourceFile(null);
@@ -291,7 +291,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, onCre
             <button type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => sourceFileInputRef.current?.click()}>
               {sourceFile ? sourceFile.name : '選擇原始檔案'}
             </button>
-            <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
+            <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
           </div>
         )}
       </div>
@@ -303,6 +303,7 @@ interface UploadVerModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetDoc: Document | null;
+  initialFile: File | null;
   initialVersion?: string;
   onUpload: (
     docId: string,
@@ -315,7 +316,7 @@ interface UploadVerModalProps {
   ) => Promise<boolean>;
 }
 
-export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose, targetDoc, initialVersion, onUpload }) => {
+export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose, targetDoc, initialFile, initialVersion, onUpload }) => {
   const [version, setVersion] = useState('');
   const [changeNote, setChangeNote] = useState('內容修訂');
   const [revisionDate, setRevisionDate] = useState(getTodayString());
@@ -336,10 +337,10 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
       setChangeNote('內容修訂');
       setRevisionDate(getTodayString());
       setEffAt(getTodayString());
-      setFile(null);
+      setFile(initialFile);
       setSourceFile(null);
     }
-  }, [isOpen, initialVersion]);
+  }, [isOpen, initialFile, initialVersion]);
 
   const handleConfirm = async () => {
     if (!targetDoc) return;
@@ -397,7 +398,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
           <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => fileInputRef.current?.click()}>
             {file ? file.name : '選擇新版檔案'}
           </button>
-          <input ref={fileInputRef} type="file" accept={ACCEPTED_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
+          <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
             const selected = e.target.files?.[0] || null;
             setFile(selected);
             if (!isPdfFile(selected)) setSourceFile(null);
@@ -431,7 +432,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
             <button type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => sourceFileInputRef.current?.click()}>
               {sourceFile ? sourceFile.name : '選擇原始檔案'}
             </button>
-            <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
+            <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
           </div>
         )}
       </div>
@@ -496,7 +497,7 @@ export const ObsoleteDocModal: React.FC<ObsoleteDocModalProps> = ({ isOpen, onCl
           <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => fileInputRef.current?.click()}>
             {file ? file.name : '選擇檔案'}
           </button>
-          <input ref={fileInputRef} type="file" accept={ACCEPTED_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </div>
       </div>
     </Modal>
@@ -586,34 +587,9 @@ interface HistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   historyDoc: Document | null;
-  handleDownload: (verId: string, fileName?: string) => void;
 }
 
-export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, historyDoc, handleDownload }) => {
-  const [openVersionActionId, setOpenVersionActionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setOpenVersionActionId(null);
-      return;
-    }
-
-    const closeActionMenu = () => setOpenVersionActionId(null);
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeActionMenu();
-      }
-    };
-
-    document.addEventListener('click', closeActionMenu);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('click', closeActionMenu);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
-
+export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, historyDoc }) => {
   if (!historyDoc) return null;
 
   const getBadge = (status: string) => {
@@ -630,6 +606,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
       onClose={onClose}
       title={`版本歷史：${historyDoc.title}`}
       footer={<button className="btn btn-primary" onClick={onClose}>關閉</button>}
+      contentClassName="modal-content-history"
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {historyDoc.status === 'Obsolete' && (
@@ -642,17 +619,24 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
           </div>
         )}
 
-        <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="version-history-table-wrap">
+          <table className="version-history-table">
+            <colgroup>
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '32%' }} />
+            </colgroup>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-secondary)' }}>
-                <th style={{ padding: 12 }}>版本</th>
-                <th style={{ padding: 12 }}>狀態</th>
-                <th style={{ padding: 12 }}>修訂日期</th>
-                <th style={{ padding: 12 }}>生效時間</th>
-                <th style={{ padding: 12 }}>結束時間</th>
-                <th style={{ padding: 12 }}>異動說明</th>
-                <th style={{ padding: 12, textAlign: 'right' }}>操作</th>
+                <th>版本</th>
+                <th>狀態</th>
+                <th>修訂日期</th>
+                <th>生效時間</th>
+                <th>結束時間</th>
+                <th>異動說明</th>
               </tr>
             </thead>
             <tbody>
@@ -660,53 +644,18 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
                 const badge = getBadge(v.status);
                 return (
                   <tr key={v.ver_id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                    <td style={{ padding: 12, fontWeight: 600 }}>{v.ver_number || `第 ${v.seq} 版`}</td>
-                    <td style={{ padding: 12 }}><span className="badge" style={{ color: badge.color }}>{badge.text}</span></td>
-                    <td style={{ padding: 12 }}>{v.revision_date || '-'}</td>
-                    <td style={{ padding: 12 }}>{v.effective_at?.split(' ')[0] || '-'}</td>
-                    <td style={{ padding: 12 }}>{v.effective_until ? v.effective_until.split(' ')[0] : '-'}</td>
-                    <td style={{ padding: 12, maxWidth: 240 }}>{v.change_note || v.cancel_reason || '-'}</td>
-                    <td className="action-cell" style={{ padding: 12, textAlign: 'right' }}>
-                      <div className="action-menu" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          className="btn-icon action-menu-trigger"
-                          title="開啟操作選單"
-                          aria-haspopup="menu"
-                          aria-expanded={openVersionActionId === v.ver_id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenVersionActionId(openVersionActionId === v.ver_id ? null : v.ver_id);
-                          }}
-                        >
-                          <span aria-hidden="true">...</span>
-                        </button>
-
-                        {openVersionActionId === v.ver_id && (
-                          <div className="action-menu-list" role="menu">
-                            <button
-                              type="button"
-                              className="action-menu-item"
-                              role="menuitem"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenVersionActionId(null);
-                                handleDownload(v.ver_id, v.file_name);
-                              }}
-                            >
-                              <span className="action-menu-icon"><CloudDownloadIcon size={18} /></span>
-                              <span className="action-menu-label">下載此版本</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
+                    <td style={{ fontWeight: 600 }} title={v.ver_number || `第 ${v.seq} 版`}>{v.ver_number || `第 ${v.seq} 版`}</td>
+                    <td title={badge.text}><span className="badge" style={{ color: badge.color }}>{badge.text}</span></td>
+                    <td title={v.revision_date || '-'}>{v.revision_date || '-'}</td>
+                    <td title={v.effective_at?.split(' ')[0] || '-'}>{v.effective_at?.split(' ')[0] || '-'}</td>
+                    <td title={v.effective_until ? v.effective_until.split(' ')[0] : '-'}>{v.effective_until ? v.effective_until.split(' ')[0] : '-'}</td>
+                    <td title={v.change_note || v.cancel_reason || '-'}>{v.change_note || v.cancel_reason || '-'}</td>
                   </tr>
                 );
               })}
               {(!historyDoc.versions || historyDoc.versions.length === 0) && (
                 <tr>
-                  <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>此文件尚無版本歷史。</td>
+                  <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>此文件尚無版本歷史。</td>
                 </tr>
               )}
             </tbody>

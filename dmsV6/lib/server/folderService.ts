@@ -12,8 +12,9 @@ interface FolderRow {
   name: string;
   status: number;
   access_type: number;
-  manager_ids: string | null;
-  manager_names: string | null;
+  can_manage: boolean;
+  can_assign_co_managers: boolean;
+  can_edit_primary_manager: boolean;
   child_folder_count: string | number;
   document_count: string | number;
   acl_summary: string | null;
@@ -25,8 +26,9 @@ const toFolder = (row: FolderRow): Folder => ({
   root_id: String(row.root_id),
   name: row.name,
   status: Number(row.status),
-  managers: row.manager_ids ? row.manager_ids.split(',').filter(Boolean) : [],
-  manager_names: row.manager_names || '',
+  can_manage: Boolean(row.can_manage),
+  can_assign_co_managers: Boolean(row.can_assign_co_managers),
+  can_edit_primary_manager: Boolean(row.can_edit_primary_manager),
   access_type: Number(row.access_type || 2),
   acl_summary: row.acl_summary || '',
   child_folder_count: Number(row.child_folder_count || 0),
@@ -54,10 +56,31 @@ export const canManageFolder = async (user: SessionUser, folderId: number) => {
         SELECT 1
           FROM dms_folder_managers m
           JOIN ancestors a ON a.df_fid = m.df_fid
-         WHERE UPPER(m.usr_uid) = UPPER($2)
+         WHERE m.usr_uid = $2
            AND m.dfm_dc = 'N'
       ) AS allowed`,
-    [folderId, user.id]
+    [folderId, user.id.toUpperCase()]
+  );
+
+  return Boolean(result.rows[0]?.allowed);
+};
+
+export const canAssignFolderManagers = async (user: SessionUser, folderId: number) => {
+  if (isAdmin(user)) {
+    return true;
+  }
+
+  const result = await query<{ allowed: boolean }>(
+    `SELECT EXISTS (
+        SELECT 1
+          FROM dms_folders f
+          JOIN dms_folder_managers m ON m.df_fid = f.df_root_fid
+         WHERE f.df_fid = $1
+           AND m.usr_uid = $2
+           AND m.dfm_type = 1
+           AND m.dfm_dc = 'N'
+      ) AS allowed`,
+    [folderId, user.id.toUpperCase()]
   );
 
   return Boolean(result.rows[0]?.allowed);
@@ -65,16 +88,7 @@ export const canManageFolder = async (user: SessionUser, folderId: number) => {
 
 export const listFolders = async (user: SessionUser) => {
   const result = await query<FolderRow>(
-    `WITH RECURSIVE manager_summary AS (
-        SELECT m.df_fid,
-               STRING_AGG(m.usr_uid, ',' ORDER BY m.usr_uid) AS manager_ids,
-               STRING_AGG(COALESCE(e.emp_name, m.usr_uid), '、' ORDER BY m.usr_uid) AS manager_names
-          FROM dms_folder_managers m
-          LEFT JOIN employee e ON UPPER(e.emp_id) = UPPER(m.usr_uid)
-         WHERE m.dfm_dc = 'N'
-         GROUP BY m.df_fid
-      ),
-      folder_ancestors AS (
+    `WITH RECURSIVE folder_ancestors AS (
         SELECT f.df_fid,
                f.df_fid AS ancestor_fid,
                f.df_pid AS ancestor_pid
@@ -86,61 +100,77 @@ export const listFolders = async (user: SessionUser) => {
           FROM folder_ancestors fa
           JOIN dms_folders p ON p.df_fid = fa.ancestor_pid
       ),
-      effective_manager_summary AS (
-        SELECT inherited.df_fid,
-               STRING_AGG(COALESCE(e.emp_name, inherited.usr_uid), '、' ORDER BY inherited.usr_uid) AS manager_names
-          FROM (
-                SELECT DISTINCT fa.df_fid,
-                       m.usr_uid
-                  FROM folder_ancestors fa
-                  JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
-                 WHERE m.dfm_dc = 'N'
-               ) inherited
-          LEFT JOIN employee e ON UPPER(e.emp_id) = UPPER(inherited.usr_uid)
-         GROUP BY inherited.df_fid
-      ),
-      acl_summary AS (
-        SELECT a.df_fid,
-               STRING_AGG(COALESCE(d.dept_name, e.emp_name, a.dfa_target), '、' ORDER BY a.dfa_type, a.dfa_target) AS acl_summary
-          FROM dms_folder_acl a
-          LEFT JOIN department d ON a.dfa_type = 1 AND a.dfa_target = d.dept_id::text
-          LEFT JOIN employee e ON a.dfa_type = 2 AND UPPER(a.dfa_target) = UPPER(e.emp_id)
-         WHERE a.dfa_dc = 'N'
-         GROUP BY a.df_fid
+      manageable AS (
+        SELECT f.df_fid
+          FROM dms_folders f
+         WHERE $3 = 'ADMIN'
+        UNION
+        SELECT DISTINCT fa.df_fid
+          FROM folder_ancestors fa
+          JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
+         WHERE m.usr_uid = $1
+           AND m.dfm_dc = 'N'
       ),
       visible AS (
         SELECT f.df_fid
           FROM dms_folders f
-         WHERE $3 = 'ADMIN'
-            OR f.df_access_type = 1
-            OR EXISTS (
-                WITH RECURSIVE ancestors AS (
-                    SELECT f2.df_fid,
-                           f2.df_pid
-                      FROM dms_folders f2
-                     WHERE f2.df_fid = f.df_fid
-                    UNION ALL
-                    SELECT p.df_fid,
-                           p.df_pid
-                      FROM dms_folders p
-                      JOIN ancestors a ON a.df_pid = p.df_fid
+         WHERE f.df_status = 1
+           AND (
+                EXISTS (
+                  SELECT 1
+                    FROM manageable mg
+                   WHERE mg.df_fid = f.df_fid
                 )
-                SELECT 1
-                  FROM dms_folder_managers m
-                  JOIN ancestors a ON a.df_fid = m.df_fid
-                 WHERE UPPER(m.usr_uid) = UPPER($1)
-                   AND m.dfm_dc = 'N'
-            )
-            OR EXISTS (
-                SELECT 1
-                  FROM dms_folder_acl a
-                 WHERE a.df_fid = f.df_fid
-                   AND a.dfa_dc = 'N'
-                   AND (
-                        (a.dfa_type = 1 AND a.dfa_target = $2)
-                        OR (a.dfa_type = 2 AND UPPER(a.dfa_target) = UPPER($1))
-                   )
-            )
+                OR f.df_access_type = 1
+                OR EXISTS (
+                    SELECT 1
+                      FROM dms_folder_acl a
+                     WHERE a.df_fid = f.df_fid
+                       AND a.dfa_dc = 'N'
+                       AND (
+                            (a.dfa_type = 1 AND a.dfa_target = $2)
+                            OR (a.dfa_type = 2 AND a.dfa_target = $1)
+                       )
+                )
+           )
+      ),
+      acl_summary AS (
+        SELECT a.df_fid,
+               STRING_AGG(
+                 COALESCE(
+                   d.dept_name,
+                   e.emp_name,
+                   CASE
+                     WHEN a.dfa_type = 1 THEN '未識別部門'
+                     ELSE '未識別同仁'
+                   END
+                 ),
+                 '、'
+                 ORDER BY a.dfa_type,
+                          a.dfa_target
+               ) AS acl_summary
+          FROM dms_folder_acl a
+          JOIN visible v ON v.df_fid = a.df_fid
+          LEFT JOIN department d ON a.dfa_type = 1 AND a.dfa_target = d.dept_id::text
+          LEFT JOIN employee e ON a.dfa_type = 2 AND a.dfa_target = e.emp_id
+         WHERE a.dfa_dc = 'N'
+         GROUP BY a.df_fid
+      ),
+      child_counts AS (
+        SELECT c.df_pid AS df_fid,
+               COUNT(*) AS child_folder_count
+          FROM dms_folders c
+          JOIN visible v ON v.df_fid = c.df_pid
+         WHERE c.df_status = 1
+         GROUP BY c.df_pid
+      ),
+      document_counts AS (
+        SELECT d.df_fid,
+               COUNT(*) AS document_count
+          FROM dms_doc d
+          JOIN visible v ON v.df_fid = d.df_fid
+         WHERE d.dd_status = 1
+         GROUP BY d.df_fid
       )
       SELECT f.df_fid AS id,
              f.df_pid AS parent_id,
@@ -148,33 +178,186 @@ export const listFolders = async (user: SessionUser) => {
              f.df_name AS name,
              f.df_status AS status,
              f.df_access_type AS access_type,
-             ms.manager_ids,
-             ems.manager_names,
+             EXISTS (
+               SELECT 1
+                 FROM manageable mg
+                WHERE mg.df_fid = f.df_fid
+             ) AS can_manage,
+             ($3 = 'ADMIN' OR EXISTS (
+               SELECT 1
+                 FROM dms_folder_managers pm
+                WHERE pm.df_fid = f.df_root_fid
+                  AND pm.usr_uid = $1
+                  AND pm.dfm_type = 1
+                  AND pm.dfm_dc = 'N'
+             )) AS can_assign_co_managers,
+             ($3 = 'ADMIN' AND f.df_pid IS NULL) AS can_edit_primary_manager,
              COALESCE(asu.acl_summary, '') AS acl_summary,
-             (
-               SELECT COUNT(*)
-                 FROM dms_folders c
-                WHERE c.df_pid = f.df_fid
-                  AND c.df_status = 1
-             ) AS child_folder_count,
-             (
-               SELECT COUNT(*)
-                 FROM dms_doc d
-                WHERE d.df_fid = f.df_fid
-                  AND d.dd_status = 1
-             ) AS document_count
+             COALESCE(cc.child_folder_count, 0) AS child_folder_count,
+             COALESCE(dc.document_count, 0) AS document_count
         FROM dms_folders f
         JOIN visible v ON v.df_fid = f.df_fid
-        LEFT JOIN manager_summary ms ON ms.df_fid = f.df_fid
-        LEFT JOIN effective_manager_summary ems ON ems.df_fid = f.df_fid
         LEFT JOIN acl_summary asu ON asu.df_fid = f.df_fid
-       WHERE f.df_status = 1
+        LEFT JOIN child_counts cc ON cc.df_fid = f.df_fid
+        LEFT JOIN document_counts dc ON dc.df_fid = f.df_fid
        ORDER BY f.df_pid NULLS FIRST,
                 f.df_name`,
-    [user.id, user.dept_id || '', user.role]
+    [user.id.toUpperCase(), user.dept_id || '', user.role]
   );
 
   return result.rows.map(toFolder);
+};
+
+export const getFolderAccessStatus = async (
+  user: SessionUser,
+  folderId: number
+): Promise<'allowed' | 'denied'> => {
+  if (!Number.isSafeInteger(folderId) || folderId <= 0) {
+    return 'denied';
+  }
+
+  const result = await query<{ exists: boolean; allowed: boolean }>(
+    `WITH RECURSIVE ancestors AS (
+        SELECT f.df_fid,
+               f.df_pid
+          FROM dms_folders f
+         WHERE f.df_fid = $1
+           AND f.df_status = 1
+        UNION ALL
+        SELECT p.df_fid,
+               p.df_pid
+          FROM dms_folders p
+          JOIN ancestors a ON a.df_pid = p.df_fid
+      )
+      SELECT EXISTS (
+               SELECT 1
+                 FROM dms_folders f
+                WHERE f.df_fid = $1
+                  AND f.df_status = 1
+             ) AS exists,
+             ($4 = 'ADMIN'
+              OR EXISTS (
+                   SELECT 1
+                     FROM dms_folders f
+                    WHERE f.df_fid = $1
+                      AND f.df_status = 1
+                      AND f.df_access_type = 1
+                 )
+              OR EXISTS (
+                   SELECT 1
+                     FROM dms_folder_acl a
+                    WHERE a.df_fid = $1
+                      AND a.dfa_dc = 'N'
+                      AND (
+                           (a.dfa_type = 1 AND a.dfa_target = $3)
+                           OR (a.dfa_type = 2 AND a.dfa_target = $2)
+                      )
+                 )
+              OR EXISTS (
+                   SELECT 1
+                     FROM dms_folder_managers m
+                     JOIN ancestors a ON a.df_fid = m.df_fid
+                    WHERE m.usr_uid = $2
+                      AND m.dfm_dc = 'N'
+                 )) AS allowed`,
+    [folderId, user.id.toUpperCase(), user.dept_id || '', user.role]
+  );
+
+  const status = result.rows[0];
+  return status?.exists && status.allowed ? 'allowed' : 'denied';
+};
+
+export const getFolderManagerInfo = async (
+  user: SessionUser,
+  folderId: number,
+  includeEmployeeIds: boolean,
+  assignmentType: 'PRIMARY' | 'CO_MANAGER' = 'CO_MANAGER'
+) => {
+  if (!folderId) {
+    throw new Error('資料夾識別碼不可空白。');
+  }
+
+  await requireFolderManage(user, folderId);
+
+  const managerNames = await query<{ manager_type: number; name: string }>(
+    `WITH RECURSIVE ancestors AS (
+        SELECT df_fid,
+               df_pid
+          FROM dms_folders
+         WHERE df_fid = $1
+           AND df_status = 1
+        UNION ALL
+        SELECT p.df_fid,
+               p.df_pid
+          FROM dms_folders p
+          JOIN ancestors a ON a.df_pid = p.df_fid
+         WHERE p.df_status = 1
+      ),
+      effective_managers AS (
+        SELECT DISTINCT m.dfm_type AS manager_type,
+               m.usr_uid
+          FROM dms_folder_managers m
+          JOIN ancestors a ON a.df_fid = m.df_fid
+         WHERE m.dfm_type IN (1, 2)
+           AND m.dfm_dc = 'N'
+      )
+      SELECT m.manager_type,
+             e.emp_name AS name
+        FROM effective_managers m
+        JOIN employee e ON e.emp_id = m.usr_uid
+       WHERE COALESCE(TRIM(e.emp_name), '') <> ''
+       ORDER BY m.manager_type,
+                e.emp_name`,
+    [folderId]
+  );
+  const names = managerNames.rows
+    .filter((row) => Number(row.manager_type) === 1)
+    .map((row) => row.name);
+  const coManagerNames = managerNames.rows
+    .filter((row) => Number(row.manager_type) === 2)
+    .map((row) => row.name);
+
+  if (!includeEmployeeIds) {
+    return {
+      names,
+      co_manager_names: coManagerNames
+    };
+  }
+
+  if (assignmentType === 'PRIMARY') {
+    if (!isAdmin(user)) {
+      throw new Error('只有系統管理員可以更換第一層資料夾管理員。');
+    }
+  } else if (!(await canAssignFolderManagers(user, folderId))) {
+    throw new Error('協同管理員不得指派或撤銷其他管理員。');
+  }
+
+  const targetFolderId = assignmentType === 'PRIMARY'
+    ? (
+        await query<{ root_id: number }>(
+          `SELECT df_root_fid AS root_id
+             FROM dms_folders
+            WHERE df_fid = $1`,
+          [folderId]
+        )
+      ).rows[0]?.root_id
+    : folderId;
+
+  const managerIds = await query<{ employee_id: string }>(
+    `SELECT m.usr_uid AS employee_id
+       FROM dms_folder_managers m
+      WHERE m.df_fid = $1
+        AND m.dfm_type = $2
+        AND m.dfm_dc = 'N'
+      ORDER BY m.usr_uid`,
+    [targetFolderId, assignmentType === 'PRIMARY' ? 1 : 2]
+  );
+
+  return {
+    names,
+    co_manager_names: coManagerNames,
+    employee_ids: managerIds.rows.map((row) => row.employee_id)
+  };
 };
 
 const requireFolderManage = async (user: SessionUser, folderId: number) => {
@@ -187,10 +370,34 @@ const replaceManagers = async (
   client: PoolClient,
   folderId: number,
   managers: string[] | undefined,
-  user: SessionUser
+  user: SessionUser,
+  managerType: 1 | 2
 ) => {
   if (!managers) {
     return;
+  }
+
+  const uniqueManagers = Array.from(
+    new Map(
+      managers
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map((value) => [value.toUpperCase(), value])
+    ).values()
+  );
+  const employees = uniqueManagers.length > 0
+    ? await client.query<{ employee_id: string }>(
+        `SELECT emp_id AS employee_id
+           FROM employee
+          WHERE emp_id = ANY($1::text[])
+            AND emp_incumbent = 0`,
+        [uniqueManagers.map((manager) => manager.toUpperCase())]
+      )
+    : { rows: [] as { employee_id: string }[] };
+  const resolvedManagers = employees.rows.map((row) => row.employee_id);
+
+  if (resolvedManagers.length !== uniqueManagers.length) {
+    throw new Error('管理員員工編號不存在或已非在職人員。');
   }
 
   await client.query(
@@ -199,26 +406,29 @@ const replaceManagers = async (
             dfm_dcby = $2,
             dfm_dcat = CURRENT_TIMESTAMP
       WHERE df_fid = $1
+        AND dfm_type = $3
         AND dfm_dc = 'N'`,
-    [folderId, user.id]
+    [folderId, user.id, managerType]
   );
 
-  for (const manager of managers.map((value) => value.trim()).filter(Boolean)) {
+  if (resolvedManagers.length > 0) {
     await client.query(
       `INSERT INTO dms_folder_managers (
              df_fid,
              usr_uid,
+             dfm_type,
              dfm_crtby,
              dfm_crtat,
              dfm_dc
-       ) VALUES (
-             $1,
-             $2,
-             $3,
-             CURRENT_TIMESTAMP,
-             'N'
-       )`,
-      [folderId, manager, user.id]
+       )
+       SELECT $1,
+              manager_uid,
+              $2,
+              $3,
+              CURRENT_TIMESTAMP,
+              'N'
+         FROM UNNEST($4::text[]) AS manager_uid`,
+      [folderId, managerType, user.id, resolvedManagers]
     );
   }
 };
@@ -237,6 +447,11 @@ export const createFolder = async (
 
   if (!parentId && !isAdmin(user)) {
     throw new Error('第一層資料夾僅限系統管理員建立。');
+  }
+
+
+  if (managers !== undefined) {
+    throw new Error('建立資料夾時不得同時指派管理員，請進入第一層資料夾後另行設定。');
   }
 
   if (parentId) {
@@ -283,7 +498,6 @@ export const createFolder = async (
         WHERE df_fid = $1`,
       [folderId, rootId]
     );
-    await replaceManagers(client, folderId, managers, user);
     await writeAudit(
       {
         user,
@@ -303,8 +517,7 @@ export const createFolder = async (
 export const updateFolder = async (
   user: SessionUser,
   id: number,
-  name: string,
-  managers?: string[]
+  name: string
 ) => {
   const trimmedName = String(name || '').trim();
 
@@ -324,7 +537,6 @@ export const updateFolder = async (
           AND df_status = 1`,
       [id, trimmedName, user.id]
     );
-    await replaceManagers(client, id, managers, user);
     await writeAudit(
       {
         user,
@@ -332,6 +544,65 @@ export const updateFolder = async (
         resourceType: 'FOLDER',
         folderId: id,
         metadata: { name: trimmedName }
+      },
+      client
+    );
+  });
+};
+
+export const updateFolderManagers = async (
+  user: SessionUser,
+  folderId: number,
+  assignmentType: 'PRIMARY' | 'CO_MANAGER',
+  managers: string[]
+) => {
+  if (!folderId) {
+    throw new Error('資料夾識別碼不可空白。');
+  }
+
+  await requireFolderManage(user, folderId);
+
+  const folder = await query<{ parent_id: number | null; root_id: number }>(
+    `SELECT df_pid AS parent_id,
+            df_root_fid AS root_id
+       FROM dms_folders
+      WHERE df_fid = $1
+        AND df_status = 1`,
+    [folderId]
+  );
+  const target = folder.rows[0];
+
+  if (!target) {
+    throw new Error('找不到有效的資料夾。');
+  }
+
+  if (assignmentType === 'PRIMARY') {
+    if (!isAdmin(user) || target.parent_id !== null) {
+      throw new Error('只有系統管理員可以更換第一層資料夾管理員。');
+    }
+    if (managers.filter((value) => value.trim()).length > 1) {
+      throw new Error('第一層資料夾最多只能指派一名資料夾管理員。');
+    }
+  } else if (!(await canAssignFolderManagers(user, folderId))) {
+    throw new Error('協同管理員不得指派或撤銷其他管理員。');
+  }
+
+  await withTransaction(async (client) => {
+    await replaceManagers(
+      client,
+      assignmentType === 'PRIMARY' ? target.root_id : folderId,
+      managers,
+      user,
+      assignmentType === 'PRIMARY' ? 1 : 2
+    );
+    await writeAudit(
+      {
+        user,
+        action: assignmentType === 'PRIMARY' ? 'FOLDER_MANAGER_UPDATED' : 'FOLDER_CO_MANAGER_UPDATED',
+        resourceType: 'FOLDER',
+        folderId,
+        managedFolderId: target.root_id,
+        metadata: { assignment_type: assignmentType, managers }
       },
       client
     );
@@ -474,6 +745,17 @@ export const updateFolderAcl = async (
   uids: string[]
 ) => {
   await requireFolderManage(user, folderId);
+  const normalizedDeptIds = Array.from(
+    new Set(deptIds.map((value) => value.trim()).filter(Boolean))
+  );
+  const normalizedUids = Array.from(
+    new Map(
+      uids
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map((value) => [value.toUpperCase(), value.toUpperCase()])
+    ).values()
+  );
 
   await withTransaction(async (client) => {
     await client.query(
@@ -494,7 +776,7 @@ export const updateFolderAcl = async (
       [folderId, user.id]
     );
 
-    for (const deptId of deptIds.map((value) => value.trim()).filter(Boolean)) {
+    if (normalizedDeptIds.length > 0) {
       await client.query(
         `INSERT INTO dms_folder_acl (
                df_fid,
@@ -503,19 +785,19 @@ export const updateFolderAcl = async (
                dfa_crtby,
                dfa_crtat,
                dfa_dc
-         ) VALUES (
-               $1,
-               1,
-               $2,
-               $3,
-               CURRENT_TIMESTAMP,
-               'N'
-         )`,
-        [folderId, deptId, user.id]
+         )
+         SELECT $1,
+                1,
+                dept_id,
+                $2,
+                CURRENT_TIMESTAMP,
+                'N'
+           FROM UNNEST($3::text[]) AS dept_id`,
+        [folderId, user.id, normalizedDeptIds]
       );
     }
 
-    for (const uid of uids.map((value) => value.trim()).filter(Boolean)) {
+    if (normalizedUids.length > 0) {
       await client.query(
         `INSERT INTO dms_folder_acl (
                df_fid,
@@ -524,15 +806,15 @@ export const updateFolderAcl = async (
                dfa_crtby,
                dfa_crtat,
                dfa_dc
-         ) VALUES (
-               $1,
-               2,
-               $2,
-               $3,
-               CURRENT_TIMESTAMP,
-               'N'
-         )`,
-        [folderId, uid, user.id]
+         )
+         SELECT $1,
+                2,
+                employee_uid,
+                $2,
+                CURRENT_TIMESTAMP,
+                'N'
+           FROM UNNEST($3::text[]) AS employee_uid`,
+        [folderId, user.id, normalizedUids]
       );
     }
 
@@ -542,7 +824,7 @@ export const updateFolderAcl = async (
         action: 'FOLDER_ACL_UPDATED',
         resourceType: 'ACL',
         folderId,
-        metadata: { access_type: accessType, dept_ids: deptIds, uids }
+        metadata: { access_type: accessType, dept_ids: normalizedDeptIds, uids: normalizedUids }
       },
       client
     );

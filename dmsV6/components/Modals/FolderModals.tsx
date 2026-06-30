@@ -137,6 +137,7 @@ interface NewFolderModalProps {
   onCreate: (name: string, managers?: string[]) => Promise<boolean>;
   isRoot?: boolean;
   userRole?: string;
+  lookupFolderId?: string;
 }
 
 interface ManagerRow {
@@ -151,16 +152,21 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   onClose,
   onCreate,
   isRoot = false,
-  userRole = ''
+  userRole = '',
+  lookupFolderId
 }) => {
   const [name, setName] = useState('');
-  const [isSystemAdmin, setIsSystemAdmin] = useState(true);
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
   const [managerRows, setManagerRows] = useState<ManagerRow[]>([{ uid: '', name: '', isValid: false, isChecking: false }]);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const managerInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const isOpenRef = useRef(isOpen);
+  const lookupFolderIdRef = useRef(lookupFolderId);
 
   useEffect(() => {
+    isOpenRef.current = isOpen;
+    lookupFolderIdRef.current = lookupFolderId;
     if (isOpen) {
       setName('');
       setTimeout(() => {
@@ -168,14 +174,17 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
       }, 50);
 
       if (isRoot && userRole === 'ADMIN') {
-        setIsSystemAdmin(true);
+        setIsSystemAdmin(false);
         setManagerRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
       } else {
         setIsSystemAdmin(false);
         setManagerRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
       }
+    } else {
+      setManagerRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
+      managerInputsRef.current = [];
     }
-  }, [isOpen, isRoot, userRole]);
+  }, [isOpen, isRoot, userRole, lookupFolderId]);
 
   useEffect(() => {
     if (focusIndex !== null && managerInputsRef.current[focusIndex]) {
@@ -197,7 +206,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   };
 
   const handleUidKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
       e.stopPropagation();
       (e.target as HTMLInputElement).blur();
@@ -217,7 +226,8 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
     });
 
     try {
-      const res = await EmployeeAPI.getEmployeeByUid(trimmed);
+      const res = await EmployeeAPI.getEmployeeByUid(trimmed, 'folder_manager', lookupFolderId);
+      if (!isOpenRef.current || lookupFolderIdRef.current !== lookupFolderId) return;
       setManagerRows(prev => {
         const next = [...prev];
         if (!next[index]) return prev;
@@ -233,7 +243,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
             };
 
             // 當確認有這位使用者後，且該列是最後一列時，才長出新的一行
-            if (index === next.length - 1) {
+            if (!isRoot && index === next.length - 1) {
               next.push({ uid: '', name: '', isValid: false, isChecking: false });
               setFocusIndex(index + 1);
             }
@@ -287,12 +297,9 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
       return;
     }
 
-    const showManagers = isRoot ? userRole === 'ADMIN' : true;
+    const showManagers = false;
     if (showManagers) {
-      if (isRoot && isSystemAdmin) {
-        const success = await onCreate(trimmed, []);
-        if (success) onClose();
-      } else {
+      {
         const validUids = managerRows
           .filter(r => r.uid.trim() !== '' && r.isValid)
           .map(r => r.uid.trim());
@@ -303,8 +310,8 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
           showRequiredFieldMessage('請修正或移除查無此人的無效用戶代碼。', managerInputsRef.current[invalidIndex]);
           return;
         }
-        if (isRoot && validUids.length === 0) {
-          showRequiredFieldMessage('請最少輸入一位有效的資料夾管理員。', managerInputsRef.current[0]);
+        if (isRoot && validUids.length !== 1) {
+          showRequiredFieldMessage('第一層資料夾必須且只能輸入一位有效的資料夾管理員。', managerInputsRef.current[0]);
           return;
         }
         const success = await onCreate(trimmed, validUids);
@@ -321,7 +328,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   );
   const validUids = managerRows.filter(r => r.uid.trim() !== '' && r.isValid);
 
-  const showManagers = isRoot ? userRole === 'ADMIN' : true;
+  const showManagers = false;
 
   return (
     <Modal
@@ -345,21 +352,21 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
           placeholder="請輸入新資料夾名稱，如: 資訊部專區"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
+          onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleConfirm()}
         />
       </div>
 
       {showManagers && (
         <div className="managers-section">
           <div className="managers-title">
-            <span>{isRoot ? '指派管理員' : '加入其他管理員'}</span>
+            <span>{isRoot ? '指派資料夾管理員' : '指派協同管理員'}</span>
           </div>
           
           {isRoot ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <label 
                  className="manager-item" 
-                 style={{ padding: '4px 6px', display: 'flex', alignItems: 'center', userSelect: 'none', cursor: 'pointer' }}
+                 style={{ display: 'none' }}
               >
                 <input
                   type="checkbox"
@@ -383,14 +390,14 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
               {!isSystemAdmin && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', animation: 'fadeIn 0.2s forwards' }}>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                    自訂管理員用戶代碼
+                    資料夾管理員員工編號
                   </label>
                   {managerRows.map((row, idx) => (
                     <div key={idx} className="manager-row">
                       <input
                         ref={(el) => { managerInputsRef.current[idx] = el; }}
                         type="text"
-                        placeholder="請輸入用戶代碼"
+                        placeholder="請輸入員工編號"
                         value={row.uid}
                         onChange={(e) => handleUidChange(idx, e.target.value)}
                         data-enter-action="blur-or-submit"
@@ -427,7 +434,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                   <input
                     ref={(el) => { managerInputsRef.current[idx] = el; }}
                     type="text"
-                    placeholder="請輸入用戶代碼 (選填)"
+                    placeholder="請輸入員工編號"
                     value={row.uid}
                     onChange={(e) => handleUidChange(idx, e.target.value)}
                     data-enter-action="blur-or-submit"
@@ -457,8 +464,8 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
             </div>
           )}
 
-          {isRoot && !isSystemAdmin && validUids.length === 0 && (
-            <div className="validation-error">「請最少輸入一位有效的資料夾管理員」</div>
+          {isRoot && validUids.length !== 1 && (
+            <div className="validation-error">「第一層資料夾必須且只能指派一位資料夾管理員」</div>
           )}
           {hasInvalidRow && (
             <div className="validation-error">「請修正或移除查無此人的無效用戶代碼」</div>
@@ -478,6 +485,8 @@ interface RenameModalProps {
   initialManagers?: string[];
   userRole?: string;
   managersOnly?: boolean;
+  showManagerEditor?: boolean;
+  lookupFolderId: string;
   onRename: (newName: string, managers?: string[]) => Promise<boolean>;
 }
 
@@ -489,6 +498,8 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   initialManagers = [],
   userRole = '',
   managersOnly = false,
+  showManagerEditor = false,
+  lookupFolderId,
   onRename
 }) => {
   const [val, setVal] = useState('');
@@ -497,8 +508,12 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const managerInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const isOpenRef = useRef(isOpen);
+  const lookupFolderIdRef = useRef(lookupFolderId);
 
   useEffect(() => {
+    isOpenRef.current = isOpen;
+    lookupFolderIdRef.current = lookupFolderId;
     if (isOpen) {
       setVal(initialValue);
       if (!managersOnly) {
@@ -519,7 +534,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
             const loadedRows: ManagerRow[] = await Promise.all(
               initialManagers.map(async (uid) => {
                 try {
-                  const res = await EmployeeAPI.getEmployeeByUid(uid);
+                  const res = await EmployeeAPI.getEmployeeByUid(uid, 'folder_manager', lookupFolderId);
                   if (res.success && res.data && res.data.length > 0) {
                     const found = res.data.find(u => u.uid.toLowerCase() === uid.toLowerCase());
                     if (found) {
@@ -528,11 +543,12 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                   }
                   return { uid, name: '查無此用戶', isValid: false, isChecking: false };
                 } catch (err) {
-                  console.error('Error fetching manager details for ' + uid, err);
+                  console.error('載入管理員資料失敗。', err);
                   return { uid, name: '檢索錯誤', isValid: false, isChecking: false };
                 }
               })
             );
+            if (!isOpenRef.current || lookupFolderIdRef.current !== lookupFolderId) return;
             loadedRows.push({ uid: '', name: '', isValid: false, isChecking: false });
             setManagerRows(loadedRows);
             if (managersOnly) {
@@ -543,8 +559,11 @@ export const RenameModal: React.FC<RenameModalProps> = ({
           fetchInitialManagers();
         }
       }
+    } else {
+      setManagerRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
+      managerInputsRef.current = [];
     }
-  }, [isOpen, initialValue, isRoot, userRole, initialManagers, managersOnly]);
+  }, [isOpen, initialValue, isRoot, userRole, initialManagers, managersOnly, lookupFolderId]);
 
   useEffect(() => {
     if (focusIndex !== null && managerInputsRef.current[focusIndex]) {
@@ -566,7 +585,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   };
 
   const handleUidKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
       e.preventDefault();
       e.stopPropagation();
       (e.target as HTMLInputElement).blur();
@@ -586,7 +605,8 @@ export const RenameModal: React.FC<RenameModalProps> = ({
     });
 
     try {
-      const res = await EmployeeAPI.getEmployeeByUid(trimmed);
+      const res = await EmployeeAPI.getEmployeeByUid(trimmed, 'folder_manager', lookupFolderId);
+      if (!isOpenRef.current || lookupFolderIdRef.current !== lookupFolderId) return;
       setManagerRows(prev => {
         const next = [...prev];
         if (!next[index]) return prev;
@@ -656,7 +676,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
       return;
     }
 
-    const showManagers = isRoot ? userRole === 'ADMIN' : true;
+    const showManagers = showManagerEditor;
     if (showManagers) {
       if (isRoot && isSystemAdmin) {
         const success = await onRename(trimmed, []);
@@ -690,7 +710,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   );
   const validUids = managerRows.filter(r => r.uid.trim() !== '' && r.isValid);
 
-  const showManagers = isRoot ? userRole === 'ADMIN' : true;
+  const showManagers = showManagerEditor;
 
   return (
     <Modal
@@ -714,7 +734,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
             type="text"
             value={val}
             onChange={(e) => setVal(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
+            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleConfirm()}
           />
         </div>
       )}
@@ -760,7 +780,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                       <input
                         ref={(el) => { managerInputsRef.current[idx] = el; }}
                         type="text"
-                        placeholder="請輸入用戶代碼"
+                        placeholder="請輸入員工編號"
                         value={row.uid}
                         onChange={(e) => handleUidChange(idx, e.target.value)}
                         data-enter-action="blur-or-submit"
@@ -797,7 +817,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                   <input
                     ref={(el) => { managerInputsRef.current[idx] = el; }}
                     type="text"
-                    placeholder="請輸入用戶代碼 (選填)"
+                    placeholder="請輸入員工編號"
                     value={row.uid}
                     onChange={(e) => handleUidChange(idx, e.target.value)}
                     data-enter-action="blur-or-submit"

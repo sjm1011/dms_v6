@@ -220,7 +220,9 @@
 <h2>1. 資料表說明</h2>
 <p>* <strong>表名稱</strong>：<code>dms_folder_managers</code></p>
 <p>* <strong>schema 檔名</strong>：<code>schema_dms_folder_managers.md</code>、<code>schema_dms_folder_managers.html</code></p>
-<p>* <strong>用途</strong>：紀錄任一資料夾節點被直接指派了哪些使用者作為資料夾管理員。</p>
+<ul>
+  <li><strong>用途</strong>：紀錄第一層資料夾的唯一資料夾管理員，以及各資料夾節點直接指派的協同管理員。</li>
+</ul>
 <p>* <strong>關聯</strong>：對應至 <code>dms_folders</code> 的任一資料夾節點。</p>
 <h3>欄位規劃</h3>
 <table>
@@ -231,6 +233,7 @@
     <tr><td><code>dfm_id</code></td><td>SERIAL (INT)</td><td>Primary Key</td><td>唯一識別碼，自動遞增。</td></tr>
     <tr><td><code>df_fid</code></td><td>INTEGER</td><td>Not Null</td><td>關聯至 <code>dms_folders</code> 的資料夾 ID。</td></tr>
     <tr><td><code>usr_uid</code></td><td>VARCHAR(50)</td><td>Not Null</td><td>被指派為管理員的使用者帳號。</td></tr>
+    <tr><td><code>dfm_type</code></td><td>SMALLINT</td><td>Not Null, Default</td><td>管理身分類型。<code>1</code>：第一層資料夾管理員；<code>2</code>：協同管理員。</td></tr>
     <tr><td><code>dfm_crtby</code></td><td>VARCHAR(50)</td><td>Not Null</td><td>建立此設定的操作者帳號 (通常為系統管理員)。</td></tr>
     <tr><td><code>dfm_crtat</code></td><td>TIMESTAMP</td><td>Not Null, Default</td><td>建立時間，預設為 <code>CURRENT_TIMESTAMP</code>。</td></tr>
     <tr><td><code>dfm_dc</code></td><td>VARCHAR(1)</td><td>Not Null, Default</td><td>作廢註記 (Y/N)。預設為 'N'。</td></tr>
@@ -246,6 +249,7 @@
     dfm_id SERIAL PRIMARY KEY,
     df_fid INTEGER NOT NULL,
     usr_uid VARCHAR(50) NOT NULL,
+    dfm_type SMALLINT NOT NULL DEFAULT 2,
     dfm_crtby VARCHAR(50) NOT NULL,
     dfm_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dfm_dc VARCHAR(1) NOT NULL DEFAULT 'N',
@@ -254,7 +258,8 @@
 );
 
 -- 建立索引以提升查詢效能與確保唯一性 (僅計算未作廢者)
-CREATE UNIQUE INDEX idx_dms_folder_mgr_uniq ON dms_folder_managers(df_fid, usr_uid) WHERE dfm_dc = 'N';
+CREATE UNIQUE INDEX idx_dms_folder_mgr_uniq ON dms_folder_managers(df_fid, usr_uid, dfm_type) WHERE dfm_dc = 'N';
+CREATE UNIQUE INDEX idx_dms_folder_primary_mgr_uniq ON dms_folder_managers(df_fid, dfm_type) WHERE dfm_dc = 'N' AND dfm_type = 1;
 CREATE INDEX idx_dms_folder_mgr_uid ON dms_folder_managers(usr_uid);</code></pre>
 </div>
 <p>---</p>
@@ -265,6 +270,7 @@ CREATE INDEX idx_dms_folder_mgr_uid ON dms_folder_managers(usr_uid);</code></pr
 COMMENT ON COLUMN dms_folder_managers.dfm_id IS '唯一識別碼，自動遞增';
 COMMENT ON COLUMN dms_folder_managers.df_fid IS '關聯至 dms_folders 的資料夾 ID';
 COMMENT ON COLUMN dms_folder_managers.usr_uid IS '被指派為管理員的使用者帳號';
+COMMENT ON COLUMN dms_folder_managers.dfm_type IS '管理身分類型。1：第一層資料夾管理員，2：協同管理員';
 COMMENT ON COLUMN dms_folder_managers.dfm_crtby IS '建立此設定的操作者帳號';
 COMMENT ON COLUMN dms_folder_managers.dfm_crtat IS '建立時間，預設為目前時間';
 COMMENT ON COLUMN dms_folder_managers.dfm_dc IS '作廢註記 (Y/N)';
@@ -277,6 +283,7 @@ COMMENT ON COLUMN dms_folder_managers.dfm_dcat IS '作廢時間';</code></pre>
 <pre><code class="language-sql">SELECT dfm_id,
        df_fid,
        usr_uid,
+       dfm_type,
        dfm_crtby,
        dfm_crtat
   FROM dms_folder_managers
@@ -293,7 +300,14 @@ COMMENT ON COLUMN dms_folder_managers.dfm_dcat IS '作廢時間';</code></pre>
 <h2>5. 後端檢核規則</h2>
 <p>* <code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</p>
 <p>* <code>usr_uid</code> 必須是有效的系統使用者帳號。</p>
-<p>* 同一資料夾與同一使用者帳號在未作廢狀態（<code>dfm_dc = 'N'</code>）下，只能有一筆關聯紀錄。</p>
+<ul>
+  <li>每個有效第一層資料夾允許沒有 <code>dfm_type = 1</code> 的有效資料夾管理員紀錄；若已指派，同一時間最多只能有一筆。</li>
+  <li>ADMIN 建立第一層資料夾時不新增 <code>dms_folder_managers</code> 紀錄，管理員由 ADMIN 進入資料夾後另行指派。</li>
+  <li><code>dfm_type = 1</code> 只能指向第一層資料夾。</li>
+  <li>第一層資料夾管理員可在其管理範圍內指派多筆 <code>dfm_type = 2</code> 的協同管理員紀錄。</li>
+  <li>協同管理員不得新增、修改或作廢任何資料夾管理員及協同管理員紀錄。</li>
+  <li>同一資料夾、同一使用者帳號與同一管理身分類型，在未作廢狀態（<code>dfm_dc = 'N'</code>）下只能有一筆關聯紀錄。</li>
+</ul>
 <p>* 作廢管理員權限時，必須寫入作廢執行者帳號 <code>dfm_dcby</code> 與作廢時間 <code>dfm_dcat</code>，且將 <code>dfm_dc</code> 設為 <code>'Y'</code>。</p>
 <p>* 系統不提供物理刪除（DELETE）管理員設定，異動一律以作廢（dfm_dc = 'Y'）處理。</p>
 

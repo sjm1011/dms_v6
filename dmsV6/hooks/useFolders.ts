@@ -13,6 +13,7 @@ export const useFolders = (
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const requestSeqRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
+  const accessCheckSeqRef = useRef(0);
 
   // 監聽網址 Hash 變更以支援上一頁/下一頁
   useEffect(() => {
@@ -101,6 +102,39 @@ export const useFolders = (
       requestAbortRef.current = null;
     };
   }, [user]);
+
+  // 網址直接指定資料夾時，由後端分別判斷資料夾是否存在及目前使用者是否可進入。
+  useEffect(() => {
+    if (!user || currentFolderId === '') {
+      return;
+    }
+
+    const requestSeq = accessCheckSeqRef.current + 1;
+    accessCheckSeqRef.current = requestSeq;
+    const controller = new AbortController();
+
+    const validateFolderAccess = async () => {
+      try {
+        const res = await FoldersAPI.getFolderAccessStatus(currentFolderId, controller.signal);
+        if (requestSeq !== accessCheckSeqRef.current || !res.success || res.data === 'allowed') {
+          return;
+        }
+
+        window.location.hash = '#/';
+      } catch (err: unknown) {
+        if (requestSeq !== accessCheckSeqRef.current || (err instanceof DOMException && err.name === 'AbortError')) {
+          return;
+        }
+
+        const msg = err instanceof Error ? err.message : String(err);
+        window.location.hash = '#/';
+        showToast('驗證資料夾存取權限失敗：' + msg, 'error');
+      }
+    };
+
+    void validateFolderAccess();
+    return () => controller.abort();
+  }, [user, currentFolderId]);
 
   // 當前目錄改變時，自動展開左側對應的樹狀目錄（僅展開所有祖先資料夾，不展開當前資料夾本身）
   useEffect(() => {

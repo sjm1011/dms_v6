@@ -1,7 +1,7 @@
 import { query } from './db';
 
 export const getEmployeeByUid = async (uid: string) => {
-  const normalizedUid = String(uid || '').trim();
+  const normalizedUid = String(uid || '').trim().toUpperCase();
 
   if (!normalizedUid) {
     return [];
@@ -11,7 +11,7 @@ export const getEmployeeByUid = async (uid: string) => {
     `SELECT emp_id AS uid,
             emp_name AS name
        FROM employee
-      WHERE UPPER(emp_id) = UPPER($1)
+      WHERE emp_id = $1
         AND emp_incumbent = 0
       ORDER BY emp_id
       LIMIT 1`,

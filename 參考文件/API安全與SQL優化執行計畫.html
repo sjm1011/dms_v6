@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>API安全與SQL優化執行計畫</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS V6 API 安全與 SQL 優化執行計畫</h1>
+<h2>1. 文件資訊</h2>
+<table>
+  <thead>
+    <tr><th>項目</th><th>內容</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>文件狀態</td><td>草案，待使用者修改與核准</td></tr>
+    <tr><td>適用專案</td><td><code>D:\.我的專案\04.文件管理系統_V6_codex\dmsV6</code></td></tr>
+    <tr><td>目標架構</td><td>維持現有 Next.js 全端架構</td></tr>
+    <tr><td>前端 API 路徑</td><td>同源 <code>/api/*</code></td></tr>
+    <tr><td>後端服務位置</td><td><code>dmsV6/lib/server</code></td></tr>
+    <tr><td>資料庫</td><td>PostgreSQL</td></tr>
+    <tr><td>執行方式</td><td>依批次逐步實作，每一批完成驗證後才進入下一批</td></tr>
+  </tbody>
+</table>
+<h2>2. 已確認原則</h2>
+<ul>
+  <li>[x] 維持目前 Next.js 全端架構。</li>
+  <li>[x] 不拆分成獨立 API 專案。</li>
+  <li>[x] 不以 JWT 取代目前架構作為主要安全措施。</li>
+  <li>[x] 前端繼續只呼叫同源 <code>/api/*</code>。</li>
+  <li>[x] 資料庫、檔案系統及權限邏輯維持於後端。</li>
+  <li>[x] 不建立 Foreign Key。</li>
+  <li>[x] 不建立額外 Constraint。</li>
+  <li>[x] 索引定義內不進行型別轉換。</li>
+  <li>[x] <code>.env.example</code> 內的資料庫參數目前屬於本機測試資料。</li>
+  <li>[x] <code>storage</code> 內受到 Git 追蹤的文件目前皆為測試文件。</li>
+  <li>[x] 本計畫暫不處理測試資料庫密碼及測試文件的 Git 追蹤問題。</li>
+  <li>[ ] 正式部署前，必須另行更換正式資料庫密碼及 <code>SESSION_SECRET</code>。</li>
+</ul>
+<h2>3. 執行管制</h2>
+<h3>3.1 每一批的固定流程</h3>
+<ol>
+  <li>確認本批次範圍與使用者修改內容。</li>
+  <li>檢查工作目錄，避免覆蓋既有未提交變更。</li>
+  <li>僅修改本批次列出的檔案。</li>
+  <li>執行檔案範圍檢查及 TypeScript 檢查。</li>
+  <li>從 <code>dmsV6</code> 執行 <code>npm run build</code>。</li>
+  <li>執行本批次列出的 API 或資料庫驗證。</li>
+  <li>回報變更檔案、驗證結果及剩餘風險。</li>
+  <li>使用者確認後，才進入下一批。</li>
+</ol>
+<h3>3.2 停止條件</h3>
+<p>遇到下列情況時，不得自行擴大修改範圍：</p>
+<ul>
+  <li>商業規則與現有程式行為衝突。</li>
+  <li>需要修改共用的 <code>employee.emp_pw</code> 密碼格式。</li>
+  <li>需要刪除正式文件或資料庫資料。</li>
+  <li>需要變更 IIS、VPN、防火牆或正式網域。</li>
+  <li>需要新增尚未核准的 PostgreSQL 資料表。</li>
+  <li>建置失敗且根因不在本批次修改範圍。</li>
+  <li>發現使用者尚未提交的變更與預計修改內容重疊。</li>
+</ul>
+<p>發生錯誤時，必須使用以下格式回報：</p>
+<pre><code class="language-text">Status：
+Root Cause：
+Suggested Fix：</code></pre>
+<h2>4. 實作前待確認事項</h2>
+<p>開始對應批次前，需由使用者填寫或確認下列決策。</p>
+<h3>D-01：發布檔案大小上限</h3>
+<ul>
+  <li>決定值：<code>100 MB</code></li>
+  <li>建議同時限制 Base64 解碼後大小及 HTTP Request Body 大小。</li>
+</ul>
+<h3>D-02：來源檔案大小上限</h3>
+<ul>
+  <li>決定值：<code>100 MB</code></li>
+</ul>
+<h3>D-03：HTML 預覽策略</h3>
+<ul>
+  <li>[x] 決定：取消 HTML、HTM、MHTML 類型的檔案上傳及預覽。</li>
+  <li>[ ] A. 保留預覽，但使用 CSP Sandbox 禁止 JavaScript、表單、導向及外部連線。</li>
+  <li>[ ] B. 停止 HTML、HTM、MHTML 線上預覽，只允許下載。</li>
+  <li>[ ] C. 改由獨立且不帶 DMS Session Cookie 的預覽網域提供。</li>
+</ul>
+<p>建議選擇 A；若 HTML 內容必須執行 JavaScript，改選 C。</p>
+<h3>D-04：敏感操作的稽核寫入失敗策略</h3>
+<ul>
+  <li>[x] A. 稽核寫入失敗時，文件刪除、ACL 修改及封存一併回復。</li>
+  <li>[ ] B. 主操作繼續，但必須寫入伺服器錯誤日誌及系統事件紀錄。</li>
+</ul>
+<p>建議選擇 A。</p>
+<h3>D-05：伺服器端 Session 資料表</h3>
+<ul>
+  <li>[ ] 同意新增 Session 資料表。</li>
+  <li>[x] 暫時維持目前簽章 Cookie，只先移除預設密鑰並補強驗證。</li>
+</ul>
+<h3>D-06：MD5 密碼遷移</h3>
+<ul>
+  <li>[ ] <code>employee.emp_pw</code> 僅供 DMS 使用，可以規劃遷移。</li>
+  <li>[ ] <code>employee.emp_pw</code> 由其他 Delphi 系統共用，暫不修改。</li>
+  <li>[x] 尚未確認，必須先調查。</li>
+</ul>
+<h2>5. 批次一：API 共用安全基礎</h2>
+<h3>5.1 目標</h3>
+<p>統一 API 的身分驗證、來源驗證、輸入處理、HTTP 狀態碼與錯誤回應。</p>
+<h3>5.2 預計修改範圍</h3>
+<ul>
+  <li><code>dmsV6/lib/server/http.ts</code></li>
+  <li><code>dmsV6/lib/server/auth.ts</code></li>
+  <li><code>dmsV6/lib/server/request.ts</code></li>
+  <li><code>dmsV6/app/api/**/route.ts</code></li>
+  <li><code>dmsV6/next.config.mjs</code></li>
+</ul>
+<h3>5.3 執行項目</h3>
+<ul>
+  <li>[ ] 建立共用 API 錯誤型別或錯誤碼。
+<ul>
+  <li>狀態：不執行</li>
+</ul>
+</li>
+  <li>[ ] 統一 <code>400</code>、<code>401</code>、<code>403</code>、<code>404</code>、<code>409</code>、<code>413</code>、<code>415</code>、<code>429</code>、<code>500</code> 的使用規則。</li>
+  <li>[ ] 未登入請求統一回傳 <code>401</code>。</li>
+  <li>[ ] 已登入但無權限統一回傳 <code>403</code>。</li>
+  <li>[ ] 不再將 PostgreSQL、檔案路徑或原始例外內容回傳前端。
+<ul>
+  <li>狀態：不執行</li>
+</ul>
+</li>
+  <li>[ ] 後端錯誤產生追蹤識別碼。
+<ul>
+  <li>狀態：不執行</li>
+</ul>
+</li>
+  <li>[ ] 完整錯誤只寫入後端日誌。
+<ul>
+  <li>狀態：不執行</li>
+</ul>
+</li>
+  <li>[ ] POST、PUT、PATCH、DELETE 驗證 <code>Origin</code>。</li>
+  <li>[ ] JSON API 驗證 <code>Content-Type: application/json</code>。</li>
+  <li>[ ] 檢查所有數字識別碼必須為正整數或明確允許的 <code>0</code>。</li>
+  <li>[ ] 檢查必要字串不可空白並限制長度。</li>
+  <li>[ ] 檢查陣列欄位型別、筆數及重複值。</li>
+  <li>[ ] 正式環境停用或移除 <code>/api/test</code>。</li>
+  <li>[ ] 加入 CSP、<code>nosniff</code>、Referrer Policy、Permissions Policy 與 Frame 限制。</li>
+  <li>[ ] 正式 HTTPS 環境加入 HSTS。
+<ul>
+  <li>狀態：不執行</li>
+</ul>
+</li>
+</ul>
+<h3>5.4 驗證項目</h3>
+<ul>
+  <li>[ ] 未登入存取資料夾 API 回傳 <code>401</code>。</li>
+  <li>[ ] 無權限修改資料夾回傳 <code>403</code>。</li>
+  <li>[ ] 無效 JSON 回傳 <code>400</code>，不包含內部例外。</li>
+  <li>[ ] 非 JSON Content-Type 的異動請求回傳 <code>415</code>。</li>
+  <li>[ ] 不合法 ID 不會送入 PostgreSQL。</li>
+  <li>[ ] 不同來源的異動請求被拒絕。</li>
+  <li>[ ] <code>/api/test</code> 在正式環境不可使用。</li>
+  <li>[ ] <code>npm run build</code> 成功。</li>
+</ul>
+<h3>5.5 完成條件</h3>
+<ul>
+  <li>[ ] 所有 API Route Handler 使用同一套錯誤與驗證規則。</li>
+  <li>[ ] 前端既有正常操作未受影響。</li>
+  <li>[ ] 正式建置成功。</li>
+</ul>
+<h2>6. 批次二：HTML 預覽與檔案安全</h2>
+<h3>6.1 目標</h3>
+<p>防止儲存型 XSS、超大檔案造成記憶體耗盡，以及檔案路徑越界。</p>
+<h3>6.2 預計修改範圍</h3>
+<ul>
+  <li><code>dmsV6/lib/server/fileStorage.ts</code></li>
+  <li><code>dmsV6/lib/server/documentService.ts</code></li>
+  <li><code>dmsV6/app/api/documents/route.ts</code></li>
+  <li><code>dmsV6/app/api/documents/preview/route.ts</code></li>
+  <li><code>dmsV6/app/api/documents/download/route.ts</code></li>
+  <li><code>dmsV6/.env.example</code></li>
+  <li><code>dmsV6/.env.local</code></li>
+</ul>
+<h3>6.3 執行項目</h3>
+<ul>
+  <li>[x] 依 D-01 設定發布檔案大小上限。</li>
+  <li>[x] 依 D-02 設定來源檔案大小上限。</li>
+  <li>[x] 在 Base64 解碼前估算大小。</li>
+  <li>[x] 解碼後再次確認實際大小。</li>
+  <li>[x] 拒絕空檔案及格式不合法的 Base64。</li>
+  <li>[x] 交叉驗證副檔名、MIME 與檔案特徵碼。</li>
+  <li>[ ] PDF 浮水印處理前檢查檔案大小。</li>
+  <li>[x] 依 D-03 實作 HTML 預覽策略。</li>
+  <li>[ ] HTML 預覽回應加入獨立 CSP。</li>
+  <li>[ ] HTML 預覽加入 <code>X-Content-Type-Options: nosniff</code>。</li>
+  <li>[ ] 對儲存路徑執行正規化。</li>
+  <li>[ ] 確認解析後路徑仍位於 storage 或 legacy storage 根目錄。</li>
+  <li>[ ] 拒絕 <code>..</code> 路徑穿越。</li>
+  <li>[ ] 絕對路徑只允許位於設定的儲存根目錄。</li>
+  <li>[ ] 確認讀取目標為一般檔案。</li>
+  <li>[ ] 檔名寫入 Content-Disposition 前移除控制字元。</li>
+</ul>
+<h3>6.4 驗證項目</h3>
+<ul>
+  <li>[ ] 超過限制的上傳回傳 <code>413</code>。</li>
+  <li>[ ] 偽造副檔名的檔案被拒絕。</li>
+  <li>[ ] 不合法 Base64 被拒絕。</li>
+  <li>[ ] HTML 內 JavaScript 無法執行。</li>
+  <li>[ ] HTML 無法呼叫 DMS API。</li>
+  <li>[ ] <code>../</code> 路徑無法越出 storage。</li>
+  <li>[ ] 既有 PDF 預覽及浮水印正常。</li>
+  <li>[ ] 既有文件下載正常。</li>
+  <li>[ ] <code>npm run build</code> 成功。</li>
+</ul>
+<h3>6.5 完成條件</h3>
+<ul>
+  <li>[ ] 所有可預覽格式都有明確安全策略。</li>
+  <li>[ ] 所有上傳入口都有伺服器端大小與格式檢查。</li>
+  <li>[ ] 所有實體檔案路徑均受根目錄限制。</li>
+</ul>
+<h2>7. 批次三：文件與資料夾交易一致性</h2>
+<h3>7.1 目標</h3>
+<p>避免併發請求產生重複版次、狀態覆蓋、錯誤刪除及孤兒檔案。</p>
+<h3>7.2 預計修改範圍</h3>
+<ul>
+  <li><code>dmsV6/lib/server/db.ts</code></li>
+  <li><code>dmsV6/lib/server/documentService.ts</code></li>
+  <li><code>dmsV6/lib/server/folderService.ts</code></li>
+  <li><code>dmsV6/lib/server/fileStorage.ts</code></li>
+  <li><code>dmsV6/lib/server/auditService.ts</code></li>
+</ul>
+<h3>7.3 執行項目</h3>
+<ul>
+  <li>[ ] 上傳新版前在交易內鎖定 <code>dms_doc</code>。</li>
+  <li>[ ] 撤回最新版前在交易內鎖定 <code>dms_doc</code>。</li>
+  <li>[ ] 刪除第一版前在交易內鎖定 <code>dms_doc</code>。</li>
+  <li>[ ] 廢止文件前在交易內鎖定 <code>dms_doc</code>。</li>
+  <li>[ ] 建立子資料夾前鎖定父資料夾。</li>
+  <li>[ ] 刪除空資料夾前鎖定目標資料夾。</li>
+  <li>[ ] 封存資料夾前鎖定目標資料夾。</li>
+  <li>[ ] 將異動前權限檢查移入相同交易。</li>
+  <li>[ ] 記錄交易期間新建立的實體檔案。</li>
+  <li>[ ] 資料庫回復後刪除本次新增的實體檔案。</li>
+  <li>[ ] 孤兒檔案刪除失敗時記錄明確錯誤。</li>
+  <li>[ ] 依 D-04 調整敏感操作的稽核失敗策略。</li>
+</ul>
+<h3>7.4 SQL 格式要求</h3>
+<p>SQL 必須保持多行、易讀且欄位對齊，例如：</p>
+<pre><code class="language-sql">SELECT dd_id
+  FROM dms_doc
+ WHERE dd_id = $1
+   FOR UPDATE</code></pre>
+<h3>7.5 併發驗證</h3>
+<ul>
+  <li>[ ] 同時上傳 2 個新版，不會產生重複版次。</li>
+  <li>[ ] 上傳新版與撤回同時發生時，結果一致。</li>
+  <li>[ ] 刪除第一版與上傳新版同時發生時，不會誤刪文件。</li>
+  <li>[ ] 刪除空資料夾與建立子資料夾同時發生時，不會留下異常階層。</li>
+  <li>[ ] 交易失敗後不留下孤兒檔案。</li>
+  <li>[ ] <code>npm run build</code> 成功。</li>
+</ul>
+<h3>7.6 完成條件</h3>
+<ul>
+  <li>[ ] 文件與資料夾異動均具備明確鎖定順序。</li>
+  <li>[ ] 資料庫與實體檔案失敗時能維持一致狀態。</li>
+  <li>[ ] 敏感操作具備可靠稽核紀錄。</li>
+</ul>
+<h2>8. 批次四：Session 與登入防護</h2>
+<h3>8.1 目標</h3>
+<p>讓登入狀態可以由伺服器撤銷，並限制暴力登入。</p>
+<h3>8.2 預計修改範圍</h3>
+<ul>
+  <li><code>dmsV6/lib/session.ts</code></li>
+  <li><code>dmsV6/lib/server/auth.ts</code></li>
+  <li><code>dmsV6/app/api/login/route.ts</code></li>
+  <li><code>dmsV6/app/api/logout/route.ts</code></li>
+  <li><code>dmsV6/app/api/session/route.ts</code></li>
+  <li><code>dmsV6/lib/server/auditService.ts</code></li>
+  <li>新增 Session 與登入失敗紀錄相關 schema 文件。</li>
+</ul>
+<h3>8.3 Session 資料表規則</h3>
+<p>若 D-05 同意新增資料表，需符合：</p>
+<ul>
+  <li>[ ] 不建立 Foreign Key。</li>
+  <li>[ ] 不建立額外 Constraint。</li>
+  <li>[ ] Session ID 只保存雜湊值。</li>
+  <li>[ ] 保存使用者帳號。</li>
+  <li>[ ] 保存建立時間與到期時間。</li>
+  <li>[ ] 保存最後活動時間。</li>
+  <li>[ ] 保存撤銷時間與撤銷原因。</li>
+  <li>[ ] 保存 IP 及 User-Agent 摘要。</li>
+  <li>[ ] 建立必要的普通索引，不在索引內做型別轉換。</li>
+</ul>
+<h3>8.4 執行項目</h3>
+<ul>
+  <li>[ ] Cookie 只保存隨機 Session ID。</li>
+  <li>[ ] API 每次由 PostgreSQL 驗證 Session。</li>
+  <li>[ ] 敏感操作重新取得目前使用者角色。</li>
+  <li>[ ] 登出立即撤銷 Session。</li>
+  <li>[ ] 離職、停權或權限取消後舊 Session 不再有效。</li>
+  <li>[ ] 正式環境缺少必要 Session 設定時停止啟動。</li>
+  <li>[ ] HTTPS 環境使用 Secure Cookie。</li>
+  <li>[ ] Session Cookie 維持 HttpOnly。</li>
+  <li>[ ] 加入帳號及 IP 單位的登入失敗限制。</li>
+  <li>[ ] 加入短時間連續失敗延遲。</li>
+  <li>[ ] 加入暫時鎖定及自動解鎖時間。</li>
+  <li>[ ] 登入成功後清除失敗計數。</li>
+  <li>[ ] 登入成功、失敗、鎖定及撤銷均寫入稽核。</li>
+</ul>
+<h3>8.5 驗證項目</h3>
+<ul>
+  <li>[ ] 偽造 Session ID 無法登入。</li>
+  <li>[ ] 登出後舊 Session 無法繼續使用。</li>
+  <li>[ ] 權限取消後舊 Session 無法維持原權限。</li>
+  <li>[ ] 過期 Session 被拒絕。</li>
+  <li>[ ] 達到失敗次數後登入受到限制。</li>
+  <li>[ ] 不同 IP 與不同帳號的限流規則正確。</li>
+  <li>[ ] <code>npm run build</code> 成功。</li>
+</ul>
+<h3>8.6 MD5 處理</h3>
+<ul>
+  <li>[ ] 依 D-06 決定是否進行密碼雜湊遷移。</li>
+  <li>[ ] 未確認其他系統相容性前，不修改 <code>employee.emp_pw</code>。</li>
+  <li>[ ] 若要遷移，另建立獨立計畫，不併入本批次直接修改。</li>
+</ul>
+<h2>9. 批次五：SQL 效能優化</h2>
+<h3>9.1 目標</h3>
+<p>降低資料夾清單的全表遞迴、相關子查詢與逐筆 SQL 往返。</p>
+<h3>9.2 預計修改範圍</h3>
+<ul>
+  <li><code>dmsV6/lib/server/folderService.ts</code></li>
+  <li><code>dmsV6/lib/server/documentService.ts</code></li>
+  <li><code>dmsV6/lib/server/auth.ts</code></li>
+  <li><code>dmsV6/lib/server/employeeService.ts</code></li>
+  <li>對應的資料庫 schema 文件。</li>
+</ul>
+<h3>9.3 <code>listFolders()</code> 重構</h3>
+<ul>
+  <li>[ ] 先計算目前使用者可見資料夾。</li>
+  <li>[ ] 只對可見資料夾計算管理員。</li>
+  <li>[ ] 只對可見資料夾彙總 ACL。</li>
+  <li>[ ] 子資料夾數量改為一次彙總。</li>
+  <li>[ ] 文件數量改為一次彙總。</li>
+  <li>[ ] 移除逐資料夾相關 COUNT 子查詢。</li>
+  <li>[ ] 保留管理員向下繼承規則。</li>
+  <li>[ ] 保留公開與限閱規則。</li>
+  <li>[ ] 一般使用者不回傳不必要的管理員帳號與 ACL 明細。</li>
+</ul>
+<h3>9.4 帳號大小寫最佳化</h3>
+<ul>
+  <li>[ ] 掃描 <code>employee.emp_id</code> 是否存在僅大小寫不同的重複值。</li>
+  <li>[ ] 掃描 <code>dms_admins.emp_id</code> 是否存在僅大小寫不同的重複值。</li>
+  <li>[ ] 掃描 <code>dms_folder_managers.usr_uid</code> 是否存在僅大小寫不同的重複值。</li>
+  <li>[ ] 掃描使用者類型 ACL 是否存在僅大小寫不同的重複值。</li>
+  <li>[ ] 寫入前統一帳號格式。</li>
+  <li>[ ] 查詢參數先在應用程式正規化。</li>
+  <li>[ ] SQL 改用普通 <code>=</code>。</li>
+  <li>[ ] 沿用普通欄位索引。</li>
+  <li>[ ] 索引定義內不使用 <code>CAST(...)</code> 或 <code>::type</code>。</li>
+</ul>
+<h3>9.5 批次寫入</h3>
+<ul>
+  <li>[ ] 管理員清單先去除重複值。</li>
+  <li>[ ] ACL 部門清單先去除重複值。</li>
+  <li>[ ] ACL 使用者清單先去除重複值。</li>
+  <li>[ ] 將逐筆 INSERT 改為 <code>unnest($1::text[])</code> 批次新增。</li>
+  <li>[ ] 空陣列不執行無意義 SQL。</li>
+</ul>
+<h3>9.6 文件存取查詢</h3>
+<ul>
+  <li>[ ] 評估合併文件版本、文件狀態與存取權限查詢。</li>
+  <li>[ ] 合併前保存原始查詢結果作為比對基準。</li>
+  <li>[ ] 使用 <code>EXPLAIN</code> 比較查詢計畫。</li>
+  <li>[ ] 不為了減少查詢次數而降低授權邏輯可讀性。</li>
+</ul>
+<h3>9.7 PostgreSQL 統計</h3>
+<ul>
+  <li>[ ] 完成資料匯入或查詢調整後執行 <code>ANALYZE</code>。</li>
+  <li>[ ] 檢查 <code>last_analyze</code> 與 <code>last_autoanalyze</code>。</li>
+  <li>[ ] 不執行會變更正式業務資料的測試 SQL。</li>
+</ul>
+<h3>9.8 驗證項目</h3>
+<ul>
+  <li>[ ] ADMIN 可見資料與原本一致。</li>
+  <li>[ ] 資料夾管理員可見資料與原本一致。</li>
+  <li>[ ] 部門 ACL 使用者可見資料與原本一致。</li>
+  <li>[ ] 個人 ACL 使用者可見資料與原本一致。</li>
+  <li>[ ] 一般公開使用者可見資料與原本一致。</li>
+  <li>[ ] 無權限使用者仍無法取得限閱資料。</li>
+  <li>[ ] <code>EXPLAIN</code> 顯示查詢結構已減少重複掃描。</li>
+  <li>[ ] <code>npm run build</code> 成功。</li>
+</ul>
+<h3>9.9 完成條件</h3>
+<ul>
+  <li>[ ] SQL Injection 檢查仍為零發現。</li>
+  <li>[ ] 權限結果與既有商業規則一致。</li>
+  <li>[ ] 查詢重構具有實際計畫改善證據。</li>
+</ul>
+<h2>10. 批次六：完整回歸驗證</h2>
+<h3>10.1 身分與權限角色</h3>
+<ul>
+  <li>[ ] ADMIN。</li>
+  <li>[ ] 資料夾直接管理員。</li>
+  <li>[ ] 上層繼承管理員。</li>
+  <li>[ ] 部門 ACL 使用者。</li>
+  <li>[ ] 個人 ACL 使用者。</li>
+  <li>[ ] 一般公開查閱使用者。</li>
+  <li>[ ] 無權限使用者。</li>
+  <li>[ ] 未登入使用者。</li>
+</ul>
+<h3>10.2 功能流程</h3>
+<ul>
+  <li>[ ] 登入。</li>
+  <li>[ ] 登出。</li>
+  <li>[ ] Session 還原。</li>
+  <li>[ ] 建立第一層資料夾。</li>
+  <li>[ ] 建立子資料夾。</li>
+  <li>[ ] 修改資料夾。</li>
+  <li>[ ] 更新管理員。</li>
+  <li>[ ] 更新 ACL。</li>
+  <li>[ ] 刪除空資料夾。</li>
+  <li>[ ] 封存資料夾。</li>
+  <li>[ ] 建立文件。</li>
+  <li>[ ] 上傳新版。</li>
+  <li>[ ] 撤回最新版。</li>
+  <li>[ ] 刪除第一版文件。</li>
+  <li>[ ] 廢止文件。</li>
+  <li>[ ] PDF 預覽與浮水印。</li>
+  <li>[ ] HTML 預覽或下載策略。</li>
+  <li>[ ] 文件下載。</li>
+</ul>
+<h3>10.3 安全測試</h3>
+<ul>
+  <li>[ ] 未登入 API 存取。</li>
+  <li>[ ] 水平越權存取其他資料夾。</li>
+  <li>[ ] 水平越權存取其他文件版本。</li>
+  <li>[ ] CSRF／錯誤 Origin。</li>
+  <li>[ ] 無效 JSON。</li>
+  <li>[ ] 超大 Request Body。</li>
+  <li>[ ] 超大 PDF。</li>
+  <li>[ ] 偽造副檔名。</li>
+  <li>[ ] 惡意 HTML。</li>
+  <li>[ ] 路徑穿越。</li>
+  <li>[ ] 暴力登入。</li>
+  <li>[ ] 過期及撤銷 Session。</li>
+  <li>[ ] 內部錯誤資訊洩漏。</li>
+</ul>
+<h3>10.4 最終驗證</h3>
+<ul>
+  <li>[ ] 從 <code>dmsV6</code> 執行 <code>npm run build</code>。</li>
+  <li>[ ] TypeScript 成功。</li>
+  <li>[ ] Next.js 正式建置成功。</li>
+  <li>[ ] 無新增建置警告。</li>
+  <li>[ ] 檢查本次修改檔案清單。</li>
+  <li>[ ] 確認未修改計畫外檔案。</li>
+  <li>[ ] 更新系統規格文件。</li>
+  <li>[ ] 執行 <code>node .\參考文件\watch.js</code> 更新 HTML 文件。</li>
+</ul>
+<h2>11. 執行順序總表</h2>
+<table>
+  <thead>
+    <tr><th>順序</th><th>批次</th><th>狀態</th><th>開始日期</th><th>完成日期</th><th>備註</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>API 共用安全基礎</td><td>未開始</td><td></td><td></td><td></td></tr>
+    <tr><td>2</td><td>HTML 預覽與檔案安全</td><td>待確認</td><td></td><td></td><td></td></tr>
+    <tr><td>3</td><td>文件與資料夾交易一致性</td><td>待確認</td><td></td><td></td><td></td></tr>
+    <tr><td>4</td><td>Session 與登入防護</td><td>待確認</td><td></td><td></td><td></td></tr>
+    <tr><td>5</td><td>SQL 效能優化</td><td>待確認</td><td></td><td></td><td></td></tr>
+    <tr><td>6</td><td>完整回歸驗證</td><td>待確認</td><td></td><td></td><td></td></tr>
+  </tbody>
+</table>
+<p>狀態僅使用：<code>未開始</code>、<code>執行中</code>、<code>待確認</code>、<code>已完成</code>、<code>已阻擋</code>。</p>
+<h2>12. 每批完成回報格式</h2>
+<pre><code class="language-text">批次：
+狀態：
+
+已修改檔案：
+1.
+
+完成項目：
+1.
+
+驗證結果：
+1. npm run build：
+2. API 測試：
+3. 資料庫測試：
+
+未完成或風險：
+1.
+
+下一步：
+1.</code></pre>
+<h2>13. 變更紀錄</h2>
+<table>
+  <thead>
+    <tr><th>日期</th><th>版本</th><th>修改者</th><th>內容</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>2026-06-30</td><td>0.1</td><td>Codex</td><td>建立 API 安全與 SQL 優化初始執行計畫</td></tr>
+  </tbody>
+</table>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

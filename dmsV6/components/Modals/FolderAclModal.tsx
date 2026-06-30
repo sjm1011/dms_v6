@@ -250,9 +250,13 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
 
   const userInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const isOpenRef = useRef(isOpen);
+  const folderIdRef = useRef(folderId);
 
   // 1. 初始化載入部門列表與現有 ACL 設定
   useEffect(() => {
+    isOpenRef.current = isOpen;
+    folderIdRef.current = folderId;
     if (isOpen && folderId) {
       setLoading(true);
       setError('');
@@ -263,12 +267,14 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
         try {
           // 載入部門列表
           const deptRes = await EmployeeAPI.getDepartments();
+          if (!isOpenRef.current || folderIdRef.current !== folderId) return;
           if (deptRes.success) {
             setDepartments(deptRes.data);
           }
 
           // 載入當前資料夾權限
           const aclRes = await FoldersAPI.getFolderACL(folderId);
+          if (!isOpenRef.current || folderIdRef.current !== folderId) return;
           if (aclRes.success && aclRes.data) {
             setAccessType(aclRes.data.access_type);
             setSelectedDepts(aclRes.data.dept_ids || []);
@@ -278,7 +284,8 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
               const rows: UserRow[] = [];
               for (const uid of aclRes.data.uids) {
                 try {
-                  const empRes = await EmployeeAPI.getEmployeeByUid(uid);
+                  const empRes = await EmployeeAPI.getEmployeeByUid(uid, 'folder_acl', folderId);
+                  if (!isOpenRef.current || folderIdRef.current !== folderId) return;
                   if (empRes.success && empRes.data && empRes.data.length > 0) {
                     rows.push({
                       uid,
@@ -318,6 +325,10 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
       };
 
       initData();
+    } else {
+      setSelectedDepts([]);
+      setUserRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
+      userInputsRef.current = [];
     }
   }, [isOpen, folderId]);
 
@@ -371,7 +382,8 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
     });
 
     try {
-      const res = await EmployeeAPI.getEmployeeByUid(targetUid);
+      const res = await EmployeeAPI.getEmployeeByUid(targetUid, 'folder_acl', folderId);
+      if (!isOpenRef.current || folderIdRef.current !== folderId) return;
       setUserRows(prev => {
         const next = [...prev];
         if (!next[index]) return prev;
@@ -535,7 +547,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
                       ref={el => {
                         userInputsRef.current[index] = el;
                       }}
-                      placeholder="請輸入同仁帳號"
+                      placeholder="請輸入員工編號"
                       value={row.uid}
                       onChange={e => handleUidChange(index, e.target.value)}
                       data-enter-action="blur-or-submit"

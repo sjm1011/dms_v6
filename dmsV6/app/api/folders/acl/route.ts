@@ -10,7 +10,9 @@ export const GET = async (request: NextRequest) => {
     const session = requireSession(request);
     const fid = Number(request.nextUrl.searchParams.get('fid') || 0);
 
-    return ok(await getFolderAcl(session.user, fid));
+    const response = ok(await getFolderAcl(session.user, fid));
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
   } catch (error) {
     return error instanceof Error ? fail(error.message, 400) : serverError(error);
   }

@@ -9,7 +9,6 @@ import {
   buildContentDisposition,
   createFileStream,
   getFileExt,
-  isHtmlExt,
   isPdfExt,
   saveUploadedFile,
   type UploadPayload
@@ -121,7 +120,7 @@ const toDocument = (rows: DocumentRow[]): Document => {
     obsolete_reason: first.obsolete_reason || undefined,
     can_manage: first.can_manage,
     is_pdf: current ? isPdfExt(current.ext || getFileExt(current.file_name || '')) : false,
-    can_preview: current ? isPdfExt(current.ext || '') || isHtmlExt(current.ext || '') : false
+    can_preview: current ? isPdfExt(current.ext || '') : false
   };
 };
 
@@ -147,7 +146,7 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
                                 AND a.dfa_dc = 'N'
                                 AND (
                                      (a.dfa_type = 1 AND a.dfa_target = $4)
-                                     OR (a.dfa_type = 2 AND UPPER(a.dfa_target) = UPPER($2))
+                                     OR (a.dfa_type = 2 AND a.dfa_target = $2)
                                 )
                          )
                     )
@@ -197,7 +196,7 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
        ORDER BY d.dd_code,
                 d.dd_id,
                 v.ddv_seq DESC`,
-    [folderId, user.id, canManage, user.dept_id || '']
+    [folderId, user.id.toUpperCase(), canManage, user.dept_id || '']
   );
   const grouped = new Map<number, DocumentRow[]>();
 
@@ -715,7 +714,10 @@ export const getFileForAccess = async (
 
   const canManage = row.df_fid > 0 ? await canManageFolder(user, row.df_fid) : isAdmin(user);
   const isPdf = isPdfExt(row.dfi_ext);
-  const isHtml = isHtmlExt(row.dfi_ext);
+
+  if (mode === 'preview' && !isPdf) {
+    throw new Error('此檔案格式不支援線上預覽。');
+  }
 
   if (!canManage) {
     if (row.dd_status !== 1) {
@@ -743,12 +745,12 @@ export const getFileForAccess = async (
                          AND a.dfa_dc = 'N'
                          AND (
                               (a.dfa_type = 1 AND a.dfa_target = $3)
-                              OR (a.dfa_type = 2 AND UPPER(a.dfa_target) = UPPER($2))
+                              OR (a.dfa_type = 2 AND a.dfa_target = $2)
                          )
                   )
              )
         ) AS allowed`,
-      [versionId, user.id, user.dept_id || '']
+      [versionId, user.id.toUpperCase(), user.dept_id || '']
     );
 
     if (!valid.rows[0]?.allowed) {
@@ -769,9 +771,6 @@ export const getFileForAccess = async (
       throw new Error('一般使用者不可下載 PDF 正式原檔。');
     }
 
-    if (mode === 'preview' && !isPdf && !isHtml) {
-      throw new Error('此檔案格式不支援線上預覽。');
-    }
   }
 
   const { stream, size } = await createFileStream(row.dfi_path);

@@ -14,8 +14,9 @@ export interface Folder {
   root_id: string;
   name: string;
   status: number;
-  managers?: string[];
-  manager_names?: string;
+  can_manage?: boolean;
+  can_assign_co_managers?: boolean;
+  can_edit_primary_manager?: boolean;
   access_type?: number;
   acl_summary?: string;
   child_folder_count?: number;
@@ -93,7 +94,6 @@ export interface DMSItem {
   mime?: string;
   ver_id?: string;
   file_name?: string;
-  manager_names?: string;
   access_type?: number;
   acl_summary?: string;
   can_manage?: boolean;
@@ -126,3 +126,13 @@ export interface FolderACL {
   dept_ids: string[];
   uids: string[];
 }
+
+export interface FolderManagerInfo {
+  names: string[];
+  co_manager_names: string[];
+  employee_ids?: string[];
+}
+
+export type FolderAccessStatus = 'allowed' | 'denied';
+
+export type FolderManagerAssignmentType = 'PRIMARY' | 'CO_MANAGER';
