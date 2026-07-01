@@ -12,7 +12,9 @@ interface FolderRow {
   name: string;
   status: number;
   access_type: number;
+  is_access_inherited: boolean;
   can_manage: boolean;
+  manager_role: 'PRIMARY' | 'CO_MANAGER' | null;
   can_assign_co_managers: boolean;
   can_edit_primary_manager: boolean;
   child_folder_count: string | number;
@@ -27,9 +29,11 @@ const toFolder = (row: FolderRow): Folder => ({
   name: row.name,
   status: Number(row.status),
   can_manage: Boolean(row.can_manage),
+  manager_role: row.manager_role,
   can_assign_co_managers: Boolean(row.can_assign_co_managers),
   can_edit_primary_manager: Boolean(row.can_edit_primary_manager),
   access_type: Number(row.access_type || 2),
+  is_access_inherited: Boolean(row.is_access_inherited),
   acl_summary: row.acl_summary || '',
   child_folder_count: Number(row.child_folder_count || 0),
   document_count: Number(row.document_count || 0)
@@ -91,14 +95,26 @@ export const listFolders = async (user: SessionUser) => {
     `WITH RECURSIVE folder_ancestors AS (
         SELECT f.df_fid,
                f.df_fid AS ancestor_fid,
-               f.df_pid AS ancestor_pid
+               f.df_pid AS ancestor_pid,
+               0 AS depth
           FROM dms_folders f
         UNION ALL
         SELECT fa.df_fid,
                p.df_fid AS ancestor_fid,
-               p.df_pid AS ancestor_pid
+               p.df_pid AS ancestor_pid,
+               fa.depth + 1 AS depth
           FROM folder_ancestors fa
           JOIN dms_folders p ON p.df_fid = fa.ancestor_pid
+      ),
+      access_sources AS (
+        SELECT DISTINCT ON (fa.df_fid)
+               fa.df_fid,
+               fa.ancestor_fid AS source_fid
+          FROM folder_ancestors fa
+          JOIN dms_folders af ON af.df_fid = fa.ancestor_fid
+         WHERE af.df_access_type = 2
+         ORDER BY fa.df_fid,
+                  fa.depth DESC
       ),
       manageable AS (
         SELECT f.df_fid
@@ -121,12 +137,17 @@ export const listFolders = async (user: SessionUser) => {
                     FROM manageable mg
                    WHERE mg.df_fid = f.df_fid
                 )
-                OR f.df_access_type = 1
+                OR NOT EXISTS (
+                    SELECT 1
+                      FROM access_sources src
+                     WHERE src.df_fid = f.df_fid
+                )
                 OR EXISTS (
                     SELECT 1
                       FROM dms_folder_acl a
-                     WHERE a.df_fid = f.df_fid
-                       AND a.dfa_dc = 'N'
+                      JOIN access_sources src ON src.source_fid = a.df_fid
+                                             AND src.df_fid = f.df_fid
+                     WHERE a.dfa_dc = 'N'
                        AND (
                             (a.dfa_type = 1 AND a.dfa_target = $2)
                             OR (a.dfa_type = 2 AND a.dfa_target = $1)
@@ -135,7 +156,7 @@ export const listFolders = async (user: SessionUser) => {
            )
       ),
       acl_summary AS (
-        SELECT a.df_fid,
+        SELECT src.df_fid,
                STRING_AGG(
                  COALESCE(
                    d.dept_name,
@@ -149,12 +170,13 @@ export const listFolders = async (user: SessionUser) => {
                  ORDER BY a.dfa_type,
                           a.dfa_target
                ) AS acl_summary
-          FROM dms_folder_acl a
-          JOIN visible v ON v.df_fid = a.df_fid
+          FROM access_sources src
+          JOIN visible v ON v.df_fid = src.df_fid
+          JOIN dms_folder_acl a ON a.df_fid = src.source_fid
           LEFT JOIN department d ON a.dfa_type = 1 AND a.dfa_target = d.dept_id::text
           LEFT JOIN employee e ON a.dfa_type = 2 AND a.dfa_target = e.emp_id
          WHERE a.dfa_dc = 'N'
-         GROUP BY a.df_fid
+         GROUP BY src.df_fid
       ),
       child_counts AS (
         SELECT c.df_pid AS df_fid,
@@ -177,12 +199,34 @@ export const listFolders = async (user: SessionUser) => {
              f.df_root_fid AS root_id,
              f.df_name AS name,
              f.df_status AS status,
-             f.df_access_type AS access_type,
+             CASE WHEN src.source_fid IS NULL THEN 1 ELSE 2 END AS access_type,
+             (src.source_fid IS NOT NULL AND src.source_fid <> f.df_fid) AS is_access_inherited,
              EXISTS (
                SELECT 1
                  FROM manageable mg
                 WHERE mg.df_fid = f.df_fid
              ) AS can_manage,
+             CASE
+               WHEN EXISTS (
+                 SELECT 1
+                   FROM folder_ancestors fa
+                   JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
+                  WHERE fa.df_fid = f.df_fid
+                    AND m.usr_uid = $1
+                    AND m.dfm_type = 1
+                    AND m.dfm_dc = 'N'
+               ) THEN 'PRIMARY'
+               WHEN EXISTS (
+                 SELECT 1
+                   FROM folder_ancestors fa
+                   JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
+                  WHERE fa.df_fid = f.df_fid
+                    AND m.usr_uid = $1
+                    AND m.dfm_type = 2
+                    AND m.dfm_dc = 'N'
+               ) THEN 'CO_MANAGER'
+               ELSE NULL
+             END AS manager_role,
              ($3 = 'ADMIN' OR EXISTS (
                SELECT 1
                  FROM dms_folder_managers pm
@@ -197,6 +241,7 @@ export const listFolders = async (user: SessionUser) => {
              COALESCE(dc.document_count, 0) AS document_count
         FROM dms_folders f
         JOIN visible v ON v.df_fid = f.df_fid
+        LEFT JOIN access_sources src ON src.df_fid = f.df_fid
         LEFT JOIN acl_summary asu ON asu.df_fid = f.df_fid
         LEFT JOIN child_counts cc ON cc.df_fid = f.df_fid
         LEFT JOIN document_counts dc ON dc.df_fid = f.df_fid
@@ -219,15 +264,26 @@ export const getFolderAccessStatus = async (
   const result = await query<{ exists: boolean; allowed: boolean }>(
     `WITH RECURSIVE ancestors AS (
         SELECT f.df_fid,
-               f.df_pid
+               f.df_pid,
+               f.df_access_type,
+               0 AS depth
           FROM dms_folders f
          WHERE f.df_fid = $1
            AND f.df_status = 1
         UNION ALL
         SELECT p.df_fid,
-               p.df_pid
+               p.df_pid,
+               p.df_access_type,
+               a.depth + 1 AS depth
           FROM dms_folders p
           JOIN ancestors a ON a.df_pid = p.df_fid
+      ),
+      access_source AS (
+        SELECT a.df_fid AS source_fid
+          FROM ancestors a
+         WHERE a.df_access_type = 2
+         ORDER BY a.depth DESC
+         LIMIT 1
       )
       SELECT EXISTS (
                SELECT 1
@@ -236,18 +292,12 @@ export const getFolderAccessStatus = async (
                   AND f.df_status = 1
              ) AS exists,
              ($4 = 'ADMIN'
-              OR EXISTS (
-                   SELECT 1
-                     FROM dms_folders f
-                    WHERE f.df_fid = $1
-                      AND f.df_status = 1
-                      AND f.df_access_type = 1
-                 )
+              OR NOT EXISTS (SELECT 1 FROM access_source)
               OR EXISTS (
                    SELECT 1
                      FROM dms_folder_acl a
-                    WHERE a.df_fid = $1
-                      AND a.dfa_dc = 'N'
+                     JOIN access_source src ON src.source_fid = a.df_fid
+                    WHERE a.dfa_dc = 'N'
                       AND (
                            (a.dfa_type = 1 AND a.dfa_target = $3)
                            OR (a.dfa_type = 2 AND a.dfa_target = $2)
@@ -713,12 +763,36 @@ export const archiveFolder = async (user: SessionUser, id: number) => {
 export const getFolderAcl = async (user: SessionUser, folderId: number): Promise<FolderACL> => {
   await requireFolderManage(user, folderId);
 
-  const folder = await query<{ access_type: number }>(
-    `SELECT df_access_type AS access_type
-       FROM dms_folders
-      WHERE df_fid = $1`,
+  const folder = await query<{ access_type: number; source_fid: number | null }>(
+    `WITH RECURSIVE ancestors AS (
+        SELECT f.df_fid,
+               f.df_pid,
+               f.df_access_type,
+               0 AS depth
+          FROM dms_folders f
+         WHERE f.df_fid = $1
+        UNION ALL
+        SELECT p.df_fid,
+               p.df_pid,
+               p.df_access_type,
+               a.depth + 1 AS depth
+          FROM dms_folders p
+          JOIN ancestors a ON a.df_pid = p.df_fid
+      ),
+      access_source AS (
+        SELECT a.df_fid AS source_fid
+          FROM ancestors a
+         WHERE a.df_access_type = 2
+         ORDER BY a.depth DESC
+         LIMIT 1
+      )
+      SELECT CASE WHEN src.source_fid IS NULL THEN 1 ELSE 2 END AS access_type,
+             src.source_fid
+        FROM (SELECT 1) seed
+        LEFT JOIN access_source src ON true`,
     [folderId]
   );
+  const sourceFolderId = folder.rows[0]?.source_fid ?? null;
   const acl = await query<{ dfa_type: number; dfa_target: string }>(
     `SELECT dfa_type,
             dfa_target
@@ -727,13 +801,17 @@ export const getFolderAcl = async (user: SessionUser, folderId: number): Promise
         AND dfa_dc = 'N'
       ORDER BY dfa_type,
                dfa_target`,
-    [folderId]
+    [sourceFolderId]
   );
 
   return {
-    access_type: Number(folder.rows[0]?.access_type || 2),
+    access_type: Number(folder.rows[0]?.access_type || 1),
     dept_ids: acl.rows.filter((row) => row.dfa_type === 1).map((row) => row.dfa_target),
-    uids: acl.rows.filter((row) => row.dfa_type === 2).map((row) => row.dfa_target)
+    uids: acl.rows.filter((row) => row.dfa_type === 2).map((row) => row.dfa_target),
+    is_inherited: sourceFolderId !== null && sourceFolderId !== folderId,
+    inherited_from_folder_id: sourceFolderId !== null && sourceFolderId !== folderId
+      ? String(sourceFolderId)
+      : null
   };
 };
 
@@ -745,6 +823,30 @@ export const updateFolderAcl = async (
   uids: string[]
 ) => {
   await requireFolderManage(user, folderId);
+  const inherited = await query<{ inherited: boolean }>(
+    `WITH RECURSIVE ancestors AS (
+        SELECT f.df_pid AS df_fid
+          FROM dms_folders f
+         WHERE f.df_fid = $1
+        UNION ALL
+        SELECT p.df_pid AS df_fid
+          FROM dms_folders p
+          JOIN ancestors a ON a.df_fid = p.df_fid
+         WHERE a.df_fid IS NOT NULL
+      )
+      SELECT EXISTS (
+               SELECT 1
+                 FROM ancestors a
+                 JOIN dms_folders f ON f.df_fid = a.df_fid
+                WHERE f.df_access_type = 2
+             ) AS inherited`,
+    [folderId]
+  );
+
+  if (inherited.rows[0]?.inherited) {
+    throw new Error('此資料夾已繼承上層資料夾的限閱屬性，不得另行設定。');
+  }
+
   const normalizedDeptIds = Array.from(
     new Set(deptIds.map((value) => value.trim()).filter(Boolean))
   );

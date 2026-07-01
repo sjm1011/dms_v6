@@ -41,6 +41,7 @@ const mimeByExt: Record<string, string> = {
 };
 
 const allowedExts = new Set(Object.keys(mimeByExt));
+const browserPreviewableImageExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
@@ -139,6 +140,12 @@ export const getFileExt = (fileName: string) => {
 };
 
 export const isPdfExt = (ext: string) => ext.toLowerCase() === 'pdf';
+
+export const isBrowserPreviewableImageExt = (ext: string) =>
+  browserPreviewableImageExts.has(ext.replace(/^\./, '').toLowerCase());
+
+export const isPreviewableExt = (ext: string) =>
+  isPdfExt(ext.replace(/^\./, '')) || isBrowserPreviewableImageExt(ext);
 
 export const validateUploadFile = (file: UploadPayload) => {
   if (!file || typeof file.name !== 'string' || typeof file.mime !== 'string') {

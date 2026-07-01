@@ -20,7 +20,7 @@
 | :--- | :--- | :--- | :--- |
 | `dd_id` | SERIAL (INT) | Primary Key | 文件主檔唯一識別碼。 |
 | `df_fid` | INTEGER | Not Null | 所屬資料夾 ID，邏輯對應 `dms_folders.df_fid`。 |
-| `dd_code` | VARCHAR(50) | Not Null | 文件編號。 |
+| `dd_code` | VARCHAR(50) | Nullable | 文件編號，可留空。非空白時由前端轉為大寫。 |
 | `dd_title` | VARCHAR(255) | Not Null | 文件名稱。 |
 | `dd_status` | SMALLINT | Not Null | 文件狀態。1：有效，2：廢止。 |
 | `dd_obs_at` | TIMESTAMP | Nullable | 廢止時間。 |
@@ -41,7 +41,7 @@
 CREATE TABLE dms_doc (
     dd_id SERIAL PRIMARY KEY,
     df_fid INTEGER NOT NULL,
-    dd_code VARCHAR(50) NOT NULL,
+    dd_code VARCHAR(50),
     dd_title VARCHAR(255) NOT NULL,
     dd_status SMALLINT NOT NULL DEFAULT 1,
     dd_obs_at TIMESTAMP,
@@ -56,7 +56,8 @@ CREATE TABLE dms_doc (
 );
 
 CREATE UNIQUE INDEX uq_dms_doc_code
-ON dms_doc(UPPER(dd_code));
+ON dms_doc(dd_code)
+WHERE dd_code IS NOT NULL;
 
 CREATE INDEX idx_dms_doc_folder
 ON dms_doc(df_fid, dd_status);
@@ -64,6 +65,22 @@ ON dms_doc(df_fid, dd_status);
 CREATE INDEX idx_dms_doc_obs
 ON dms_doc(dd_obs_at)
 WHERE dd_status = 2;
+```
+
+### 既有資料庫升級語法
+
+```sql
+ALTER TABLE dms_doc
+ALTER COLUMN dd_code DROP NOT NULL;
+
+UPDATE dms_doc
+   SET dd_code = NULLIF(UPPER(BTRIM(dd_code)), '');
+
+DROP INDEX IF EXISTS uq_dms_doc_code;
+
+CREATE UNIQUE INDEX uq_dms_doc_code
+ON dms_doc(dd_code)
+WHERE dd_code IS NOT NULL;
 ```
 
 ---
@@ -107,7 +124,7 @@ SELECT dd_id,
  ORDER BY dd_code ASC;
 ```
 
-依文件編號查詢文件主檔（不區分大小寫）：
+依文件編號查詢文件主檔：
 
 ```sql
 SELECT dd_id,
@@ -118,14 +135,17 @@ SELECT dd_id,
        dd_crtby,
        dd_crtat
   FROM dms_doc
- WHERE UPPER(dd_code) = UPPER(:document_code);
+ WHERE dd_code = :document_code;
 ```
 
 ---
 
 ## 5. 後端檢核規則
 
-* 文件編號 `dd_code` 採全系統唯一，且不區分大小寫。
+* 文件編號 `dd_code` 可為 `NULL`；前端留空時，後端必須儲存為 `NULL`，不得儲存空字串。
+* 前端必須將文件編號去除前後空白並轉為大寫，再送至後端。
+* 文件編號非空白時採全系統唯一。唯一索引直接使用 `dd_code`，不得在索引定義使用 `UPPER()`、型別轉換或其他函數。
+* 未編號文件可補填文件編號；已編號文件亦可修改或清空，但修改後的非空白編號不得與其他文件重複。
 * `df_fid` 必須存在於有效的 `dms_folders.df_fid`。
 * 文件主檔為 `dd_status = 2` 時，不得再建立新版、預約版或執行撤回版本。
 * 手動廢止時，`dfi_id` 必填，且必須存在於 `dms_file.dfi_id`，並符合 `dfi_role = 4`。

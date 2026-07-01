@@ -15,10 +15,12 @@ export interface Folder {
   name: string;
   status: number;
   can_manage?: boolean;
+  manager_role?: FolderManagerRole;
   can_assign_co_managers?: boolean;
   can_edit_primary_manager?: boolean;
   access_type?: number;
   acl_summary?: string;
+  is_access_inherited?: boolean;
   child_folder_count?: number;
   document_count?: number;
 }
@@ -40,6 +42,7 @@ export interface DocumentVersion {
   created_by?: string;
   created_at?: string;
   cancel_reason?: string;
+  has_source_file?: boolean;
 
   // 廢止相關後設資料
   obsolete_reason?: string;
@@ -50,7 +53,7 @@ export interface DocumentVersion {
 
 export interface Document {
   id: string;
-  code: string;
+  code: string | null;
   title: string;
   status: 'Effective' | 'Obsolete';
   folder_id: string;
@@ -64,6 +67,7 @@ export interface Document {
   file_size?: number;
   mime?: string;
   change_note?: string;
+  revision_date?: string;
   effective_at?: string;
   obsolete_at?: string | null;
 
@@ -75,11 +79,12 @@ export interface Document {
   can_manage?: boolean;
   is_pdf?: boolean;
   can_preview?: boolean;
+  has_source_file?: boolean;
 }
 
 export interface DMSItem {
   id: string;
-  code?: string;
+  code?: string | null;
   name: string;
   type: 'folder' | 'document';
   size: string;
@@ -96,12 +101,16 @@ export interface DMSItem {
   file_name?: string;
   access_type?: number;
   acl_summary?: string;
+  is_access_inherited?: boolean;
   can_manage?: boolean;
+  manager_role?: FolderManagerRole;
   child_folder_count?: number;
   document_count?: number;
   is_empty_folder?: boolean;
   is_pdf?: boolean;
   can_preview?: boolean;
+  has_source_file?: boolean;
+  has_scheduled_version?: boolean;
 
   // 廢止相關後設資料
   obsolete_reason?: string;
@@ -125,6 +134,8 @@ export interface FolderACL {
   access_type: number; // 1: 公開, 2: 限閱
   dept_ids: string[];
   uids: string[];
+  is_inherited: boolean;
+  inherited_from_folder_id: string | null;
 }
 
 export interface FolderManagerInfo {
@@ -136,3 +147,4 @@ export interface FolderManagerInfo {
 export type FolderAccessStatus = 'allowed' | 'denied';
 
 export type FolderManagerAssignmentType = 'PRIMARY' | 'CO_MANAGER';
+export type FolderManagerRole = FolderManagerAssignmentType | null;

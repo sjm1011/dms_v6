@@ -5,6 +5,8 @@ import {
   cancelLatestVersion,
   createDocument,
   deleteFirstVersionDocument,
+  deleteScheduledVersion,
+  editDocument,
   listDocuments,
   obsoleteDocument,
   uploadVersion
@@ -37,6 +39,11 @@ export const POST = async (request: NextRequest) => {
       return ok(null);
     }
 
+    if (body.action === 'edit_document') {
+      await editDocument(session.user, body);
+      return ok(null);
+    }
+
     if (body.action === 'cancel_latest_version') {
       await cancelLatestVersion(session.user, Number(body.doc_id), body.reason || '');
       return ok(null);
@@ -49,6 +56,15 @@ export const POST = async (request: NextRequest) => {
 
     if (body.action === 'delete_document') {
       await deleteFirstVersionDocument(session.user, Number(body.doc_id));
+      return ok(null);
+    }
+
+    if (body.action === 'delete_scheduled_version') {
+      await deleteScheduledVersion(
+        session.user,
+        Number(body.doc_id),
+        Number(body.version_id)
+      );
       return ok(null);
     }
 

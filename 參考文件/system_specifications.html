@@ -244,7 +244,10 @@
 <p>欄位命名原則如下：</p>
 <p>* 主鍵採「資料表前綴 + <code>id</code>」格式，例如 <code>dms_doc.dd_id</code>、<code>dms_doc_ver.ddv_id</code>。</p>
 <p>* 主鍵不得重複放入業務名詞。例如文件主檔主鍵使用 <code>dd_id</code>，不使用 <code>dd_doc_id</code>；文件版本主鍵使用 <code>ddv_id</code>，不使用 <code>ddv_ver_id</code>。</p>
-<p>* 本專案資料庫不建立實體 <code>FOREIGN KEY</code> 約束。跨表關聯以欄位命名、索引、後端交易檢核與必要查詢條件維護，不依賴資料庫外鍵。</p>
+<ul>
+  <li>本專案資料庫不建立實體 <code>FOREIGN KEY</code> 約束。跨表關聯以欄位命名、索引、後端交易檢核與必要查詢條件維護，不依賴資料庫外鍵。</li>
+  <li>索引定義只使用原始欄位，不得在索引欄位或條件內使用 <code>UPPER()</code>、<code>LOWER()</code>、<code>BTRIM()</code>、<code>CAST()</code>、<code>::type</code> 或其他函數與型別轉換。需要統一大小寫或格式的資料，必須由前端在送出前完成正規化，後端再執行防呆檢核。</li>
+</ul>
 <p>* 關聯欄位若只指向單一父表，沿用父表主鍵欄位名，例如 <code>dms_doc_ver.dd_id</code>、<code>dms_ver_rev.ddv_id</code>。</p>
 <p>* 同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 <code>ddv_pub_dfi_id</code> (正式發佈檔案) 與 <code>ddv_src_dfi_id</code> (原始編修檔案)。</p>
 <p>* 欄位名稱不得包含句點。<code>dms_doc.dd_id</code> 僅代表 SQL 查詢中的「資料表名稱 + 欄位名稱」參照方式，實際欄位名稱為 <code>dd_id</code>。</p>
@@ -310,8 +313,16 @@
 <p>- 不得建立第一層資料夾；第一層資料夾建立固定由 ADMIN 執行。</p>
 <p>- 不得於根目錄建立文件；根目錄文件建立固定由 ADMIN 執行。</p>
 <p>* <strong>ACL 授權管理</strong>：資料夾管理員可將其有效管理範圍內的資料夾設定為公開或限閱。限閱時可授權特定部門或特定使用者。</p>
-<p>* <strong>管理員身分資訊最小化</strong>：</p>
-<p>- 資料夾樹、資料夾清單、搜尋結果及文件清單均不得顯示或夾帶資料夾管理員身分資訊。</p>
+<ul>
+  <li><strong>管理員身分資訊最小化</strong>：
+<ul>
+  <li>資料夾樹、搜尋結果及清單均不得顯示或夾帶其他人員的資料夾管理員身分資訊。資料夾與文件清單僅可顯示目前登入者本人的有效管理身分類型圖示，不得顯示姓名、員工編號、登入帳號、指派來源或其他管理員資料。</li>
+  <li>資料夾與文件清單的「文件編號」欄位，若目前登入者是該資料夾的有效第一層資料夾管理員，顯示主要管理員圖示；若目前登入者是該資料夾本身或祖先節點指派的有效協同管理員，顯示協同管理員圖示。文件列依文件所屬資料夾的有效管理身分顯示，資料夾列依該資料夾的有效管理身分顯示。</li>
+  <li>ADMIN 的全站強制管理權不得直接產生管理身分圖示。ADMIN 只有同時存在有效的 <code>dms_folder_managers</code> 指派紀錄時，才依 <code>dfm_type = 1</code> 或 <code>dfm_type = 2</code> 顯示主要管理員或協同管理員圖示。未被指派的 ADMIN 與無有效管理權的使用者均不顯示管理身分圖示。</li>
+  <li>同一使用者若在有效祖先範圍內同時符合主要管理員與協同管理員，清單以主要管理員圖示優先。圖示必須提供可辨識的顏色、形狀及滑鼠提示文字，不得只依顏色區分角色。</li>
+</ul>
+</li>
+</ul>
 <p>- 只有 ADMIN，或對目前資料夾具有效管理權的資料夾管理員，在實際進入該資料夾後，才可於畫面上方看到該資料夾的有效管理員姓名。</p>
 <p>- 一般使用者，以及進入非其管理範圍資料夾的資料夾管理員，均不得取得或看到管理員姓名。</p>
 <p>- 一般資料夾畫面允許送往前端的管理員資料僅限顯示所需的姓名。員工編號、登入帳號、直接或繼承來源、內部關聯鍵及其他可識別資料均不得送往前端。</p>
@@ -324,13 +335,18 @@
 <p>* <strong>預設權限</strong>：採資安優先原則。一般使用者預設無法看見任何資料夾與一般資料夾文件。例外：位於根目錄 (<code>folder_id = 0</code>) 的文件固定公開，任何已登入使用者皆可看見符合文件生效條件的根目錄文件。</p>
 <p>* <strong>公開規則</strong>：資料夾必須明確設定為公開，才可被一般使用者瀏覽。沒有 ACL 紀錄不代表公開。</p>
 <p>* <strong>限閱規則</strong>：資料夾設定為限閱時，必須明確授權特定部門或特定使用者。若限閱資料夾沒有任何有效授權對象，則一般使用者不可見。</p>
-<p>* <strong>唯讀限制</strong>：一般使用者僅具備唯讀、線上預覽 (PDF) 與下載權限，PDF 不提供下載，僅提供列印，只能下載「生效中」且「處於生效區間內」非 PDF 格式之最新版文件。一般使用者不得執行修改、建立、版更、作廢、封存與檢視歷史廢止紀錄等管理操作。</p>
+<ul>
+  <li><strong>唯讀限制</strong>：一般使用者僅具備唯讀、線上預覽與下載權限。PDF 不提供下載，僅提供預覽與列印；瀏覽器支援的圖檔提供預覽及下載；其他非 PDF 格式僅提供下載。一般使用者只能存取「生效中」且「處於生效區間內」之最新版文件，不得執行修改、建立、版更、作廢、封存與檢視歷史廢止紀錄等管理操作。</li>
+</ul>
 <p>* <strong>修訂對照表檢視規則</strong>：任何具備文件查閱權限的使用者皆可檢視其可見文件版本之修訂對照表。</p>
 <h3>2.4. 資料夾 ACL 狀態</h3>
-<p>* <code>access_type = 1</code>：公開。一般使用者可瀏覽該資料夾，並可查閱符合文件生效條件的文件。</p>
-<p>* <code>access_type = 2</code>：限閱。僅 ADMIN、有效資料夾管理員、被授權部門成員與被授權使用者可瀏覽。</p>
-<p>* 新建資料夾預設為 <code>access_type = 2</code>。若未設定授權部門或授權使用者，則只有 ADMIN 與有效資料夾管理員可見。</p>
-<p>* 根目錄不是實體資料夾節點，不套用 <code>dms_folder_acl</code>。位於根目錄的文件固定公開查閱，但建立、版更、廢止與維護仍固定僅限 ADMIN。</p>
+<ul>
+  <li><code>access_type = 1</code>：公開。一般使用者可瀏覽該資料夾，並可查閱符合文件生效條件的文件。</li>
+  <li><code>access_type = 2</code>：限閱。僅 ADMIN、有效資料夾管理員、被授權部門成員與被授權使用者可瀏覽。</li>
+  <li>新建資料夾預設為 <code>access_type = 2</code>。若未設定授權部門或授權使用者，則只有 ADMIN 與有效資料夾管理員可見。</li>
+  <li><strong>限閱屬性繼承規則</strong>：直接上層資料夾為限閱時，其子資料夾必須繼承上層資料夾的限閱屬性，不得再進行其他限閱的設定。</li>
+  <li>根目錄不是實體資料夾節點，不套用 <code>dms_folder_acl</code>。位於根目錄的文件固定公開查閱，但建立、版更、廢止與維護仍固定僅限 ADMIN。</li>
+</ul>
 <p>---</p>
 <h2>3. 資料夾結構管理</h2>
 <h3>3.1. 基本狀態</h3>
@@ -459,12 +475,14 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 文件編號</p>
 <p>* 「內部文件，禁止外流」</p>
 <h3>4.7. 非 PDF 文件規則</h3>
-<p>若正式發佈檔案不是 PDF (可攜式文件格式)，例如 Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 或圖檔：</p>
-<p>* 系統不提供線上預覽。</p>
-<p>* 系統不套用浮水印。</p>
-<p>* 一般使用者僅提供下載。</p>
-<p>* 不顯示「上傳原始檔案」按鈕。</p>
-<p>* 該檔案即為此版本之正式發佈檔案。</p>
+<p>若正式發佈檔案不是 PDF (可攜式文件格式)：</p>
+<ul>
+  <li>系統不套用浮水印。</li>
+  <li>不顯示「上傳原始檔案」按鈕。</li>
+  <li>該檔案即為此版本之正式發佈檔案。</li>
+</ul>
+<p>圖檔依瀏覽器原生支援能力提供開新視窗預覽及下載。目前提供預覽的格式為 <code>.jpg</code>、<code>.jpeg</code>、<code>.png</code>、<code>.gif</code> 與 <code>.webp</code>；<code>.tif</code>、<code>.tiff</code> 因主流瀏覽器未提供一致的原生顯示能力，僅提供下載。圖檔預覽不得套用 PDF 浮水印處理。</p>
+<p>Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由瀏覽器原生顯示的非 PDF 格式，僅提供下載，不提供線上預覽。</p>
 <p>此規則主要適用於表單、範本、試算表、簡報或需要使用者下載後編輯、填寫、使用之文件。</p>
 <h3>4.8. 新建文件</h3>
 <p>文件可建立於一般資料夾或根目錄，但權限來源不同：</p>
@@ -474,28 +492,48 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* <strong>根目錄識別規則</strong>：建立或查詢根目錄文件時，系統以 <code>folder_id = 0</code> 表示根目錄。一般資料夾文件則使用實際 <code>dms_folders.df_fid</code>。</p>
 <p>* <strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息，同時寫入權限不足稽核紀錄。</p>
 <p>管理員建立文件時：</p>
-<p>1. 建立文件主檔。</p>
-<p>2. 上傳第一個正式發佈檔案。</p>
-<p>3. 填寫修訂日期、生效日期，並選取或輸入異動說明。</p>
-<p>- 生效日期預設為當下日期。</p>
-<p>4. 版本號可填寫或留空。</p>
-<p>5. 文件主檔狀態設為 <code>Effective</code> (有效的)。</p>
-<p>6. 第一個文件版本寫入 <code>effective_at</code> (生效時間)。</p>
-<p>7. 第一個文件版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
-<p>8. 若第一個版本尚未到生效日期，一般使用者不可看到該文件；資料夾管理員可看到此尚未生效版本。</p>
+<ol>
+  <li>文件編號可填寫或留空；有填寫時，前端必須去除前後空白並轉為大寫。</li>
+  <li>建立文件主檔。</li>
+  <li>上傳第一個正式發佈檔案。</li>
+  <li>填寫修訂日期、生效日期，並選取或輸入異動說明。
+<ul>
+  <li>生效日期預設為當下日期。</li>
+</ul>
+</li>
+  <li>版本號可填寫或留空。</li>
+  <li>文件主檔狀態設為 <code>Effective</code> (有效的)。</li>
+  <li>第一個文件版本寫入 <code>effective_at</code> (生效時間)。</li>
+  <li>第一個文件版本的 <code>effective_until</code> (結束時間) 保持空白。</li>
+  <li>若第一個版本尚未到生效日期，一般使用者不可看到該文件；系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員可看到此尚未生效版本。</li>
+  <li>管理員查看尚未生效文件時，文件清單的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。第一版尚未生效時，清單只顯示該預約版本。</li>
+</ol>
+<p>文件編號留空時，後端必須將 <code>dd_code</code> 儲存為 <code>NULL</code>，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 <code>dd_code</code>，不得在索引定義內使用 <code>UPPER()</code>、型別轉換或其他函數。</p>
 <h3>4.9. 文件版更與預約生效</h3>
-<p>資料夾管理員上傳新版文件時：</p>
-<p>1. 新增一筆文件版本。</p>
-<p>2. 上傳新的正式發佈檔案。</p>
-<p>3. 填寫修訂日期、生效日期，並選取或輸入異動說明。</p>
-<p>4. 版本號可填寫或留空。</p>
-<p>5. 新版本寫入 <code>effective_at</code> (生效時間)。</p>
-<p>6. 新版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
-<p>7. 系統將上一個未撤回版本的 <code>effective_until</code> (結束時間) 設為新版本的 <code>effective_at</code> (生效時間)。</p>
+<p>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，必須可從文件操作選單的「修改文件」進入點修改文件編號、目前顯示版本的文件名稱、版本號、修訂日期、生效日期及異動說明。未編號文件可補填文件編號，已編號文件亦可修改或清空；修改後的非空白文件編號不得與其他文件重複。「修改文件」只更新文件主檔與既有版本資料，不得建立新版本，並需於同一筆交易完成及於稽核紀錄保存異動前後資料。</p>
+<p>目前顯示版本的正式發佈檔案為 PDF，且尚未保存 PDF 原始編修檔案時，「修改文件」可顯示原始檔案選擇欄位並接受新增檔案。該版本已有 PDF 原始編修檔案時，不得顯示可提交的檔案欄位，也不得接受前端或直接 API 請求覆蓋既有檔案；後端必須以版本資料重新驗證，不得只依賴前端狀態。</p>
+<p>上傳新版文件時：</p>
+<ol>
+  <li>新增一筆文件版本。</li>
+  <li>上傳新的正式發佈檔案。</li>
+  <li>填寫修訂日期、生效日期，並選取或輸入異動說明。</li>
+  <li>版本號可填寫或留空。</li>
+  <li>正式發佈檔案為 PDF 時，可上傳該新版本的 PDF 原始編修檔案。</li>
+  <li>新版本寫入 <code>effective_at</code> (生效時間)。</li>
+  <li>新版本的 <code>effective_until</code> (結束時間) 保持空白。</li>
+  <li>系統將上一個未撤回版本的 <code>effective_until</code> (結束時間) 設為新版本的 <code>effective_at</code> (生效時間)。</li>
+</ol>
 <p>若新版本生效日期晚於目前時間：</p>
-<p>* 一般使用者在新版本生效前仍看到上一個版本。</p>
-<p>* 新版本到達生效時間後，一般使用者看到新版本。</p>
-<p>* 資料夾管理員在新版本生效前即可查閱與下載該版本。</p>
+<ul>
+  <li>一般使用者在新版本生效前仍看到上一個版本。</li>
+  <li>新版本到達生效時間後，一般使用者看到新版本。</li>
+  <li>資料夾管理員在新版本生效前即可查閱與下載該版本。</li>
+  <li>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，文件清單必須同時分列顯示預約版本與目前有效版本，不得以預約版本取代目前有效版本的清單列。</li>
+  <li>預約版本的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。目前有效版本仍顯示其版本號。</li>
+  <li>管理員可從預約版本的操作選單執行「修改文件」，但只允許修改新版本號、修訂日期、發行日期與異動說明，不得藉此修改文件編號、文件名稱或替換版本檔案。</li>
+  <li>管理員可刪除尚未生效的最新預約版本。刪除後，該版本、修訂對照資料與檔案有效狀態必須於同一筆交易處理，並將前一個未撤回版本的 <code>effective_until</code> 清空，使目前有效版本繼續生效。</li>
+  <li>若刪除的是尚未生效的第一版，且文件沒有其他版本，系統必須一併刪除文件主檔。</li>
+</ul>
 <p>若新版本生效日期為上傳當日：</p>
 <p>* 上一個版本的 <code>effective_until</code> (結束時間) 設為新版本生效時間。</p>
 <p>* 一般使用者於版更完成後看到新版本。</p>
@@ -548,17 +586,24 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 廢止公文。</p>
 <p>* PDF 原始檔。</p>
 <p>* PDF 文件之原始編修檔案。</p>
-<p>一般使用者對 PDF 與其他非 PDF 文件之操作如下：</p>
-<p>* PDF (可攜式文件格式)：僅可線上預覽，不提供下載按鈕；後端 API (應用程式介面) 亦不得提供一般使用者下載正式 PDF 原檔。</p>
-<p>* 其他非 PDF 文件：僅提供下載，不提供線上預覽。</p>
+<p>一般使用者對 PDF、圖檔與其他非 PDF 文件之操作如下：</p>
+<ul>
+  <li>PDF (可攜式文件格式)：僅可線上預覽，不提供下載按鈕；後端 API (應用程式介面) 亦不得提供一般使用者下載正式 PDF 原檔。</li>
+  <li>瀏覽器支援的圖檔：提供開新視窗預覽及下載。</li>
+  <li>其他非 PDF 文件：僅提供下載，不提供線上預覽。</li>
+</ul>
 <p>一般使用者的資料夾瀏覽與搜尋結果均須套用上述規則；不得在搜尋結果中揭露無權限、尚未生效、歷史、已撤回或已廢止文件的標題、版本、檔名或其他可識別資訊。</p>
 <h3>4.14. 資料夾管理員權限</h3>
 <p>ADMIN 除具備所有資料夾管理員權限外，另可於根目錄建立文件。根目錄文件不屬於任何資料夾管理員繼承範圍，非 ADMIN 不得建立、版更、廢止或維護根目錄文件；非 ADMIN 僅可依一般使用者權限查閱符合生效條件的根目錄文件。</p>
 <p>資料夾管理員可：</p>
 <p>* 新增子資料夾。</p>
 <p>* 在其可管理的資料夾指派或撤銷多位協同管理員。</p>
-<p>* 建立文件。</p>
-<p>* 上傳新版。</p>
+<ul>
+  <li>建立文件。</li>
+  <li>上傳新版。</li>
+  <li>透過「修改文件」修改文件編號，以及目前顯示版本的文件名稱、版本號、修訂日期、生效日期與異動說明。</li>
+  <li>目前顯示版本為 PDF 且尚無原始編修檔案時，透過「修改文件」補上原始編修檔案；既有原始編修檔案不得覆蓋。</li>
+</ul>
 <p>* 上傳預約生效版本。</p>
 <p>* 撤回最新版本並回復前版。</p>
 <p>* 查看所有版本歷史。</p>
@@ -599,7 +644,9 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 存取事件：<code>FOLDER_VIEWED</code> (資料夾瀏覽)、<code>DOCUMENT_PREVIEWED</code> (文件預覽)、<code>DOCUMENT_DOWNLOADED</code> (文件下載)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕)。</p>
 <p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
 <p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
-<p>* 文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (建立文件版本)、<code>DOCUMENT_VERSION_SCHEDULED</code> (預約生效版本)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)、<code>DOCUMENT_PREVIOUS_VERSION_RESTORED</code> (回復前一版)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (手動廢止文件)、<code>DOCUMENT_AUTO_OBSOLETED_BY_FOLDER_ARCHIVE</code> (因資料夾封存自動廢止文件)。</p>
+<ul>
+  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (建立文件版本)、<code>DOCUMENT_VERSION_SCHEDULED</code> (預約生效版本)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)、<code>DOCUMENT_VERSION_DELETED</code> (刪除尚未生效的預約版本)、<code>DOCUMENT_PREVIOUS_VERSION_RESTORED</code> (回復前一版)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (手動廢止文件)、<code>DOCUMENT_AUTO_OBSOLETED_BY_FOLDER_ARCHIVE</code> (因資料夾封存自動廢止文件)。</li>
+</ul>
 <p>* 失敗與拒絕事件：<code>PERMISSION_DENIED</code> (權限不足)、<code>OPERATION_FAILED</code> (操作失敗)。</p>
 <h3>5.3. 稽核資料欄位</h3>
 <p>全域稽核紀錄建議至少保存下列欄位：</p>
@@ -632,8 +679,11 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 </table>
 <h3>5.4. 查閱、預覽與下載紀錄</h3>
 <p>一般使用者與資料夾管理員的查閱、預覽、下載行為均需記錄。</p>
-<p>* PDF (可攜式文件格式) 預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (文件預覽)，並於 <code>metadata</code> (額外資料) 中保存文件編號、版本、預覽時間與浮水印相關資訊。</p>
-<p>* 非 PDF 文件下載應記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。</p>
+<ul>
+  <li>PDF (可攜式文件格式) 預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (文件預覽)，並於 <code>metadata</code> (額外資料) 中保存文件編號、版本、預覽時間與浮水印相關資訊。</li>
+  <li>圖檔預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (文件預覽)，並保存檔名、副檔名、MIME Type (媒體類型) 與文件版本；圖檔預覽不記錄 PDF 浮水印資訊。</li>
+  <li>非 PDF 文件下載應記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。</li>
+</ul>
 <p>* 資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並於 <code>metadata</code> (額外資料) 中標示 <code>file_purpose</code> (檔案用途)，例如 <code>PUBLISHED_FILE</code> (正式發佈檔案)、<code>SOURCE_FILE</code> (原始編修檔)、<code>OBSOLETE_APPROVAL_FILE</code> (廢止公文)。</p>
 <p>* 一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕) 或 <code>PERMISSION_DENIED</code> (權限不足)。</p>
 <h3>5.5. 權限異動與資料夾異動紀錄</h3>
@@ -755,7 +805,9 @@ DMS_NEXT_PORT=3000</code></pre>
 </table>
 <p><code>DELETE /api/folders</code> 透過 JSON body 的 <code>action</code> 欄位區分資料夾生命週期操作：<code>action = "archive"</code> 代表封存資料夾；<code>action = "delete"</code> 代表刪除（作廢）空資料夾。若未提供 <code>action</code>，後端為相容既有呼叫，視為封存資料夾。</p>
 <p>資料夾相關 API 必須遵守管理員身分資料最小化規則：</p>
-<p>* <code>GET /api/folders</code>、<code>GET /api/folders/acl</code>、文件清單與搜尋 API 的一般回應，不得包含資料夾管理員姓名、員工編號、登入帳號、直接管理員清單、繼承管理員清單或有效管理員清單。</p>
+<ul>
+  <li><code>GET /api/folders</code>、<code>GET /api/folders/acl</code>、文件清單與搜尋 API 的一般回應，不得包含資料夾管理員姓名、員工編號、登入帳號、直接管理員清單、繼承管理員清單或有效管理員清單。<code>GET /api/folders</code> 可依 session 與資料夾階層回傳目前登入者本人的 <code>manager_role</code>，值僅限 <code>PRIMARY</code>、<code>CO_MANAGER</code> 或 <code>null</code>，供清單顯示本人管理身分圖示；此欄位不得包含其他人員資料，也不得作為後端授權依據。</li>
+</ul>
 <p>* 使用者實際進入單一資料夾後，前端才可另行要求該資料夾的管理員顯示資料。後端必須先依 session 驗證目前登入者為 ADMIN，或為該資料夾的有效管理員，驗證成功後才回傳有效管理員姓名。</p>
 <p>* 一般資料夾畫面的管理員顯示資料回應只可包含姓名陣列，不得包含員工編號、登入帳號、直接或繼承來源、內部關聯鍵或其他個人資料，並須設定為不可由瀏覽器或共用代理伺服器持久快取。</p>
 <p>* 只有 ADMIN 點擊「管理員：未指派」或執行第一層資料夾管理員更換時，或該第一層資料夾的資料夾管理員開啟「指派協同管理員」畫面時，後端才可回傳目前權限授予作業所需的員工編號。協同管理員不得取得指派畫面所需資料。回傳範圍不得擴大至其他資料夾、其他使用者清單或與本次授權無關的個人資料。</p>

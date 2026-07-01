@@ -65,8 +65,8 @@ CREATE UNIQUE INDEX uq_dms_doc_ver_seq
 ON dms_doc_ver(dd_id, ddv_seq);
 
 CREATE UNIQUE INDEX uq_dms_doc_ver_no
-ON dms_doc_ver(dd_id, UPPER(ddv_no))
-WHERE ddv_no IS NOT NULL AND BTRIM(ddv_no) <> '';
+ON dms_doc_ver(dd_id, ddv_no)
+WHERE ddv_no IS NOT NULL;
 
 CREATE INDEX idx_dms_doc_ver_doc
 ON dms_doc_ver(dd_id);

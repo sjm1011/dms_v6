@@ -19,7 +19,7 @@ import {
 export interface PdfWatermarkOptions {
   userText: string;
   clientIp: string;
-  documentCode: string;
+  documentCode: string | null;
   previewedAt?: Date;
 }
 
@@ -60,7 +60,7 @@ const getWatermarkLines = (options: PdfWatermarkOptions) => [
   `使用者：${options.userText || '未知使用者'}`,
   `預覽時間：${formatPreviewTime(options.previewedAt || new Date())}`,
   `IP：${options.clientIp || '無法判定'}`,
-  `文件編號：${options.documentCode || '-'}`,
+  `文件編號：${options.documentCode || '未編號'}`,
   '內部文件，禁止外流'
 ];
 

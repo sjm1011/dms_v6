@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { User, Folder, DMSItem, Document, FolderManagerAssignmentType } from '../types';
+import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType } from '../types';
 import { Sidebar } from '../components/Sidebar';
 import { FileTable } from '../components/FileTable';
 import { useDocuments } from '../hooks/useDocuments';
@@ -16,7 +16,7 @@ import { NewFolderModal, RenameModal, ArchiveFolderModal, DeleteFolderModal } fr
 import { ErrorDetailModal, TestResultModal } from '../components/Modals/FeedbackModals';
 import { FolderAclModal } from '../components/Modals/FolderAclModal';
 import { FolderManagerModal } from '../components/Modals/FolderManagerModal';
-import { ACCEPTED_DOCUMENT_FILE_TYPES, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal } from '../components/Modals/DocumentModals';
+import { ACCEPTED_DOCUMENT_FILE_TYPES, DeleteScheduledVersionModal, EditDocumentModal, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal } from '../components/Modals/DocumentModals';
 
 interface MainLayoutProps {
   user: User;
@@ -89,6 +89,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   const [isNewDocOpen, setIsNewDocOpen] = useState(false);
   const [isUploadVerOpen, setIsUploadVerOpen] = useState(false);
+  const [isEditDocumentOpen, setIsEditDocumentOpen] = useState(false);
+  const [isDeleteScheduledVersionOpen, setIsDeleteScheduledVersionOpen] = useState(false);
   const [isObsoleteDocOpen, setIsObsoleteDocOpen] = useState(false);
   const [isDeleteDocOpen, setIsDeleteDocOpen] = useState(false);
   const [isCancelVersionOpen, setIsCancelVersionOpen] = useState(false);
@@ -252,35 +254,56 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         status: 'Active',
         access_type: f.access_type,
         acl_summary: f.acl_summary,
+        is_access_inherited: Boolean(f.is_access_inherited),
         child_folder_count: childFolderCount,
         document_count: documentCount,
         is_empty_folder: childFolderCount === 0 && documentCount === 0,
-        can_manage: Boolean(f.can_manage) && f.status === 1
+        can_manage: Boolean(f.can_manage) && f.status === 1,
+        manager_role: f.manager_role || null
       });
     });
 
     documentsHook.documents.forEach(doc => {
-      const currentVersion = doc.versions?.find(v => v.status === 'Effective') || doc.versions?.[0];
-      list.push({
-        id: doc.id,
-        code: doc.code,
-        name: doc.title,
-        type: 'document',
-        size: formatFileSize(currentVersion?.file_size),
-        creator: doc.created_by || '-',
-        time: currentVersion?.effective_at || '-',
-        status: doc.status === 'Obsolete' ? 'Obsolete' : (currentVersion?.status || 'Effective'),
-        version: currentVersion?.ver_number || (currentVersion?.seq ? `第 ${currentVersion.seq} 版` : '-'),
-        revision_date: currentVersion?.revision_date || '-',
-        effective_at: currentVersion?.effective_at,
-        obsolete_at: currentVersion?.effective_until || null,
-        versions: doc.versions,
-        mime: currentVersion?.mime,
-        ver_id: currentVersion?.ver_id,
-        file_name: currentVersion?.file_name,
-        can_manage: !!doc.can_manage,
-        is_pdf: !!doc.is_pdf || currentVersion?.ext?.toLowerCase() === '.pdf',
-        can_preview: !!doc.can_preview || currentVersion?.ext?.replace(/^\./, '').toLowerCase() === 'pdf'
+      const scheduledVersion = doc.can_manage
+        ? doc.versions?.find(v => v.status === 'Scheduled')
+        : undefined;
+      const effectiveVersion = doc.versions?.find(v => v.status === 'Effective');
+      const displayVersions = scheduledVersion
+        ? [scheduledVersion, effectiveVersion].filter(
+            (version): version is DocumentVersion => Boolean(version)
+          )
+        : [effectiveVersion || doc.versions?.[0]].filter(
+            (version): version is DocumentVersion => Boolean(version)
+          );
+
+      displayVersions.forEach(displayVersion => {
+        const currentExtension = displayVersion.ext?.replace(/^\./, '').toLowerCase();
+        list.push({
+          id: doc.id,
+          code: doc.code,
+          name: doc.title,
+          type: 'document',
+          size: formatFileSize(displayVersion.file_size),
+          creator: doc.created_by || '-',
+          time: displayVersion.effective_at || '-',
+          status: doc.status === 'Obsolete' ? 'Obsolete' : displayVersion.status,
+          version: displayVersion.ver_number || (displayVersion.seq ? `第 ${displayVersion.seq} 版` : '-'),
+          revision_date: displayVersion.revision_date || '-',
+          effective_at: displayVersion.effective_at,
+          obsolete_at: displayVersion.effective_until || null,
+          versions: doc.versions,
+          mime: displayVersion.mime,
+          ver_id: displayVersion.ver_id,
+          file_name: displayVersion.file_name,
+          can_manage: !!doc.can_manage,
+          manager_role: currentFolder?.manager_role || null,
+          is_pdf: currentExtension ? currentExtension === 'pdf' : false,
+          can_preview: currentExtension
+            ? ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(currentExtension)
+            : false,
+          has_source_file: !!displayVersion.has_source_file,
+          has_scheduled_version: Boolean(scheduledVersion)
+        });
       });
     });
 
@@ -291,14 +314,33 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     }
 
     return list;
-  }, [folders, currentFolderId, searchQuery, documentsHook.documents]);
+  }, [folders, currentFolder, currentFolderId, searchQuery, documentsHook.documents]);
 
   const breadcrumbs = getBreadcrumbs();
 
   const openDocument = (item: DMSItem) => {
     const doc = documentsById.get(item.id.toString()) || null;
-    setActiveDoc(doc);
-    return doc;
+    const selectedVersion = doc?.versions.find(version => version.ver_id === item.ver_id);
+    const selectedDoc = doc && selectedVersion
+      ? {
+          ...doc,
+          ver_id: selectedVersion.ver_id,
+          version: selectedVersion.ver_number,
+          file_size: selectedVersion.file_size,
+          mime: selectedVersion.mime,
+          change_note: selectedVersion.change_note,
+          revision_date: selectedVersion.revision_date,
+          effective_at: selectedVersion.effective_at,
+          obsolete_at: selectedVersion.effective_until || null,
+          is_pdf: selectedVersion.ext?.replace(/^\./, '').toLowerCase() === 'pdf',
+          can_preview: ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
+            selectedVersion.ext?.replace(/^\./, '').toLowerCase() || ''
+          ),
+          has_source_file: Boolean(selectedVersion.has_source_file)
+        }
+      : doc;
+    setActiveDoc(selectedDoc);
+    return selectedDoc;
   };
 
   const handlePreviewDocument = async (item: DMSItem) => {
@@ -521,6 +563,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   const doc = openDocument(item);
                   if (doc) uploadVerFileInputRef.current?.click();
                 }}
+                onEditDocument={(item) => {
+                  const doc = openDocument(item);
+                  if (doc) setIsEditDocumentOpen(true);
+                }}
+                onDeleteScheduledVersion={(item) => {
+                  const doc = openDocument(item);
+                  if (doc) setIsDeleteScheduledVersionOpen(true);
+                }}
                 onCancelVersion={(item) => {
                   const doc = openDocument(item);
                   if (doc) setIsCancelVersionOpen(true);
@@ -653,6 +703,29 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         }}
         targetDoc={activeDoc}
         onUpload={documentsHook.handleUploadVersion}
+      />
+
+      <EditDocumentModal
+        isOpen={isEditDocumentOpen}
+        onClose={() => setIsEditDocumentOpen(false)}
+        targetDoc={activeDoc}
+        onSave={documentsHook.handleEditDocument}
+      />
+
+      <DeleteScheduledVersionModal
+        isOpen={isDeleteScheduledVersionOpen}
+        onClose={() => setIsDeleteScheduledVersionOpen(false)}
+        targetName={activeDoc?.title || ''}
+        targetVersion={activeDoc?.version || ''}
+        effectiveAt={activeDoc?.effective_at || ''}
+        onDelete={async () => {
+          if (!activeDoc?.ver_id) return false;
+          return await documentsHook.handleDeleteScheduledVersion(
+            activeDoc.id,
+            activeDoc.ver_id,
+            activeDoc.title
+          );
+        }}
       />
 
       <ObsoleteDocModal

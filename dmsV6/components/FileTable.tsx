@@ -20,6 +20,22 @@ const KeyIcon = ({ size = 18, style }: { size?: number, style?: React.CSSPropert
   </svg>
 );
 
+const PrimaryManagerIcon = ({ size = 18 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3l7 3v5c0 4.6-2.9 8.2-7 10-4.1-1.8-7-5.4-7-10V6l7-3z" />
+    <path d="M12 7l1.2 2.4 2.7.4-2 1.9.5 2.7-2.4-1.3-2.4 1.3.5-2.7-2-1.9 2.7-.4L12 7z" />
+  </svg>
+);
+
+const CoManagerIcon = ({ size = 18 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="9" cy="8" r="3" />
+    <circle cx="17" cy="9" r="2.5" />
+    <path d="M3 19c.5-3.3 2.5-5 6-5s5.5 1.7 6 5" />
+    <path d="M15 14c3.2 0 5 1.5 5.5 4" />
+  </svg>
+);
+
 
 
 interface FileTableProps {
@@ -32,6 +48,8 @@ interface FileTableProps {
   onPreviewDocument?: (item: DMSItem) => void;
   onDownloadDocument?: (item: DMSItem) => void;
   onUploadVersion?: (item: DMSItem) => void;
+  onEditDocument?: (item: DMSItem) => void;
+  onDeleteScheduledVersion?: (item: DMSItem) => void;
   onCancelVersion?: (item: DMSItem) => void;
   onObsoleteDocument?: (item: DMSItem) => void;
   onDeleteDocument?: (item: DMSItem) => void;
@@ -48,6 +66,8 @@ export const FileTable = React.memo<FileTableProps>(({
   onPreviewDocument,
   onDownloadDocument,
   onUploadVersion,
+  onEditDocument,
+  onDeleteScheduledVersion,
   onCancelVersion,
   onObsoleteDocument,
   onDeleteDocument,
@@ -117,6 +137,18 @@ export const FileTable = React.memo<FileTableProps>(({
   // 渲染資料夾屬性 Badge
   const renderAccessBadge = (item: DMSItem) => {
     if (item.type === 'document') {
+      if (item.status === 'Scheduled') {
+        const effectiveDate = item.effective_at?.split(' ')[0] || '-';
+        return (
+          <span
+            className="badge-access scheduled"
+            title={`生效日期：${effectiveDate}`}
+          >
+            即將生效
+          </span>
+        );
+      }
+
       return (
         <span className="badge-access public">
           {item.version || '-'}
@@ -125,8 +157,16 @@ export const FileTable = React.memo<FileTableProps>(({
     }
 
     if (item.access_type === 2) {
+      const isInherited = Boolean(item.is_access_inherited);
       return (
-        <span className="badge-access restricted" title={item.acl_summary ? `授權對象：${item.acl_summary}` : '限閱：未設定詳細授權'}>
+        <span
+          className={`badge-access restricted${isInherited ? ' inherited' : ''}`}
+          title={isInherited
+            ? `繼承上層限閱設定；限閱對象：${item.acl_summary || '未設定'}`
+            : item.acl_summary
+              ? `授權對象：${item.acl_summary}`
+              : '限閱：未設定詳細授權'}
+        >
           限閱
         </span>
       );
@@ -137,6 +177,26 @@ export const FileTable = React.memo<FileTableProps>(({
         公開
       </span>
     );
+  };
+
+  const renderManagerRoleIcon = (item: DMSItem) => {
+    if (item.manager_role === 'PRIMARY') {
+      return (
+        <span className="manager-role-icon primary" title="您是此資料夾的管理員" aria-label="您是此資料夾的管理員">
+          <PrimaryManagerIcon />
+        </span>
+      );
+    }
+
+    if (item.manager_role === 'CO_MANAGER') {
+      return (
+        <span className="manager-role-icon co-manager" title="您是此資料夾的協同管理員" aria-label="您是此資料夾的協同管理員">
+          <CoManagerIcon />
+        </span>
+      );
+    }
+
+    return null;
   };
 
   const getActionItems = (item: DMSItem): ActionMenuItem[] => {
@@ -157,24 +217,41 @@ export const FileTable = React.memo<FileTableProps>(({
             }
       ];
 
+      if (item.can_preview && (!item.is_pdf || item.can_manage)) {
+        actions.push({
+          key: 'download-previewable',
+          label: item.is_pdf ? '下載正式 PDF' : '下載正式檔案',
+          icon: <CloudDownloadIcon size={18} />,
+          onClick: () => onDownloadDocument?.(item)
+        });
+      }
+
       if (item.can_manage) {
-        if (item.can_preview) {
+        actions.push({
+          key: 'edit-document',
+          label: '修改文件',
+          icon: <EditIcon size={18} />,
+          onClick: () => onEditDocument?.(item)
+        });
+
+        if (item.status === 'Scheduled') {
           actions.push({
-            key: 'download-previewable',
-            label: item.is_pdf ? '下載正式 PDF' : '下載正式檔案',
-            icon: <CloudDownloadIcon size={18} />,
-            onClick: () => onDownloadDocument?.(item)
+            key: 'delete-scheduled-version',
+            label: '刪除預約版本',
+            icon: <DeleteIcon size={18} />,
+            className: 'menu-item-warning',
+            onClick: () => onDeleteScheduledVersion?.(item)
+          });
+        } else if (!item.has_scheduled_version) {
+          actions.push({
+            key: 'upload-version',
+            label: '上傳新版',
+            icon: <CloudUploadIcon size={18} />,
+            onClick: () => onUploadVersion?.(item)
           });
         }
 
-        actions.push({
-          key: 'upload-version',
-          label: '上傳新版',
-          icon: <CloudUploadIcon size={18} />,
-          onClick: () => onUploadVersion?.(item)
-        });
-
-        if (item.versions && item.versions.length > 1) {
+        if (item.status !== 'Scheduled' && !item.has_scheduled_version && item.versions && item.versions.length > 1) {
           actions.push({
             key: 'cancel-version',
             label: '撤回最新版本',
@@ -189,6 +266,10 @@ export const FileTable = React.memo<FileTableProps>(({
           icon: <HistoryIcon size={18} />,
           onClick: () => onShowHistory?.(item)
         });
+
+        if (item.status === 'Scheduled') {
+          return actions;
+        }
 
         if (item.versions && item.versions.length === 1) {
           actions.push({
@@ -218,7 +299,7 @@ export const FileTable = React.memo<FileTableProps>(({
 
     const actions: ActionMenuItem[] = [];
 
-    if (onSetAcl) {
+    if (onSetAcl && !item.is_access_inherited) {
       actions.push({
         key: 'acl',
         label: '屬性設定',
@@ -257,7 +338,7 @@ export const FileTable = React.memo<FileTableProps>(({
   };
 
   const renderActionMenu = (item: DMSItem) => {
-    const actionId = `${item.type}-${item.id}`;
+    const actionId = `${item.type}-${item.id}-${item.ver_id || ''}`;
     const actions = getActionItems(item);
     const isOpen = openActionId === actionId;
 
@@ -388,7 +469,7 @@ export const FileTable = React.memo<FileTableProps>(({
           {items.map(item => {
             return (
               <tr
-                key={`${item.type}-${item.id}`}
+                key={`${item.type}-${item.id}-${item.ver_id || ''}`}
                 className="table-row"
                 onClick={() => handleRowClick(item)}
               >
@@ -401,9 +482,12 @@ export const FileTable = React.memo<FileTableProps>(({
                   </div>
                 </td>
                 <td>
-                  <span style={{ display: 'block', fontWeight: 600, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.type === 'document' ? (item.code || '-') : '-'}
-                  </span>
+                  <div className="document-code-cell">
+                    {renderManagerRoleIcon(item)}
+                    <span>
+                      {item.type === 'document' ? (item.code || '') : ''}
+                    </span>
+                  </div>
                 </td>
                 <td>
                   {renderAccessBadge(item)}

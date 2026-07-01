@@ -202,6 +202,7 @@ echo [WARN] Invalid option.
 goto browser_menu
 
 :end_script
+cls
 echo Done.
 endlocal
 exit /b 0

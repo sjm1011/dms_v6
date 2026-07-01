@@ -31,10 +31,12 @@ export const FoldersAPI = {
           name: f.name,
           status: f.status,
           can_manage: Boolean(f.can_manage),
+          manager_role: f.manager_role || null,
           can_assign_co_managers: Boolean(f.can_assign_co_managers),
           can_edit_primary_manager: Boolean(f.can_edit_primary_manager),
           access_type: f.access_type,
           acl_summary: f.acl_summary,
+          is_access_inherited: Boolean(f.is_access_inherited),
           child_folder_count: Number(f.child_folder_count || 0),
           document_count: Number(f.document_count || 0)
         }));

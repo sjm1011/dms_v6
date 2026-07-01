@@ -1010,6 +1010,36 @@ tr.table-row:hover {
   color: var(--accent-blue);
 }
 
+.document-code-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.document-code-cell > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manager-role-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+
+.manager-role-icon.primary {
+  color: hsl(42, 92%, 48%);
+}
+
+.manager-role-icon.co-manager {
+  color: var(--accent-blue);
+}
+
 .action-cell {
   text-align: right;
   overflow: visible;
@@ -1465,11 +1495,22 @@ tr.table-row:hover .action-cell-buttons {
   color: var(--color-success);
   border: 1px solid hsla(145, 80%, 45%, 0.3);
 }
+.badge-access.scheduled {
+  background-color: hsla(38, 92%, 55%, 0.15);
+  color: var(--color-warning);
+  border: 1px solid hsla(38, 92%, 55%, 0.35);
+  cursor: help;
+}
 .badge-access.restricted {
   background-color: hsla(355, 85%, 55%, 0.15);
   color: var(--color-danger);
   border: 1px solid hsla(355, 85%, 55%, 0.3);
   cursor: help;
+}
+.badge-access.restricted.inherited {
+  background-color: hsla(258, 75%, 62%, 0.16);
+  color: hsl(258, 88%, 76%);
+  border-color: hsla(258, 75%, 68%, 0.45);
 }
 .badge-status.active {
   background-color: hsla(145, 80%, 45%, 0.15);

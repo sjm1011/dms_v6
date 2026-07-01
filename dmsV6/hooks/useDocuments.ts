@@ -172,6 +172,43 @@ export const useDocuments = (
     }
   };
 
+  const handleEditDocument = async (
+    docId: string,
+    versionId: string,
+    code: string,
+    title: string,
+    version: string,
+    changeNote: string,
+    revisionDate: string,
+    effAt: string,
+    sourceFile?: File | null
+  ) => {
+    try {
+      const res = await DocumentsAPI.editDocument(
+        docId,
+        versionId,
+        code,
+        title,
+        version,
+        changeNote,
+        revisionDate,
+        effAt,
+        sourceFile
+      );
+      if (res.success) {
+        showToast(`文件「${title}」已更新。`, 'success');
+        fetchDocuments();
+        return true;
+      }
+      showToast(res.error, 'error');
+      return false;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast('修改文件失敗：' + msg, 'error');
+      return false;
+    }
+  };
+
   // 廢止文件
   const handleObsoleteDocument = async (docId: string, docName: string, reason: string, file: File) => {
     try {
@@ -210,6 +247,27 @@ export const useDocuments = (
     }
   };
 
+  const handleDeleteScheduledVersion = async (
+    docId: string,
+    versionId: string,
+    docName: string
+  ) => {
+    try {
+      const res = await DocumentsAPI.deleteScheduledVersion(docId, versionId);
+      if (res.success) {
+        showToast(`文件「${docName}」的預約版本已刪除。`, 'success');
+        fetchDocuments();
+        return true;
+      }
+      showToast(res.error, 'error');
+      return false;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast('刪除預約版本失敗：' + msg, 'error');
+      return false;
+    }
+  };
+
   return {
     documents,
     setDocuments,
@@ -217,7 +275,9 @@ export const useDocuments = (
     fetchDocuments,
     handleCreateDocument,
     handleUploadVersion,
+    handleEditDocument,
     handleCancelLatestVersion,
+    handleDeleteScheduledVersion,
     handleObsoleteDocument,
     handleDeleteDocument
   };

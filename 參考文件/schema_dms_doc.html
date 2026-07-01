@@ -229,7 +229,7 @@
   <tbody>
     <tr><td><code>dd_id</code></td><td>SERIAL (INT)</td><td>Primary Key</td><td>文件主檔唯一識別碼。</td></tr>
     <tr><td><code>df_fid</code></td><td>INTEGER</td><td>Not Null</td><td>所屬資料夾 ID，邏輯對應 <code>dms_folders.df_fid</code>。</td></tr>
-    <tr><td><code>dd_code</code></td><td>VARCHAR(50)</td><td>Not Null</td><td>文件編號。</td></tr>
+    <tr><td><code>dd_code</code></td><td>VARCHAR(50)</td><td>Nullable</td><td>文件編號，可留空。非空白時由前端轉為大寫。</td></tr>
     <tr><td><code>dd_title</code></td><td>VARCHAR(255)</td><td>Not Null</td><td>文件名稱。</td></tr>
     <tr><td><code>dd_status</code></td><td>SMALLINT</td><td>Not Null</td><td>文件狀態。1：有效，2：廢止。</td></tr>
     <tr><td><code>dd_obs_at</code></td><td>TIMESTAMP</td><td>Nullable</td><td>廢止時間。</td></tr>
@@ -250,7 +250,7 @@
   <pre><code class="language-sql">CREATE TABLE dms_doc (
     dd_id SERIAL PRIMARY KEY,
     df_fid INTEGER NOT NULL,
-    dd_code VARCHAR(50) NOT NULL,
+    dd_code VARCHAR(50),
     dd_title VARCHAR(255) NOT NULL,
     dd_status SMALLINT NOT NULL DEFAULT 1,
     dd_obs_at TIMESTAMP,
@@ -265,14 +265,30 @@
 );
 
 CREATE UNIQUE INDEX uq_dms_doc_code
-ON dms_doc(UPPER(dd_code));
+ON dms_doc(dd_code)
+WHERE dd_code IS NOT NULL;
 
 CREATE INDEX idx_dms_doc_folder
 ON dms_doc(df_fid, dd_status);
 
 CREATE INDEX idx_dms_doc_obs
 ON dms_doc(dd_obs_at)
-WHERE dd_status = 2;</code></pre>
+WHERE dd_status = 2;</code></pre>
+</div>
+<h3>既有資料庫升級語法</h3>
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">ALTER TABLE dms_doc
+ALTER COLUMN dd_code DROP NOT NULL;
+
+UPDATE dms_doc
+   SET dd_code = NULLIF(UPPER(BTRIM(dd_code)), '');
+
+DROP INDEX IF EXISTS uq_dms_doc_code;
+
+CREATE UNIQUE INDEX uq_dms_doc_code
+ON dms_doc(dd_code)
+WHERE dd_code IS NOT NULL;</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -307,7 +323,7 @@ COMMENT ON COLUMN dms_doc.dd_updat IS '最後異動時間';</code></pre>
  WHERE df_fid = :folder_id
    AND dd_status = 1
  ORDER BY dd_code ASC;</code></pre>
-<p>依文件編號查詢文件主檔（不區分大小寫）：</p>
+<p>依文件編號查詢文件主檔：</p>
 <pre><code class="language-sql">SELECT dd_id,
        df_fid,
        dd_code,
@@ -316,10 +332,15 @@ COMMENT ON COLUMN dms_doc.dd_updat IS '最後異動時間';</code></pre>
        dd_crtby,
        dd_crtat
   FROM dms_doc
- WHERE UPPER(dd_code) = UPPER(:document_code);</code></pre>
+ WHERE dd_code = :document_code;</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<p>* 文件編號 <code>dd_code</code> 採全系統唯一，且不區分大小寫。</p>
+<ul>
+  <li>文件編號 <code>dd_code</code> 可為 <code>NULL</code>；前端留空時，後端必須儲存為 <code>NULL</code>，不得儲存空字串。</li>
+  <li>前端必須將文件編號去除前後空白並轉為大寫，再送至後端。</li>
+  <li>文件編號非空白時採全系統唯一。唯一索引直接使用 <code>dd_code</code>，不得在索引定義使用 <code>UPPER()</code>、型別轉換或其他函數。</li>
+  <li>未編號文件可補填文件編號；已編號文件亦可修改或清空，但修改後的非空白編號不得與其他文件重複。</li>
+</ul>
 <p>* <code>df_fid</code> 必須存在於有效的 <code>dms_folders.df_fid</code>。</p>
 <p>* 文件主檔為 <code>dd_status = 2</code> 時，不得再建立新版、預約版或執行撤回版本。</p>
 <p>* 手動廢止時，<code>dfi_id</code> 必填，且必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 4</code>。</p>

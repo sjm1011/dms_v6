@@ -3,7 +3,6 @@ import { Document } from '../../types';
 import { Modal } from '../Modal';
 import {
   ErrorOutlineIcon,
-  PdfIcon,
   ChevronRightIcon
 } from '../Icons';
 import { showRequiredFieldMessage } from '../../lib/clientValidation';
@@ -161,7 +160,6 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initi
   const [file, setFile] = useState<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
 
-  const codeInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const revisionDateInputRef = useRef<HTMLInputElement>(null);
   const effAtInputRef = useRef<HTMLInputElement>(null);
@@ -184,10 +182,6 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initi
   }, [isOpen, initialFile]);
 
   const handleConfirm = async () => {
-    if (!code.trim()) {
-      showRequiredFieldMessage('請輸入文件編號。', codeInputRef.current);
-      return;
-    }
     if (!title.trim()) {
       showRequiredFieldMessage('請輸入文件名稱。', titleInputRef.current);
       return;
@@ -238,8 +232,13 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initi
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', gap: 12 }}>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label>文件編號</label>
-            <input ref={codeInputRef} value={code} onChange={(e) => setCode(toUpperValue(e.target.value))} placeholder="ISO-RD-001" />
+            <label>文件編號（選填）</label>
+            <input
+              value={code}
+              maxLength={50}
+              onChange={(e) => setCode(toUpperValue(e.target.value))}
+              placeholder="可留空"
+            />
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
             <label>版本號</label>
@@ -316,6 +315,176 @@ interface UploadVerModalProps {
   ) => Promise<boolean>;
 }
 
+interface EditDocumentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  targetDoc: Document | null;
+  onSave: (
+    docId: string,
+    versionId: string,
+    code: string,
+    title: string,
+    version: string,
+    changeNote: string,
+    revisionDate: string,
+    effAt: string,
+    sourceFile?: File | null
+  ) => Promise<boolean>;
+}
+
+export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, onClose, targetDoc, onSave }) => {
+  const [title, setTitle] = useState('');
+  const [code, setCode] = useState('');
+  const [version, setVersion] = useState('');
+  const [changeNote, setChangeNote] = useState('');
+  const [revisionDate, setRevisionDate] = useState('');
+  const [effAt, setEffAt] = useState('');
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+
+  const versionInputRef = useRef<HTMLInputElement>(null);
+  const codeInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const revisionDateInputRef = useRef<HTMLInputElement>(null);
+  const effAtInputRef = useRef<HTMLInputElement>(null);
+  const changeNoteInputRef = useRef<HTMLInputElement>(null);
+  const sourceFileInputRef = useRef<HTMLInputElement>(null);
+  const targetVersion = targetDoc?.versions.find(item => item.ver_id === targetDoc.ver_id);
+  const isScheduledVersion = targetVersion?.status === 'Scheduled';
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCode(targetDoc?.code || '');
+    setTitle(targetDoc?.title || '');
+    setVersion(targetDoc?.version || '');
+    setChangeNote(targetDoc?.change_note || '');
+    setRevisionDate(targetDoc?.revision_date || '');
+    setEffAt(targetDoc?.effective_at?.split(' ')[0] || '');
+    setSourceFile(null);
+  }, [isOpen, targetDoc]);
+
+  const handleConfirm = async () => {
+    if (!targetDoc?.ver_id) return;
+    if (!title.trim()) {
+      showRequiredFieldMessage('請輸入文件名稱。', titleInputRef.current);
+      return;
+    }
+    if (!revisionDate) {
+      showRequiredFieldMessage('請輸入修訂日期。', revisionDateInputRef.current);
+      return;
+    }
+    if (!effAt) {
+      showRequiredFieldMessage(
+        isScheduledVersion ? '請輸入發行日期。' : '請輸入生效日期。',
+        effAtInputRef.current
+      );
+      return;
+    }
+    if (!changeNote.trim()) {
+      showRequiredFieldMessage('請輸入異動說明。', changeNoteInputRef.current);
+      return;
+    }
+
+    const success = await onSave(
+      targetDoc.id,
+      targetDoc.ver_id,
+      code.trim(),
+      title.trim(),
+      version.trim(),
+      changeNote.trim(),
+      revisionDate,
+      effAt,
+      sourceFile
+    );
+    if (success) onClose();
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`修改文件：${targetDoc?.title || ''}`}
+      useNativeDialog
+      closeOnOverlayClick={false}
+      footer={
+        <>
+          <button className="btn btn-secondary" onClick={onClose}>取消</button>
+          <button className="btn btn-primary" onClick={handleConfirm}>儲存修改</button>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {isScheduledVersion ? (
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label>新版本號</label>
+            <input ref={versionInputRef} value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label>文件編號（選填）</label>
+                <input
+                  ref={codeInputRef}
+                  value={code}
+                  maxLength={50}
+                  onChange={(e) => setCode(toUpperValue(e.target.value))}
+                  placeholder="可留空"
+                />
+              </div>
+              <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label>版本號</label>
+                <input ref={versionInputRef} value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+              </div>
+            </div>
+
+            <div className="input-group" style={{ marginBottom: 0 }}>
+              <label>文件名稱</label>
+              <input ref={titleInputRef} value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+            <label>修訂日期</label>
+            <input ref={revisionDateInputRef} type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} />
+          </div>
+          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+            <label>{isScheduledVersion ? '發行日期' : '生效日期'}</label>
+            <input ref={effAtInputRef} type="date" value={effAt} onChange={(e) => setEffAt(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="input-group" style={{ marginBottom: 0 }}>
+          <label>異動說明</label>
+          <ChangeNoteInput
+            selectId="edit-document-change-note-options"
+            value={changeNote}
+            onChange={setChangeNote}
+            inputRef={changeNoteInputRef}
+          />
+        </div>
+
+        {!isScheduledVersion && targetDoc?.is_pdf && (
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label>PDF 原始編修檔案</label>
+            {targetDoc.has_source_file ? (
+              <div className="btn btn-secondary btn-block" style={{ height: 42, cursor: 'default' }}>原始編修檔案已存在，不可更換</div>
+            ) : (
+              <>
+                <button type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => sourceFileInputRef.current?.click()}>
+                  {sourceFile ? sourceFile.name : '選擇原始檔案'}
+                </button>
+                <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
 export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose, targetDoc, initialFile, initialVersion, onUpload }) => {
   const [version, setVersion] = useState('');
   const [changeNote, setChangeNote] = useState('內容修訂');
@@ -324,6 +493,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
   const [file, setFile] = useState<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
 
+  const versionInputRef = useRef<HTMLInputElement>(null);
   const revisionDateInputRef = useRef<HTMLInputElement>(null);
   const effAtInputRef = useRef<HTMLInputElement>(null);
   const changeNoteInputRef = useRef<HTMLInputElement>(null);
@@ -369,6 +539,8 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
       isOpen={isOpen}
       onClose={onClose}
       title={`文件版更：${targetDoc?.title || ''}`}
+      useNativeDialog
+      closeOnOverlayClick={false}
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>取消</button>
@@ -384,7 +556,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
             <label>新版本號</label>
-            <input value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+            <input ref={versionInputRef} value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
           </div>
         </div>
 
@@ -536,6 +708,52 @@ export const DeleteDocModal: React.FC<DeleteDocModalProps> = ({ isOpen, onClose,
   );
 };
 
+interface DeleteScheduledVersionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  targetName: string;
+  targetVersion: string;
+  effectiveAt: string;
+  onDelete: () => Promise<boolean>;
+}
+
+export const DeleteScheduledVersionModal: React.FC<DeleteScheduledVersionModalProps> = ({
+  isOpen,
+  onClose,
+  targetName,
+  targetVersion,
+  effectiveAt,
+  onDelete
+}) => {
+  const handleConfirm = async () => {
+    const success = await onDelete();
+    if (success) onClose();
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="刪除預約版本"
+      footer={
+        <>
+          <button className="btn btn-secondary" onClick={onClose}>取消</button>
+          <button className="btn btn-danger" onClick={handleConfirm}>確認刪除</button>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p>
+          您即將刪除文件「<strong>{targetName}</strong>」的預約版本
+          {targetVersion ? `「${targetVersion}」` : ''}。
+        </p>
+        <p>發行日期：{effectiveAt?.split(' ')[0] || '-'}</p>
+        <p>刪除後，目前有效版本會繼續生效；此操作無法復原。</p>
+      </div>
+    </Modal>
+  );
+};
+
 interface CancelVersionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -662,10 +880,6 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
           </table>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)' }}>
-          <PdfIcon size={16} />
-          PDF 正式原檔下載權限由後端依角色與 ACL 判斷。
-        </div>
       </div>
     </Modal>
   );

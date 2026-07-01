@@ -233,12 +233,20 @@ const openPdfPreview = (objectUrl: string, fileName: string, targetWindow?: Wind
   return previewWindow;
 };
 
-const openInlinePreview = (objectUrl: string, title: string, targetWindow?: Window | null) => {
+const openImagePreview = (
+  objectUrl: string,
+  fileName: string,
+  contentType: string,
+  targetWindow?: Window | null
+) => {
   const previewWindow = targetWindow || window.open('', '_blank');
+  const objectUrlScriptValue = toScriptString(objectUrl);
+  const fileNameScriptValue = toScriptString(fileName);
+  const contentTypeScriptValue = toScriptString(contentType);
 
   if (!previewWindow || previewWindow.closed) {
     window.open(objectUrl, '_blank');
-    return;
+    return null;
   }
 
   previewWindow.document.write(`
@@ -246,18 +254,86 @@ const openInlinePreview = (objectUrl: string, title: string, targetWindow?: Wind
     <html lang="zh-Hant">
       <head>
         <meta charset="utf-8" />
-        <title>${escapeHtml(title)}</title>
+        <title>圖片預覽</title>
         <style>
-          html, body { margin: 0; height: 100%; overflow: hidden; background: #ffffff; }
-          iframe { width: 100%; height: 100%; border: 0; background: #ffffff; }
+          html, body { margin: 0; height: 100%; overflow: hidden; background: #374151; }
+          body { display: flex; flex-direction: column; }
+          .preview-toolbar {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 16px;
+            background: #111827;
+            font: 600 14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          }
+          .preview-toolbar button {
+            color: #ffffff;
+            background: #2563eb;
+            border: 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font: inherit;
+            padding: 8px 12px;
+          }
+          .preview-toolbar button:disabled { cursor: wait; opacity: 0.72; }
+          .preview-content {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: #374151;
+          }
+          .preview-content img {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+          }
         </style>
       </head>
       <body>
-        <iframe sandbox="" referrerpolicy="no-referrer" src="${escapeHtml(objectUrl)}" title="${escapeHtml(title)}"></iframe>
+        <div class="preview-toolbar">
+          <button id="downloadImageButton" type="button">下載圖片</button>
+        </div>
+        <main class="preview-content">
+          <img src="${escapeHtml(objectUrl)}" alt="圖片預覽" />
+        </main>
+        <script>
+          (() => {
+            const objectUrl = ${objectUrlScriptValue};
+            const fileName = ${fileNameScriptValue};
+            const contentType = ${contentTypeScriptValue};
+            const downloadButton = document.getElementById('downloadImageButton');
+
+            const saveImage = async () => {
+              downloadButton.disabled = true;
+              try {
+                const response = await fetch(objectUrl);
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(new Blob([blob], { type: contentType }));
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(link.href);
+              } finally {
+                downloadButton.disabled = false;
+              }
+            };
+
+            downloadButton.addEventListener('click', saveImage);
+          })();
+        </script>
       </body>
     </html>
   `);
   previewWindow.document.close();
+  return previewWindow;
 };
 
 const downloadBlob = async (
@@ -283,6 +359,25 @@ const downloadBlob = async (
 
   const blob = await response.blob();
   const isPdf = contentType.toLowerCase().includes('application/pdf');
+  const isImage = contentType.toLowerCase().startsWith('image/');
+
+  if (inline && !isPdf && !isImage) {
+    throw new Error('此檔案格式不支援線上預覽。');
+  }
+
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const utf8FileNameMatch = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  const asciiFileNameMatch = disposition.match(/filename\s*=\s*"([^"]+)"/i);
+  let fileName = asciiFileNameMatch?.[1] || fallbackFileName;
+
+  if (utf8FileNameMatch) {
+    try {
+      fileName = decodeURIComponent(utf8FileNameMatch[1].trim().replace(/^"|"$/g, ''));
+    } catch {
+      // UTF-8 檔名格式異常時，保留 ASCII 或呼叫端提供的備援檔名。
+    }
+  }
+
   const objectBlob = inline && isPdf
     ? new File([blob], fallbackFileName, { type: 'application/pdf' })
     : blob;
@@ -292,16 +387,13 @@ const downloadBlob = async (
     if (isPdf) {
       const openedPreviewWindow = openPdfPreview(objectUrl, fallbackFileName, previewWindow);
       openedPreviewWindow?.addEventListener('beforeunload', () => URL.revokeObjectURL(objectUrl), { once: true });
-    } else {
-      openInlinePreview(objectUrl, '文件預覽', previewWindow);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } else if (isImage) {
+      const openedPreviewWindow = openImagePreview(objectUrl, fileName, contentType, previewWindow);
+      openedPreviewWindow?.addEventListener('beforeunload', () => URL.revokeObjectURL(objectUrl), { once: true });
     }
     return;
   }
 
-  const disposition = response.headers.get('Content-Disposition') || '';
-  const match = disposition.match(/filename="([^"]+)"/i);
-  const fileName = match?.[1] || fallbackFileName;
   const link = document.createElement('a');
   link.href = objectUrl;
   link.download = fileName;
@@ -413,6 +505,41 @@ export const DocumentsAPI = {
     return await handleResponse(response);
   },
 
+  editDocument: async (
+    docId: string,
+    versionId: string,
+    code: string,
+    title: string,
+    version: string,
+    changeNote: string,
+    revisionDate: string,
+    effectiveAt: string,
+    sourceFile?: File | null
+  ): Promise<ApiResponse<null>> => {
+    const body: Record<string, unknown> = {
+      action: 'edit_document',
+      doc_id: docId,
+      version_id: versionId,
+      code,
+      title,
+      version,
+      change_note: changeNote,
+      revision_date: revisionDate,
+      effective_at: effectiveAt
+    };
+
+    if (sourceFile) {
+      body.source_file = await fileToPayload(sourceFile);
+    }
+
+    const response = await fetch(`${API_BASE}/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(body)
+    });
+    return await handleResponse(response);
+  },
+
   deleteDocument: async (docId: string): Promise<ApiResponse<null>> => {
     const response = await fetch(`${API_BASE}/documents`, {
       method: 'POST',
@@ -420,6 +547,22 @@ export const DocumentsAPI = {
       body: JSON.stringify({
         action: 'delete_document',
         doc_id: docId
+      })
+    });
+    return await handleResponse(response);
+  },
+
+  deleteScheduledVersion: async (
+    docId: string,
+    versionId: string
+  ): Promise<ApiResponse<null>> => {
+    const response = await fetch(`${API_BASE}/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({
+        action: 'delete_scheduled_version',
+        doc_id: docId,
+        version_id: versionId
       })
     });
     return await handleResponse(response);

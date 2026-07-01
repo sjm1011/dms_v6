@@ -62,6 +62,20 @@ const styles = `
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--glass-border-hover);
   }
+  .access-type-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  .acl-inherited-notice {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    border-radius: var(--radius-sm);
+    background: rgba(249, 115, 22, 0.08);
+    color: #f97316;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
   .access-type-btn.active-public {
     background: rgba(16, 185, 129, 0.1);
     border-color: #10b981;
@@ -248,6 +262,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
+  const [isInherited, setIsInherited] = useState<boolean>(false);
 
   const userInputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const isOpenRef = useRef(isOpen);
@@ -260,6 +275,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
     if (isOpen && folderId) {
       setLoading(true);
       setError('');
+      setIsInherited(false);
       setSelectedDepts([]);
       setUserRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
       
@@ -277,6 +293,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
           if (!isOpenRef.current || folderIdRef.current !== folderId) return;
           if (aclRes.success && aclRes.data) {
             setAccessType(aclRes.data.access_type);
+            setIsInherited(Boolean(aclRes.data.is_inherited));
             setSelectedDepts(aclRes.data.dept_ids || []);
             
             // 查詢已授權同仁姓名
@@ -326,6 +343,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
 
       initData();
     } else {
+      setIsInherited(false);
       setSelectedDepts([]);
       setUserRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
       userInputsRef.current = [];
@@ -436,6 +454,8 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
 
   // 8. 存檔送出
   const handleSave = async () => {
+    if (isInherited) return;
+
     setError('');
     
     // 過濾出有效的同仁帳號
@@ -482,26 +502,34 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
               onClick={onClose}
               disabled={loading}
             >
-              取消
+              {isInherited ? '關閉' : '取消'}
             </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSave}
-              disabled={loading}
-            >
-              {loading ? '儲存中...' : '確定儲存'}
-            </button>
+            {!isInherited && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? '儲存中...' : '確定儲存'}
+              </button>
+            )}
           </>
         }
       >
         <div className="acl-form">
+          {isInherited && (
+            <div className="acl-inherited-notice">
+              此資料夾已繼承上層資料夾的限閱屬性，不得再進行其他限閱設定。
+            </div>
+          )}
           <label className="acl-label">資料夾屬性</label>
           <div className="access-type-selector">
             <button
               type="button"
               className={`access-type-btn ${accessType === 1 ? 'active-public' : ''}`}
               onClick={() => setAccessType(1)}
+              disabled={loading || isInherited}
             >
               <span>🌐</span> 公開
             </button>
@@ -509,6 +537,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
               type="button"
               className={`access-type-btn ${accessType === 2 ? 'active-restricted' : ''}`}
               onClick={() => setAccessType(2)}
+              disabled={loading || isInherited}
             >
               <span>🔒</span> 限閱
             </button>
@@ -529,6 +558,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
                         type="checkbox"
                         checked={selectedDepts.includes(dept.dept_id)}
                         onChange={() => handleDeptToggle(dept.dept_id)}
+                        disabled={loading || isInherited}
                       />
                       <span>{dept.dept_name}</span>
                     </label>
@@ -553,7 +583,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
                       data-enter-action="blur-or-submit"
                       onKeyDown={handleUidKeyDown}
                       onBlur={() => handleUidBlur(index)}
-                      disabled={loading}
+                      disabled={loading || isInherited}
                     />
                     <div
                       className={`user-name-display ${
@@ -573,6 +603,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
                       className="btn-remove-row"
                       onClick={() => removeUserRow(index)}
                       title="移除此行"
+                      disabled={loading || isInherited}
                     >
                       ✕
                     </button>
