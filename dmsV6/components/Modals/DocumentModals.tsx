@@ -852,8 +852,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
                 <th>版本</th>
                 <th>狀態</th>
                 <th>修訂日期</th>
-                <th>生效時間</th>
-                <th>結束時間</th>
+                <th>生效日期</th>
+                <th>結束日期</th>
                 <th>異動說明</th>
               </tr>
             </thead>

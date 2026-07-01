@@ -30,6 +30,11 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
   const [pwd, setPwd] = useState('');
   const pwdInputRef = useRef<HTMLInputElement>(null);
 
+  const handleThemeChange = (nextTheme: AppTheme) => {
+    onThemeChange(nextTheme);
+    window.requestAnimationFrame(() => uidInputRef.current?.focus());
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -94,7 +99,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
                 name="theme"
                 value="modern-dark"
                 checked={theme === 'modern-dark'}
-                onChange={() => onThemeChange('modern-dark')}
+                onChange={() => handleThemeChange('modern-dark')}
               />
               <span>現代深色</span>
             </label>
@@ -104,7 +109,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
                 name="theme"
                 value="modern-light"
                 checked={theme === 'modern-light'}
-                onChange={() => onThemeChange('modern-light')}
+                onChange={() => handleThemeChange('modern-light')}
               />
               <span>現代淺色</span>
             </label>
