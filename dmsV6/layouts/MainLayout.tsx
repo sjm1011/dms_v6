@@ -8,7 +8,9 @@ import { FoldersAPI } from '../api/folders';
 import {
   SearchIcon,
   CreateNewFolderIcon,
-  CloudUploadIcon
+  CloudUploadIcon,
+  CheckCircleIcon,
+  ErrorOutlineIcon
 } from '../components/Icons';
 
 // 匯入分流後的 Modals 
@@ -198,6 +200,49 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const canCreateFolder = currentFolderIsActive && (currentFolderId === '' ? isAdmin : isCurrentFolderManager());
   const canCreateDocument = currentFolderIsActive && (currentFolderId === '' ? isAdmin : isCurrentFolderManager());
   const hasLoadedCurrentManagerNames = loadedManagerFolderId === currentFolderId;
+  const currentFolderHasDetailedAcl = Boolean(currentFolder?.acl_summary?.trim());
+
+  const renderCurrentFolderAccessBadge = () => {
+    if (!currentFolder) return null;
+
+    const isRestricted = currentFolder.access_type === 2;
+    const isInherited = Boolean(currentFolder.is_access_inherited);
+    const title = isRestricted
+      ? isInherited
+        ? `授權對象：${currentFolder.acl_summary || '未設定詳細授權'}`
+        : currentFolderHasDetailedAcl
+          ? `限閱，已授權：${currentFolder.acl_summary}`
+          : '限閱，未設定詳細授權'
+      : '公開，任何登入同仁皆可見並可進入';
+    const className = `badge-access folder-header-access-badge ${isRestricted ? 'restricted' : 'public'}${isInherited ? ' inherited' : ''}`;
+    const content = (
+      <>
+        <span>{isRestricted ? '限閱' : '公開'}</span>
+        {isRestricted && (currentFolderHasDetailedAcl
+          ? <CheckCircleIcon size={16} aria-hidden="true" />
+          : <ErrorOutlineIcon size={16} aria-hidden="true" />)}
+      </>
+    );
+
+    if (isInherited || !isCurrentFolderManager()) {
+      return <span className={className} title={title}>{content}</span>;
+    }
+
+    return (
+      <button
+        type="button"
+        className={`${className} editable`}
+        title={`${title}；點擊開啟資料夾屬性`}
+        aria-label={`${title}；點擊開啟資料夾屬性`}
+        onClick={() => {
+          setAclFolder({ id: currentFolder.id, name: currentFolder.name });
+          setIsFolderAclOpen(true);
+        }}
+      >
+        {content}
+      </button>
+    );
+  };
 
   const documentsById = useMemo(() => {
     const map = new Map<string, Document>();
@@ -447,6 +492,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         <div className="action-bar">
           <div className="action-left">
             <h2>{getCurrentTitle()}</h2>
+            {renderCurrentFolderAccessBadge()}
             <span className="badge">{combinedItems.length} 個項目</span>
             {currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
               <button

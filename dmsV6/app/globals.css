@@ -1506,11 +1506,39 @@ tr.table-row:hover .action-cell-buttons {
   color: var(--color-danger);
   border: 1px solid hsla(355, 85%, 55%, 0.3);
   cursor: help;
+  gap: 5px;
+}
+.badge-access.restricted svg {
+  display: block;
+  flex: 0 0 auto;
 }
 .badge-access.restricted.inherited {
   background-color: hsla(258, 75%, 62%, 0.16);
   color: hsl(258, 88%, 76%);
   border-color: hsla(258, 75%, 68%, 0.45);
+}
+.folder-header-access-badge {
+  gap: 5px;
+  min-height: auto;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: normal;
+}
+button.folder-header-access-badge {
+  font-family: inherit;
+  appearance: none;
+}
+.folder-header-access-badge.editable {
+  cursor: pointer;
+}
+.folder-header-access-badge.editable:hover {
+  filter: brightness(1.2);
+}
+.folder-header-access-badge.editable:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 .badge-status.active {
   background-color: hsla(145, 80%, 45%, 0.15);

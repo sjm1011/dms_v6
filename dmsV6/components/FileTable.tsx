@@ -11,7 +11,9 @@ import {
   EditIcon,
   DeleteIcon,
   HistoryIcon,
-  CloseIcon
+  CloseIcon,
+  CheckCircleIcon,
+  ErrorOutlineIcon
 } from './Icons';
 
 const KeyIcon = ({ size = 18, style }: { size?: number, style?: React.CSSProperties }) => (
@@ -158,16 +160,20 @@ export const FileTable = React.memo<FileTableProps>(({
 
     if (item.access_type === 2) {
       const isInherited = Boolean(item.is_access_inherited);
+      const hasDetailedAcl = Boolean(item.acl_summary?.trim());
       return (
         <span
           className={`badge-access restricted${isInherited ? ' inherited' : ''}`}
           title={isInherited
-            ? `繼承上層限閱設定；限閱對象：${item.acl_summary || '未設定'}`
+            ? `授權對象：${item.acl_summary || '未設定詳細授權'}`
             : item.acl_summary
               ? `授權對象：${item.acl_summary}`
               : '限閱：未設定詳細授權'}
         >
-          限閱
+          <span>限閱</span>
+          {hasDetailedAcl
+            ? <CheckCircleIcon size={16} aria-hidden="true" />
+            : <ErrorOutlineIcon size={16} aria-hidden="true" />}
         </span>
       );
     }
