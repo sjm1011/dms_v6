@@ -43,7 +43,7 @@ const mimeByExt: Record<string, string> = {
 const allowedExts = new Set(Object.keys(mimeByExt));
 const browserPreviewableImageExts = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+const INVALID_BASE64_CHARACTER_PATTERN = /[^A-Za-z0-9+/]/;
 
 const bufferStartsWith = (bytes: Buffer, signature: number[]) =>
   bytes.length >= signature.length && signature.every((value, index) => bytes[index] === value);
@@ -90,7 +90,16 @@ const decodeValidatedBase64 = (base64: unknown) => {
     throw new Error('正式發佈檔案大小不得超過 100 MB。');
   }
 
-  if (!BASE64_PATTERN.test(base64)) {
+  const paddingIndex = base64.indexOf('=');
+  const content = paddingIndex >= 0 ? base64.slice(0, paddingIndex) : base64;
+  const padding = paddingIndex >= 0 ? base64.slice(paddingIndex) : '';
+  const hasValidPadding = padding === '' || padding === '=' || padding === '==';
+
+  if (
+    base64.length % 4 !== 0 ||
+    !hasValidPadding ||
+    INVALID_BASE64_CHARACTER_PATTERN.test(content)
+  ) {
     throw new Error('檔案內容不是合法的 Base64 格式。');
   }
 

@@ -1,0 +1,6 @@
+{
+  "markdown-pdf.styles": [
+    ".vscode/markdown-pdf.css"
+  ],
+  "markdown-pdf.printBackground": true
+}

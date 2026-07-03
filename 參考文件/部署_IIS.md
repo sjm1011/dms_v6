@@ -6,7 +6,7 @@
 瀏覽器
   -> HTTPS 443
   -> IIS、URL Rewrite、ARR
-  -> http://127.0.0.1:3000
+  -> http://127.0.0.1:3502
   -> Next.js standalone Node.js 服務
   -> PostgreSQL 與 C:\DMS\storage
 ```
@@ -45,22 +45,50 @@ Copy-Item -Recurse -Force public C:\DMS\app\public
 
 ## 4. Node.js 正式環境變數
 
-執行 Node.js 的 Windows 服務帳號必須取得下列變數：
+正式環境的設定檔結構比照 `dmsV6\.env.example`。在正式伺服器建立 `C:\DMS\app\.env.production`，並將各欄位替換為正式環境的設定值。
+
+正式環境範例如下：
+
+```text
+# DATABASE_URL=postgres://資料庫帳號:URL編碼後的密碼@資料庫主機:5432/資料庫名稱
+# 也可改用 PGHOST、PGPORT、PGDATABASE、PGUSER、PGPASSWORD。
+PGHOST=127.0.0.1
+PGPORT=5432
+PGDATABASE=正式資料庫名稱
+PGUSER=正式資料庫帳號
+PGPASSWORD=正式資料庫密碼
+PGPOOL_MAX=10
+PG_CONNECTION_TIMEOUT_MS=5000
+PG_STATEMENT_TIMEOUT_MS=10000
+PG_QUERY_TIMEOUT_MS=12000
+# DMS_STORAGE_ROOT 用於新上傳檔案；相對路徑以 Node.js 服務啟動目錄為基準。
+DMS_STORAGE_ROOT=C:\DMS\storage
+# DMS_LEGACY_STORAGE_ROOT 用於讀取既有 dmsapi 儲存檔案；不需要相容舊資料時可留空。
+DMS_LEGACY_STORAGE_ROOT=
+SESSION_COOKIE_NAME=dms_session
+SESSION_SECRET=至少32字元且只供正式環境使用的隨機字串
+SESSION_MAX_AGE_SECONDS=28800
+# 目前使用 HTTP，必須設為 false；日後啟用 HTTPS 才改為 true。
+SESSION_COOKIE_SECURE=false
+```
+
+`C:\DMS\app\.env.production` 必須與 `server.js` 位於同一個目錄。第 5 節的 Windows 服務「啟動目錄」必須設為 `C:\DMS\app`，執行 Node.js 的服務帳號必須具有該檔案的讀取權限。
+
+此檔案包含資料庫密碼與 `SESSION_SECRET`，只允許系統管理員及 Node.js 服務帳號讀取，不可放入 IIS 網站目錄 `C:\DMS\iis-root`，也不可提交至 Git。
+
+資料庫連線可使用上述 `PGHOST`、`PGPORT`、`PGDATABASE`、`PGUSER`、`PGPASSWORD` 分項格式，也可改用單一 `DATABASE_URL`；兩種格式擇一即可。
+
+下列 3 個項目是 Node.js 服務的啟動環境變數，不屬於 `.env.example` 的應用程式設定結構。請在 NSSM、WinSW 或採用的 Windows Service Wrapper 內設定：
 
 ```text
 NODE_ENV=production
 HOSTNAME=127.0.0.1
-PORT=3000
-DATABASE_URL=postgres://dms_app:URL編碼後的密碼@127.0.0.1:5432/dms
-PGPOOL_MAX=10
-DMS_STORAGE_ROOT=C:\DMS\storage
-SESSION_COOKIE_NAME=dms_session
-SESSION_SECRET=至少32字元且只供正式環境使用的隨機字串
-SESSION_MAX_AGE_SECONDS=28800
-SESSION_COOKIE_SECURE=true
+PORT=3502
 ```
 
-若對外入口尚未啟用 HTTPS，測試期間必須設為 `SESSION_COOKIE_SECURE=false`，否則瀏覽器不會透過 HTTP 回傳登入 Cookie。正式環境必須使用 HTTPS 並改回 `true`。
+正式部署固定使用內部連接埠 `3502`，避免占用本機開發環境預設使用的 `3000`。若需改用其他連接埠，必須同步修改 Windows 服務的 `PORT`、第 5 節健康檢查網址、第 7 節 `web.config` 反向代理網址及第 9.2 節檢查網址。
+
+目前對外入口未啟用 HTTPS，因此必須設定為 `SESSION_COOKIE_SECURE=false`，否則瀏覽器不會透過 HTTP 回傳登入 Cookie。日後啟用 HTTPS 時，再改為 `SESSION_COOKIE_SECURE=true`。
 
 ## 5. 將 Node.js 設為 Windows 服務
 
@@ -78,8 +106,8 @@ SESSION_COOKIE_SECURE=true
 啟動後驗證：
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/test
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test
 ```
 
 ## 6. 建立 IIS 網站
@@ -103,7 +131,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/test
       <rules>
         <rule name="DMS V6 reverse proxy" stopProcessing="true">
           <match url="(.*)" />
-          <action type="Rewrite" url="http://127.0.0.1:3000/{R:1}" />
+          <action type="Rewrite" url="http://127.0.0.1:3502/{R:1}" />
         </rule>
       </rules>
     </rewrite>
@@ -139,8 +167,8 @@ Invoke-WebRequest -UseBasicParsing https://dms.example.com/api/test
 ### 9.2 IIS 回傳 502.3
 
 * Status：IIS `502.3 Bad Gateway`。
-* Root Cause：Node.js Windows 服務未啟動，或未監聽 `127.0.0.1:3000`。
-* Suggested Fix：先直接請求 `http://127.0.0.1:3000/`，確認服務與連接埠，再檢查 ARR。
+* Root Cause：Node.js Windows 服務未啟動，或未監聽 `127.0.0.1:3502`。
+* Suggested Fix：先直接請求 `http://127.0.0.1:3502/`，確認服務與連接埠，再檢查 ARR。
 
 ### 9.3 登入成功後仍回到登入頁
 

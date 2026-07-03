@@ -1,0 +1,117 @@
+/* Markdown PDF 專用高對比列印樣式。 */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #1f2937 !important;
+  }
+
+  body,
+  p,
+  li,
+  td,
+  dd,
+  figcaption {
+    color: #1f2937 !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  strong,
+  th {
+    color: #111827 !important;
+  }
+
+  a,
+  a:visited {
+    color: #1d4ed8 !important;
+    text-decoration: underline;
+  }
+
+  blockquote {
+    color: #374151 !important;
+    border-left-color: #6b7280 !important;
+    background: #f3f4f6 !important;
+  }
+
+  table,
+  th,
+  td {
+    border-color: #6b7280 !important;
+  }
+
+  th {
+    background: #e5e7eb !important;
+  }
+
+  tr:nth-child(even) td {
+    background: #f9fafb !important;
+  }
+
+  code:not(pre code) {
+    color: #9f1239 !important;
+    background: #f3f4f6 !important;
+    border: 1px solid #d1d5db;
+  }
+
+  pre,
+  pre code {
+    color: #f8fafc !important;
+    background: #111827 !important;
+  }
+
+  pre {
+    border: 1px solid #374151 !important;
+  }
+
+  pre .hljs-comment,
+  pre .hljs-quote {
+    color: #d1d5db !important;
+  }
+
+  pre .hljs-keyword,
+  pre .hljs-selector-tag,
+  pre .hljs-literal,
+  pre .hljs-section,
+  pre .hljs-link {
+    color: #c4b5fd !important;
+  }
+
+  pre .hljs-string,
+  pre .hljs-title,
+  pre .hljs-name,
+  pre .hljs-type,
+  pre .hljs-attribute,
+  pre .hljs-symbol,
+  pre .hljs-bullet,
+  pre .hljs-addition,
+  pre .hljs-variable,
+  pre .hljs-template-tag,
+  pre .hljs-template-variable {
+    color: #86efac !important;
+  }
+
+  pre .hljs-number,
+  pre .hljs-meta,
+  pre .hljs-built_in,
+  pre .hljs-builtin-name,
+  pre .hljs-params {
+    color: #fde68a !important;
+  }
+
+  pre .hljs-deletion {
+    color: #fca5a5 !important;
+  }
+
+  hr {
+    border-color: #6b7280 !important;
+  }
+}
