@@ -207,6 +207,9 @@ export const FileTable = React.memo<FileTableProps>(({
 
   const getActionItems = (item: DMSItem): ActionMenuItem[] => {
     if (item.type === 'document') {
+      const activeVersionCount = item.versions?.filter(
+        (version) => version.status !== 'Cancelled'
+      ).length || 0;
       const actions: ActionMenuItem[] = [
         item.can_preview
           ? {
@@ -257,7 +260,7 @@ export const FileTable = React.memo<FileTableProps>(({
           });
         }
 
-        if (item.status !== 'Scheduled' && !item.has_scheduled_version && item.versions && item.versions.length > 1) {
+        if (item.status !== 'Scheduled' && !item.has_scheduled_version && activeVersionCount > 1) {
           actions.push({
             key: 'cancel-version',
             label: '撤回最新版本',
@@ -277,7 +280,7 @@ export const FileTable = React.memo<FileTableProps>(({
           return actions;
         }
 
-        if (item.versions && item.versions.length === 1) {
+        if (activeVersionCount === 1) {
           actions.push({
             key: 'delete-document',
             label: '刪除文件',

@@ -967,21 +967,20 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
 
   await withTransaction(async (client) => {
     const version = await client.query<{
-      total_version_count: string;
       active_version_count: string;
-      min_seq: number;
-      max_seq: number;
+      active_min_seq: number;
+      active_max_seq: number;
       version_id: number;
-      pub_file_id: number;
-      src_file_id: number | null;
+      file_ids: number[];
     }>(
-      `SELECT COUNT(*) AS total_version_count,
-              SUM(CASE WHEN ddv_cancel_at IS NULL THEN 1 ELSE 0 END) AS active_version_count,
-              MIN(ddv_seq) AS min_seq,
-              MAX(ddv_seq) AS max_seq,
-              MIN(ddv_id) AS version_id,
-              MIN(ddv_pub_dfi_id) AS pub_file_id,
-              MIN(ddv_src_dfi_id) AS src_file_id
+      `SELECT COUNT(*) FILTER (WHERE ddv_cancel_at IS NULL) AS active_version_count,
+              MIN(ddv_seq) FILTER (WHERE ddv_cancel_at IS NULL) AS active_min_seq,
+              MAX(ddv_seq) FILTER (WHERE ddv_cancel_at IS NULL) AS active_max_seq,
+              MIN(ddv_id) FILTER (WHERE ddv_cancel_at IS NULL) AS version_id,
+              ARRAY_REMOVE(
+                ARRAY_AGG(ddv_pub_dfi_id) || ARRAY_AGG(ddv_src_dfi_id),
+                NULL
+              ) AS file_ids
          FROM dms_doc_ver
         WHERE dd_id = $1`,
       [docId]
@@ -989,12 +988,11 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
     const versionRow = version.rows[0];
 
     if (
-      Number(versionRow.total_version_count) !== 1 ||
       Number(versionRow.active_version_count) !== 1 ||
-      Number(versionRow.min_seq) !== 1 ||
-      Number(versionRow.max_seq) !== 1
+      Number(versionRow.active_min_seq) !== 1 ||
+      Number(versionRow.active_max_seq) !== 1
     ) {
-      throw new Error('僅第一版且未版更的文件可以刪除。');
+      throw new Error('僅目前有效版本為第一版的文件可以刪除。');
     }
 
     await writeAudit(
@@ -1010,9 +1008,7 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
       client
     );
 
-    const fileIds = [versionRow.pub_file_id, versionRow.src_file_id].filter(
-      (fileId): fileId is number => Boolean(fileId)
-    );
+    const fileIds = versionRow.file_ids || [];
 
     if (fileIds.length > 0) {
       await client.query(
@@ -1025,8 +1021,12 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
 
     await client.query(
       `DELETE FROM dms_ver_rev
-        WHERE ddv_id = $1`,
-      [versionRow.version_id]
+        WHERE ddv_id IN (
+              SELECT ddv_id
+                FROM dms_doc_ver
+               WHERE dd_id = $1
+        )`,
+      [docId]
     );
 
     await client.query(
