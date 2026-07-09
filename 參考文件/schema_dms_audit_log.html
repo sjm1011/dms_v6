@@ -212,16 +212,16 @@
 </head>
 <body>
   <div class="container">
-    <h1>資料表結構：dms_audit_log (系統稽核紀錄)</h1>
-<p>本文件紀錄 DMS V5 之 <code>dms_audit_log</code> 資料表結構定義。</p>
-<p>本文件依據 <code>system_specifications.md</code> 第 1.5 節「資料表與欄位命名規則」與第 5 節「全域稽核紀錄規格」製作。資料表名稱與 schema 檔名一致，檔名前綴統一使用 <code>schema_</code>。</p>
+    <h1>資料表結構：dms_audit_log (既有保留稽核紀錄)</h1>
+<p>本文件紀錄 DMS V6 之 <code>dms_audit_log</code> 資料表結構定義。</p>
+<p><code>dms_audit_log</code> 為早期既有稽核表，欄位命名未符合目前第 1.5 節「資料表與欄位命名規則」。為保留既有資料，本表不刪除；新稽核紀錄改寫入 <code>dms_log</code>，其正式 schema 請見 <code>schema_dms_log.md</code>。</p>
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
 <ul>
   <li><strong>表名稱</strong>：<code>dms_audit_log</code></li>
   <li><strong>schema 檔名</strong>：<code>schema_dms_audit_log.md</code>、<code>schema_dms_audit_log.html</code></li>
-  <li><strong>用途</strong>：保存登入、登出、文件查閱、文件下載、文件生命週期、資料夾異動、權限異動、權限不足與操作失敗等全域稽核紀錄。</li>
+  <li><strong>用途</strong>：保留早期已寫入的稽核紀錄；新稽核紀錄不再寫入本表。</li>
 </ul>
 <h3>欄位規劃</h3>
 <table>

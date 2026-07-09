@@ -239,6 +239,7 @@
     <tr><td><code>dms_doc_ver</code></td><td>文件版本</td><td><code>ddv_</code></td><td><code>ddv_id</code></td></tr>
     <tr><td><code>dms_file</code></td><td>檔案後設資料</td><td><code>dfi_</code></td><td><code>dfi_id</code></td></tr>
     <tr><td><code>dms_ver_rev</code></td><td>版本修訂對照表</td><td><code>dvr_</code></td><td><code>dvr_id</code></td></tr>
+    <tr><td><code>dms_log</code></td><td>系統稽核紀錄</td><td><code>dl_</code></td><td><code>dl_id</code></td></tr>
   </tbody>
 </table>
 <p>欄位命名原則如下：</p>
@@ -283,10 +284,10 @@
     <tr><td><code>dms_doc_ver</code></td><td><code>ddv_id</code>、<code>dd_id</code>、<code>ddv_seq</code>、<code>ddv_no</code>、<code>ddv_rev_date</code>、<code>ddv_eff_at</code>、<code>ddv_eff_to</code>、<code>ddv_chg_note</code>、<code>ddv_pub_dfi_id</code>、<code>ddv_src_dfi_id</code>、<code>ddv_cancel_at</code>、<code>ddv_cancel_by</code>、<code>ddv_cancel_reason</code>、<code>ddv_crtby</code>、<code>ddv_crtat</code>、<code>ddv_updby</code>、<code>ddv_updat</code></td></tr>
     <tr><td><code>dms_file</code></td><td><code>dfi_id</code>、<code>dfi_role</code>、<code>dfi_name</code>、<code>dfi_path</code>、<code>dfi_ext</code>、<code>dfi_mime</code>、<code>dfi_size</code>、<code>dfi_sha256</code>、<code>dfi_status</code>、<code>dfi_crtby</code>、<code>dfi_crtat</code></td></tr>
     <tr><td><code>dms_ver_rev</code></td><td><code>dvr_id</code>、<code>ddv_id</code>、<code>dvr_base_ddv_id</code>、<code>dfi_id</code>、<code>dvr_note</code>、<code>dvr_dc</code>、<code>dvr_crtby</code>、<code>dvr_crtat</code>、<code>dvr_dcby</code>、<code>dvr_dcat</code></td></tr>
-    <tr><td><code>dms_audit_log</code></td><td><code>id</code>、<code>event_at</code>、<code>actor_uid</code>、<code>actor_name</code>、<code>actor_role</code>、<code>action</code>、<code>resource_type</code>、<code>resource_id</code>、<code>managed_folder_id</code>、<code>folder_id</code>、<code>document_id</code>、<code>version_id</code>、<code>result</code>、<code>ip_address</code>、<code>user_agent</code>、<code>request_id</code>、<code>reason</code>、<code>before_data</code>、<code>after_data</code>、<code>metadata</code></td></tr>
+    <tr><td><code>dms_log</code></td><td><code>dl_id</code>、<code>dl_event_at</code>、<code>dl_actor_uid</code>、<code>dl_actor_name</code>、<code>dl_actor_role</code>、<code>dl_action</code>、<code>dl_resource_type</code>、<code>dl_resource_id</code>、<code>dl_managed_df_fid</code>、<code>df_fid</code>、<code>dd_id</code>、<code>ddv_id</code>、<code>dl_result</code>、<code>dl_ip_address</code>、<code>dl_user_agent</code>、<code>dl_request_id</code>、<code>dl_reason</code>、<code>dl_before_data</code>、<code>dl_after_data</code>、<code>dl_metadata</code></td></tr>
   </tbody>
 </table>
-<p>第 5 節稽核資料表採同一命名原則。全域稽核表使用 <code>dms_audit_log</code>；文件查閱、預覽與下載紀錄若獨立成表，使用 <code>dms_doc_access_log</code>。</p>
+<p>第 5 節稽核資料表採同一命名原則。全域稽核表使用 <code>dms_log</code>。既有 <code>dms_audit_log</code> 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 <code>dms_doc_access_log</code>。</p>
 <p>---</p>
 <h2>2. 帳戶角色與權限矩陣 (基於資料夾的存取控制 Folder-based ACL)</h2>
 <p>系統採用「帳戶角色」與「資料夾管理身分」分離的權限模型。登入後的帳戶角色僅分為 <code>ADMIN</code> 與 <code>USER</code>；<code>FOLDER_MANAGER</code> 不作為登入角色，而是由 <code>dms_folder_managers</code> 依資料夾節點計算出的管理身分。原全站通用的「文件管理員 (MANAGER)」角色已全面廢除。</p>
@@ -492,7 +493,9 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* <strong>根目錄建立文件</strong>：僅 ADMIN 可在根目錄建立文件。前端僅對 ADMIN 顯示根目錄「新建文件」入口；後端 API 必須再次驗證登入角色，不得只依賴前端防呆。</p>
 <p>* <strong>根目錄文件公開規則</strong>：位於根目錄的文件固定公開查閱。任何已登入使用者進入文件庫根層時，皆可看見符合文件主檔狀態、版本生效期間與 PDF / 非 PDF 操作規則的根目錄文件。</p>
 <p>* <strong>根目錄識別規則</strong>：建立或查詢根目錄文件時，系統以 <code>folder_id = 0</code> 表示根目錄。一般資料夾文件則使用實際 <code>dms_folders.df_fid</code>。</p>
-<p>* <strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息，同時寫入權限不足稽核紀錄。</p>
+<ul>
+  <li><strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息。</li>
+</ul>
 <p>管理員建立文件時：</p>
 <ol>
   <li>文件編號可填寫或留空；有填寫時，前端必須去除前後空白並轉為大寫。</li>
@@ -633,23 +636,24 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>任何具備文件查閱權限的使用者皆可檢視其可見文件版本之修訂對照表。若版本被撤回，該版本之修訂對照表仍需保留，並依版本可見性與歷史紀錄權限控管；無權檢視該版本者，不得透過修訂對照表取得已撤回版本內容。</p>
 <p>---</p>
 <h2>5. 全域稽核紀錄規格</h2>
-<p>DMS 內所有會影響資料、權限、安全、文件流通或使用者存取軌跡的行為，都應寫入全域稽核紀錄。稽核紀錄不僅涵蓋文件版本生命週期，也涵蓋登入、查閱、下載、資料夾屬性、資料夾管理員、ACL (存取控制清單) 與權限不足嘗試等事件。</p>
+<p>DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登入、預覽、下載、資料夾屬性、資料夾管理員、ACL (存取控制清單) 與 PDF 正式原檔下載拒絕等事件。</p>
 <h3>5.1. 稽核設計原則</h3>
 <p>* 稽核紀錄採追加寫入模式，系統一般功能不提供修改或刪除稽核紀錄的操作。</p>
 <p>* 稽核紀錄應由後端統一寫入，不得只依賴前端事件紀錄。</p>
 <p>* 管理類異動成功時，主要資料異動與稽核紀錄應在同一個短交易中完成；若稽核紀錄寫入失敗，該管理異動應回復。</p>
-<p>* 查閱、預覽與下載屬高頻事件，仍須留下紀錄；實作上可寫入同一張 <code>dms_audit_log</code> (稽核紀錄表)，或獨立為 <code>dms_doc_access_log</code> (文件存取紀錄表) 與分區表，但查詢介面上應視為同一套全域稽核資料。</p>
+<ul>
+  <li>查閱、預覽與下載屬高頻事件，仍須留下紀錄；目前寫入 <code>dms_log</code> (系統稽核紀錄表)。後續若獨立為 <code>dms_doc_access_log</code> (文件存取紀錄表) 與分區表，查詢介面上應視為同一套全域稽核資料。</li>
+</ul>
 <p>* 稽核紀錄應保存足以還原「誰、於何時、從何處、對何資料、做了什麼、結果如何」的資訊。</p>
 <h3>5.2. 必須記錄的事件範圍</h3>
 <p>下列事件均需寫入全域稽核紀錄：</p>
-<p>* 驗證事件：<code>AUTH_LOGIN_SUCCESS</code> (登入成功)、<code>AUTH_LOGIN_FAILED</code> (登入失敗)、<code>AUTH_LOGOUT</code> (登出)。</p>
-<p>* 存取事件：<code>FOLDER_VIEWED</code> (資料夾瀏覽)、<code>DOCUMENT_PREVIEWED</code> (文件預覽)、<code>DOCUMENT_DOWNLOADED</code> (文件下載)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕)。</p>
-<p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
-<p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
 <ul>
-  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (建立文件版本)、<code>DOCUMENT_VERSION_SCHEDULED</code> (預約生效版本)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)、<code>DOCUMENT_VERSION_DELETED</code> (刪除尚未生效的預約版本)、<code>DOCUMENT_PREVIOUS_VERSION_RESTORED</code> (回復前一版)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (手動廢止文件)、<code>DOCUMENT_AUTO_OBSOLETED_BY_FOLDER_ARCHIVE</code> (因資料夾封存自動廢止文件)。</li>
+  <li>驗證事件：<code>AUTH_LOGIN_SUCCESS</code> (登入成功)、<code>AUTH_LOGIN_FAILED</code> (登入失敗)。</li>
+  <li>存取事件：<code>DOCUMENT_PREVIEWED</code> (文件預覽)、<code>DOCUMENT_DOWNLOADED</code> (文件下載)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕)。</li>
+  <li>資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</li>
+  <li>權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</li>
+  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (建立文件版本)、<code>DOCUMENT_UPDATED</code> (修改文件或預約版本資料)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)、<code>DOCUMENT_VERSION_DELETED</code> (刪除尚未生效的預約版本)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (手動廢止文件)。</li>
 </ul>
-<p>* 失敗與拒絕事件：<code>PERMISSION_DENIED</code> (權限不足)、<code>OPERATION_FAILED</code> (操作失敗)。</p>
 <h3>5.3. 稽核資料欄位</h3>
 <p>全域稽核紀錄建議至少保存下列欄位：</p>
 <table>
@@ -657,26 +661,26 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
     <tr><th>欄位</th><th>說明</th></tr>
   </thead>
   <tbody>
-    <tr><td><code>id</code> (流水號)</td><td>稽核紀錄唯一識別碼。</td></tr>
-    <tr><td><code>event_at</code> (事件時間)</td><td>事件發生時間，以後端伺服器本地時間寫入。</td></tr>
-    <tr><td><code>actor_uid</code> (操作者帳號)</td><td>執行動作的使用者帳號；未登入或登入失敗時可依實際情境留空或記錄輸入帳號。</td></tr>
-    <tr><td><code>actor_name</code> (操作者姓名)</td><td>執行動作的使用者姓名。</td></tr>
-    <tr><td><code>actor_role</code> (操作者角色)</td><td>執行動作當下的登入角色，僅記錄 <code>ADMIN</code> (系統管理員) 或 <code>USER</code> (一般使用者)。資料夾管理員屬於計算型管理身分，不寫入為登入角色。</td></tr>
-    <tr><td><code>action</code> (動作代碼)</td><td>本次事件類型，例如 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)。</td></tr>
-    <tr><td><code>resource_type</code> (資源類型)</td><td>被操作的資源類型，例如 <code>AUTH</code> (驗證)、<code>FOLDER</code> (資料夾)、<code>DOCUMENT</code> (文件主檔)、<code>VERSION</code> (文件版本)、<code>ACL</code> (存取控制清單)。</td></tr>
-    <tr><td><code>resource_id</code> (資源識別碼)</td><td>被操作資源的主要識別碼。</td></tr>
-    <tr><td><code>managed_folder_id</code> (管理資料夾節點識別碼)</td><td>事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。</td></tr>
-    <tr><td><code>folder_id</code> (資料夾識別碼)</td><td>事件所屬資料夾識別碼。</td></tr>
-    <tr><td><code>document_id</code> (文件主檔識別碼)</td><td>事件所屬文件主檔識別碼。</td></tr>
-    <tr><td><code>version_id</code> (文件版本識別碼)</td><td>事件所屬文件版本識別碼。</td></tr>
-    <tr><td><code>result</code> (執行結果)</td><td><code>SUCCESS</code> (成功)、<code>FAILED</code> (失敗) 或 <code>DENIED</code> (拒絕)。</td></tr>
-    <tr><td><code>ip_address</code> (來源位址)</td><td>使用者來源 IP 位址。</td></tr>
-    <tr><td><code>user_agent</code> (瀏覽器識別資訊)</td><td>瀏覽器或用戶端識別資訊。</td></tr>
-    <tr><td><code>request_id</code> (請求追蹤識別碼)</td><td>後端請求追蹤用識別碼，便於除錯與串接日誌。</td></tr>
-    <tr><td><code>reason</code> (原因)</td><td>使用者填寫或系統產生的原因，例如撤回原因、廢止原因或拒絕原因。</td></tr>
-    <tr><td><code>before_data</code> (變更前資料)</td><td>異動前快照，可使用 <code>JSONB</code> (JSON 二進位格式) 保存。</td></tr>
-    <tr><td><code>after_data</code> (變更後資料)</td><td>異動後快照，可使用 <code>JSONB</code> (JSON 二進位格式) 保存。</td></tr>
-    <tr><td><code>metadata</code> (額外資料)</td><td>其他補充資訊，例如檔名、MIME Type (媒體類型)、版本號、下載類型、浮水印內容或錯誤訊息。</td></tr>
+    <tr><td><code>dl_id</code> (流水號)</td><td>稽核紀錄唯一識別碼。</td></tr>
+    <tr><td><code>dl_event_at</code> (事件時間)</td><td>事件發生時間，以後端伺服器本地時間寫入。</td></tr>
+    <tr><td><code>dl_actor_uid</code> (操作者帳號)</td><td>執行動作的使用者帳號；未登入或登入失敗時可依實際情境留空或記錄輸入帳號。</td></tr>
+    <tr><td><code>dl_actor_name</code> (操作者姓名)</td><td>執行動作的使用者姓名。</td></tr>
+    <tr><td><code>dl_actor_role</code> (操作者角色)</td><td>執行動作當下的登入角色，僅記錄 <code>ADMIN</code> (系統管理員) 或 <code>USER</code> (一般使用者)。資料夾管理員屬於計算型管理身分，不寫入為登入角色。</td></tr>
+    <tr><td><code>dl_action</code> (動作代碼)</td><td>本次事件類型，例如 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)。</td></tr>
+    <tr><td><code>dl_resource_type</code> (資源類型)</td><td>被操作的資源類型，例如 <code>AUTH</code> (驗證)、<code>FOLDER</code> (資料夾)、<code>DOCUMENT</code> (文件主檔)、<code>VERSION</code> (文件版本)、<code>ACL</code> (存取控制清單)。</td></tr>
+    <tr><td><code>dl_resource_id</code> (資源識別碼)</td><td>被操作資源的主要識別碼。</td></tr>
+    <tr><td><code>dl_managed_df_fid</code> (管理資料夾節點識別碼)</td><td>事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。</td></tr>
+    <tr><td><code>df_fid</code> (資料夾識別碼)</td><td>事件所屬資料夾識別碼。</td></tr>
+    <tr><td><code>dd_id</code> (文件主檔識別碼)</td><td>事件所屬文件主檔識別碼。</td></tr>
+    <tr><td><code>ddv_id</code> (文件版本識別碼)</td><td>事件所屬文件版本識別碼。</td></tr>
+    <tr><td><code>dl_result</code> (執行結果)</td><td><code>SUCCESS</code> (成功)、<code>FAILED</code> (失敗) 或 <code>DENIED</code> (拒絕)。</td></tr>
+    <tr><td><code>dl_ip_address</code> (來源位址)</td><td>使用者來源 IP 位址。</td></tr>
+    <tr><td><code>dl_user_agent</code> (瀏覽器識別資訊)</td><td>瀏覽器或用戶端識別資訊。</td></tr>
+    <tr><td><code>dl_request_id</code> (請求追蹤識別碼)</td><td>後端請求追蹤用識別碼，便於除錯與串接日誌。</td></tr>
+    <tr><td><code>dl_reason</code> (原因)</td><td>使用者填寫或系統產生的原因，例如撤回原因、廢止原因或拒絕原因。</td></tr>
+    <tr><td><code>dl_before_data</code> (變更前資料)</td><td>異動前快照，可使用 <code>JSONB</code> (JSON 二進位格式) 保存。</td></tr>
+    <tr><td><code>dl_after_data</code> (變更後資料)</td><td>異動後快照，可使用 <code>JSONB</code> (JSON 二進位格式) 保存。</td></tr>
+    <tr><td><code>dl_metadata</code> (額外資料)</td><td>其他補充資訊，例如檔名、MIME Type (媒體類型)、版本號、下載類型、浮水印內容或錯誤訊息。</td></tr>
   </tbody>
 </table>
 <h3>5.4. 查閱、預覽與下載紀錄</h3>
@@ -687,27 +691,33 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li>非 PDF 文件下載應記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。</li>
 </ul>
 <p>* 資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 <code>DOCUMENT_DOWNLOADED</code> (文件下載)，並於 <code>metadata</code> (額外資料) 中標示 <code>file_purpose</code> (檔案用途)，例如 <code>PUBLISHED_FILE</code> (正式發佈檔案)、<code>SOURCE_FILE</code> (原始編修檔)、<code>OBSOLETE_APPROVAL_FILE</code> (廢止公文)。</p>
-<p>* 一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕) 或 <code>PERMISSION_DENIED</code> (權限不足)。</p>
+<ul>
+  <li>一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕)。</li>
+</ul>
 <h3>5.5. 權限異動與資料夾異動紀錄</h3>
 <p>資料夾屬性、資料夾管理員與 ACL (存取控制清單) 異動需保留變更前後資料。</p>
 <p>* 建立、修改、作廢或封存資料夾時，應記錄資料夾名稱、父層資料夾、狀態、異動人員與異動結果。</p>
 <p>* 指派、更換或撤銷第一層資料夾的資料夾管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存異動前後的資料夾管理員；異動完成後允許零名或一名有效資料夾管理員，但不得超過一名。</p>
-<p>* 指派或撤銷協同管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存協同管理員清單差異、授權資料夾節點與操作者的管理身分類型。協同管理員嘗試再授權他人時，後端必須拒絕並寫入 <code>PERMISSION_DENIED</code> (權限不足)。</p>
+<ul>
+  <li>指派或撤銷協同管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存協同管理員清單差異、授權資料夾節點與操作者的管理身分類型。協同管理員嘗試再授權他人時，後端必須拒絕。</li>
+</ul>
 <p>* 修改管理資料夾節點 ACL (存取控制清單) 時，應保存授權模式，例如公開、特定群組或特定使用者，以及群組與使用者清單差異。</p>
-<p>* 若因權限不足導致資料夾或 ACL (存取控制清單) 修改被拒絕，仍需記錄拒絕事件。</p>
 <h3>5.6. 文件與版本生命週期紀錄</h3>
 <p>文件主檔與文件版本的生命週期異動，均需寫入全域稽核紀錄。</p>
 <p>* 新建文件與上傳第一版時，需記錄文件主檔、第一筆版本、正式發佈檔案與生效時間。</p>
-<p>* 上傳新版或預約生效版本時，需記錄新版本資料，以及前一版本 <code>effective_until</code> (結束時間) 被設定為新版本 <code>effective_at</code> (生效時間) 的異動。</p>
-<p>* 撤回版本並回復前版時，需記錄 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本) 與 <code>DOCUMENT_PREVIOUS_VERSION_RESTORED</code> (回復前一版)，並在 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存被撤回版本與前一版 <code>effective_until</code> (結束時間) 的變化。</p>
+<ul>
+  <li>上傳新版或預約生效版本時，需記錄 <code>DOCUMENT_VERSION_CREATED</code> (建立文件版本)、新版本資料，以及前一版本 <code>effective_until</code> (結束時間) 被設定為新版本 <code>effective_at</code> (生效時間) 的異動。</li>
+  <li>修改文件或預約版本資料時，需記錄 <code>DOCUMENT_UPDATED</code> (修改文件或預約版本資料)，並在 <code>metadata</code> (額外資料) 保存異動前後資料。</li>
+  <li>撤回版本並回復前版時，需記錄 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回文件版本)，並保存撤回原因。</li>
+</ul>
 <p>* 刪除第一版文件時，需記錄 <code>DOCUMENT_DELETED</code> (刪除文件)，並保存操作者、所屬資料夾、文件主檔識別碼、第一版版本識別碼、刪除原因與請求來源資訊。</p>
 <p>* 手動廢止文件時，需記錄廢止原因、廢止公文、文件主檔狀態從 <code>Effective</code> (有效的) 改為 <code>Obsolete</code> (已廢止) 的異動。</p>
-<p>* 因資料夾封存自動廢止文件時，需記錄 <code>DOCUMENT_AUTO_OBSOLETED_BY_FOLDER_ARCHIVE</code> (因資料夾封存自動廢止文件)，並保存來源資料夾與系統自動廢止原因。</p>
-<h3>5.7. 失敗與拒絕存取紀錄</h3>
-<p>系統不只記錄成功事件，也需記錄失敗或被拒絕的嘗試。</p>
-<p>* 登入失敗需記錄 <code>AUTH_LOGIN_FAILED</code> (登入失敗)，但不得記錄明文密碼。</p>
-<p>* 權限不足、ACL (存取控制清單) 不符、角色不符、文件狀態不允許、版本狀態不允許等情況，均需記錄 <code>PERMISSION_DENIED</code> (權限不足) 或對應的拒絕事件。</p>
-<p>* 後端驗證失敗、資料版本衝突、檔案格式不符或資料庫異常等情況，應記錄 <code>OPERATION_FAILED</code> (操作失敗)，並於 <code>metadata</code> (額外資料) 保存可供維護人員判讀的錯誤摘要。</p>
+<h3>5.7. 下載拒絕紀錄</h3>
+<p>目前全域稽核紀錄已實作的拒絕事件為 PDF 正式原檔下載拒絕。</p>
+<ul>
+  <li>登入失敗需記錄 <code>AUTH_LOGIN_FAILED</code> (登入失敗)，但不得記錄明文密碼。</li>
+  <li>一般使用者嘗試下載 PDF 正式原檔時，需記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載被拒絕)，並保存文件、版本與檔名資訊。</li>
+</ul>
 <h3>5.8. 稽核紀錄保存與不可竄改原則</h3>
 <p>* 稽核紀錄未另訂保存期限前，原則上永久保存。</p>
 <p>* 系統前端不提供稽核紀錄修改或刪除功能。</p>

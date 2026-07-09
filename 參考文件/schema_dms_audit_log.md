@@ -1,8 +1,8 @@
-# 資料表結構：dms_audit_log (系統稽核紀錄)
+# 資料表結構：dms_audit_log (既有保留稽核紀錄)
 
-本文件紀錄 DMS V5 之 `dms_audit_log` 資料表結構定義。
+本文件紀錄 DMS V6 之 `dms_audit_log` 資料表結構定義。
 
-本文件依據 `system_specifications.md` 第 1.5 節「資料表與欄位命名規則」與第 5 節「全域稽核紀錄規格」製作。資料表名稱與 schema 檔名一致，檔名前綴統一使用 `schema_`。
+`dms_audit_log` 為早期既有稽核表，欄位命名未符合目前第 1.5 節「資料表與欄位命名規則」。為保留既有資料，本表不刪除；新稽核紀錄改寫入 `dms_log`，其正式 schema 請見 `schema_dms_log.md`。
 
 本專案資料庫不建立實體 `FOREIGN KEY`。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。
 
@@ -12,7 +12,7 @@
 
 * **表名稱**：`dms_audit_log`
 * **schema 檔名**：`schema_dms_audit_log.md`、`schema_dms_audit_log.html`
-* **用途**：保存登入、登出、文件查閱、文件下載、文件生命週期、資料夾異動、權限異動、權限不足與操作失敗等全域稽核紀錄。
+* **用途**：保留早期已寫入的稽核紀錄；新稽核紀錄不再寫入本表。
 
 ### 欄位規劃
 

@@ -15,19 +15,19 @@ interface AuditPayload {
 }
 
 const insertAuditSql = `
-INSERT INTO dms_audit_log (
-       actor_uid,
-       actor_name,
-       actor_role,
-       action,
-       resource_type,
-       result,
-       managed_folder_id,
-       folder_id,
-       document_id,
-       version_id,
-       metadata,
-       event_at
+INSERT INTO dms_log (
+       dl_actor_uid,
+       dl_actor_name,
+       dl_actor_role,
+       dl_action,
+       dl_resource_type,
+       dl_result,
+       dl_managed_df_fid,
+       df_fid,
+       dd_id,
+       ddv_id,
+       dl_metadata,
+       dl_event_at
 ) VALUES (
        $1,
        $2,
