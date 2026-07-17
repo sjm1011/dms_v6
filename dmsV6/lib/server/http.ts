@@ -36,7 +36,21 @@ export const authOrServerError = (error: unknown) => {
     return fail(error.message, 401);
   }
 
+  if (error instanceof Error && error.message === '只有系統管理員可以使用此功能。') {
+    return fail(error.message, 403);
+  }
+
   return serverError(error);
+};
+
+export const systemRouteError = (error: unknown) => {
+  if (error instanceof Error && unauthorizedMessages.has(error.message)) {
+    return fail(error.message, 401);
+  }
+  if (error instanceof Error && error.message === '只有系統管理員可以使用此功能。') {
+    return fail(error.message, 403);
+  }
+  return fail(error instanceof Error ? error.message : String(error), 400);
 };
 
 export const parseJsonBody = async <T>(request: Request): Promise<T> => {

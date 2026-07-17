@@ -38,6 +38,7 @@
 | `dms_file` | 檔案後設資料 | `dfi_` | `dfi_id` |
 | `dms_ver_rev` | 版本修訂對照表 | `dvr_` | `dvr_id` |
 | `dms_log` | 系統稽核紀錄 | `dl_` | `dl_id` |
+| `dms_purge_job` | 實體檔案清理工作 | `dpj_` | `dpj_id` |
 
 欄位命名原則如下：
 
@@ -77,6 +78,7 @@
 | `dms_file` | `dfi_id`、`dfi_role`、`dfi_name`、`dfi_path`、`dfi_ext`、`dfi_mime`、`dfi_size`、`dfi_sha256`、`dfi_status`、`dfi_crtby`、`dfi_crtat` |
 | `dms_ver_rev` | `dvr_id`、`ddv_id`、`dvr_base_ddv_id`、`dfi_id`、`dvr_note`、`dvr_dc`、`dvr_crtby`、`dvr_crtat`、`dvr_dcby`、`dvr_dcat` |
 | `dms_log` | `dl_id`、`dl_event_at`、`dl_actor_uid`、`dl_actor_name`、`dl_actor_role`、`dl_action`、`dl_resource_type`、`dl_resource_id`、`dl_managed_df_fid`、`df_fid`、`dd_id`、`ddv_id`、`dl_result`、`dl_ip_address`、`dl_user_agent`、`dl_request_id`、`dl_reason`、`dl_before_data`、`dl_after_data`、`dl_metadata` |
+| `dms_purge_job` | `dpj_id`、`df_fid`、`dpj_status`、`dpj_manifest`、`dpj_requested_by`、`dpj_requested_at`、`dpj_completed_at`、`dpj_retry_count`、`dpj_error` |
 
 第 5 節稽核資料表採同一命名原則。全域稽核表使用 `dms_log`。既有 `dms_audit_log` 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 `dms_doc_access_log`。
 
@@ -166,8 +168,8 @@
 
 * 當管理員對某一正常狀態（`1`）的資料夾進行封存時，系統將執行遞迴封存，一併將其下所有子資料夾之狀態更新為 `2`。
 * **文件聯動廢止**：被封存資料夾及其子資料夾下的所有文件，其文件主檔狀態將被自動更新為 `Obsolete` (已廢止)，並於文件主檔註記廢止時間與廢止原因。文件版本的有效期間與撤回紀錄不因資料夾封存而改寫，以確保版本歷史維持原始紀錄。
-* **文件庫顯示規則**：已封存資料夾不得顯示於文件庫的資料夾樹、資料夾清單與一般文件瀏覽流程中。已封存資料夾與其文件仍保留於資料庫及檔案儲存中，未來由「資源回收區」或其他專用功能區檢視。
-* **不可逆性**：封存操作為不可逆，檔案實體與歷史紀錄將永久保留於伺服器中存檔備查。
+* **文件庫顯示規則**：已封存資料夾不得顯示於文件庫的資料夾樹、資料夾清單與一般文件瀏覽流程中。已封存資料夾與其文件保留於資料庫及檔案儲存中，改由「資源回收區」檢視。
+* **還原與永久刪除**：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 8.5 節規則永久作廢資料並刪除實體檔案。
 
 ---
 
@@ -738,6 +740,12 @@ DMS_NEXT_PORT=3000
 | `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件、上傳新版本或修訂 |
 | `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
 | `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
+| `GET /api/system/audit` | `app/api/system/audit/route.ts` | 透過 `systemService.ts` 查詢及分頁顯示 `dms_log` |
+| `GET /api/system/audit/export` | `app/api/system/audit/export/route.ts` | 匯出目前條件的稽核 CSV 並記錄匯出事件 |
+| `GET`、`POST`、`DELETE /api/system/settings/admins` | `app/api/system/settings/admins/route.ts` | 查詢、指定或撤銷系統管理員 |
+| `GET /api/system/permissions` | `app/api/system/permissions/route.ts` | 查詢第一層資料夾權限總覽 |
+| `GET /api/system/status` | `app/api/system/status/route.ts` | 查詢應用程式、資料庫、儲存空間與資料統計 |
+| `GET`、`POST /api/system/recycle` | `app/api/system/recycle/route.ts` | 查詢、還原、永久刪除封存批次及重試檔案清理 |
 
 `DELETE /api/folders` 透過 JSON body 的 `action` 欄位區分資料夾生命週期操作：`action = "archive"` 代表封存資料夾；`action = "delete"` 代表刪除（作廢）空資料夾。若未提供 `action`，後端為相容既有呼叫，視為封存資料夾。
 
@@ -880,3 +888,56 @@ _github.bat "本次修改摘要"
 ```
 
 `_github.bat` 已會自動處理本機 commit (提交)，因此日常同步遠端時可直接使用 `_github.bat`。
+
+## 8. 系統管理功能區
+
+### 8.1. 導覽與權限
+
+* 左側樹狀選單在「文件庫」下方提供第二個 root「系統管理」，僅登入角色為 `ADMIN` 的系統管理員可見。
+* 「系統管理」預設收合，展開後依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。
+* 系統管理頁面開啟時不得載入文件清單；返回文件庫時保留原資料夾位置。
+* 所有 `/api/system/*` API 必須在後端驗證 Session 角色，非 `ADMIN` 回傳 HTTP `403`。
+
+### 8.2. 系統稽核紀錄
+
+* 查詢來源固定為現行 `dms_log`，不合併早期保留的 `dms_audit_log`。
+* 提供日期區間、操作者、動作、結果、關鍵字、分頁與單筆 JSON 明細。
+* 預設查詢最近 30 天，每頁可選 25、50 或 100 筆。
+* CSV 匯出沿用目前條件，採 UTF-8 BOM，單次上限 50,000 筆；超過上限時必須要求縮小條件，不得截斷。
+* 匯出成功後寫入 `AUDIT_LOG_EXPORTED`。
+* 清單、篩選選項、明細與 CSV 的動作、資源及結果欄位一律使用中文顯示，不得直接顯示資料庫代碼或英文狀態。
+* 操作者欄位固定使用「姓名 + 半形空格 + 員工編號」格式；無登入身分的系統事件以「系統 無員工編號」顯示。
+
+### 8.3. 系統設定
+
+* 系統設定為後續系統層級設定的統一入口，目前只提供「系統管理員」設定，不顯示空白或尚未實作的分類。
+* 系統管理員以員工編號指定，後端必須驗證員工存在且在職。
+* 撤銷管理員採 `dms_admins.da_dc = 'Y'`，不得物理刪除紀錄。
+* 系統管理員不得撤銷自己，也不得撤銷最後 1 位有效管理員。
+* 指定與撤銷分別寫入 `SYSTEM_ADMIN_ASSIGNED`、`SYSTEM_ADMIN_REVOKED`，保存異動前後資料。
+* 管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。
+
+### 8.4. 權限總覽與系統狀態
+
+* 權限總覽唯讀顯示有效第一層資料夾的主要管理員、協同管理員、公開或限閱狀態、授權摘要、子資料夾數與文件數。
+* 權限總覽提供篩選及「前往資料夾」，實際權限異動仍由文件庫中的資料夾管理畫面處理。
+* 系統狀態顯示應用程式、PostgreSQL、連線池、儲存空間、必要環境設定、資料統計及待清理工作數量。
+* 系統狀態不得回傳資料庫密碼、Session 密鑰或完整連線字串，只能回傳設定是否安全或完整。
+
+### 8.5. 資源回收區
+
+* 資源回收區以根資料夾的 `df_arcat` 識別同一次遞迴封存批次，只顯示批次根節點。
+* 還原只恢復同批資料夾，以及 `dd_obs_src = 2` 且封存時間相符的文件；手動廢止文件不得恢復。
+* 封存滿 90 天後才允許永久刪除，執行者必須輸入完整資料夾名稱確認。
+* 永久刪除將資料夾及關聯 `dms_file` 後設資料改為作廢，保留文件、版本、修訂與稽核後設資料，並刪除所有關聯實體檔案。
+* 實體檔案先移入 `.purge/<清理工作 ID>` 隔離區，再於資料庫交易內作廢資料並寫入 `FOLDER_PURGED`。
+* 資料庫提交後若隔離區刪除失敗，`dms_purge_job` 維持 `CLEANUP_PENDING`，管理員可於資源回收區重試。
+* 還原成功寫入 `FOLDER_RESTORED`。永久刪除完成後不得由介面還原。
+
+### 8.6. 系統管理稽核事件
+
+* `SYSTEM_ADMIN_ASSIGNED`：指定系統管理員。
+* `SYSTEM_ADMIN_REVOKED`：撤銷系統管理員。
+* `AUDIT_LOG_EXPORTED`：匯出稽核紀錄。
+* `FOLDER_RESTORED`：還原封存批次。
+* `FOLDER_PURGED`：永久作廢封存批次並啟動實體檔案清理。

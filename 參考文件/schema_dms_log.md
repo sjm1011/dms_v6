@@ -197,3 +197,5 @@ SELECT dl_id,
 * `dl_result` 必須使用 `SUCCESS`、`FAILED` 或 `DENIED`。
 * `dl_before_data`、`dl_after_data` 與 `dl_metadata` 必須保存合法 JSONB 資料；無額外資料時可使用 `{}`。
 * 一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。
+* 系統管理介面新增 `SYSTEM_ADMIN_ASSIGNED`、`SYSTEM_ADMIN_REVOKED`、`AUDIT_LOG_EXPORTED`、`FOLDER_RESTORED` 與 `FOLDER_PURGED` 事件。
+* 稽核查詢與 CSV 匯出僅讀取 `dms_log`；CSV 單次最多 50,000 筆。

@@ -148,3 +148,76 @@ export type FolderAccessStatus = 'allowed' | 'denied';
 
 export type FolderManagerAssignmentType = 'PRIMARY' | 'CO_MANAGER';
 export type FolderManagerRole = FolderManagerAssignmentType | null;
+
+export type SystemPage = 'audit' | 'settings' | 'permissions' | 'status' | 'recycle';
+
+export interface AuditLogItem {
+  id: string;
+  event_at: string;
+  actor_uid: string | null;
+  actor_name: string | null;
+  actor_role: string | null;
+  action: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  result: string;
+  reason: string | null;
+  before_data: Record<string, unknown>;
+  after_data: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  folder_id: string | null;
+  document_id: string | null;
+  version_id: string | null;
+  folder_name: string | null;
+  document_name: string | null;
+}
+
+export interface SystemAdminItem {
+  emp_id: string;
+  emp_name: string;
+  dept_name: string;
+  assigned_by: string;
+  assigned_at: string;
+}
+
+export interface PermissionOverviewItem {
+  folder_id: string;
+  folder_name: string;
+  primary_managers: string;
+  co_managers: string;
+  access_type: number;
+  acl_summary: string;
+  child_folder_count: number;
+  document_count: number;
+}
+
+export interface RecycleBatchItem {
+  folder_id: string;
+  folder_name: string;
+  folder_path: string;
+  archived_by: string;
+  archived_at: string;
+  can_purge: boolean;
+  child_folder_count: number;
+  document_count: number;
+  file_count: number;
+  total_bytes: number;
+}
+
+export interface PurgeJobItem {
+  job_id: string;
+  folder_id: string;
+  status: string;
+  requested_by: string;
+  requested_at: string;
+  retry_count: number;
+  error: string | null;
+}
+
+export interface SystemStatusData {
+  application: { version: string; environment: string; server_time: string; uptime_seconds: number };
+  database: { connected: boolean; version: string; database_time: string; latency_ms: number; pool_total: number; pool_idle: number; pool_waiting: number };
+  storage: { root: string; readable: boolean; writable: boolean; total_bytes: number; free_bytes: number; error?: string };
+  configuration: { session_secret_secure: boolean; storage_root_configured: boolean; secure_cookie: boolean; database_configured: boolean };
+  statistics: Record<string, number>;
+}

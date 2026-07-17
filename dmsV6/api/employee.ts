@@ -6,7 +6,7 @@ export interface EmployeeItem {
   name: string;
 }
 
-export type EmployeeLookupPurpose = 'folder_manager' | 'folder_acl';
+export type EmployeeLookupPurpose = 'folder_manager' | 'folder_acl' | 'system_admin';
 
 export const EmployeeAPI = {
   getEmployeeByUid: async (

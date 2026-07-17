@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType } from '../types';
+import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType, SystemPage } from '../types';
 import { Sidebar } from '../components/Sidebar';
 import { FileTable } from '../components/FileTable';
 import { useDocuments } from '../hooks/useDocuments';
@@ -18,6 +18,7 @@ import { NewFolderModal, RenameModal, ArchiveFolderModal, DeleteFolderModal } fr
 import { ErrorDetailModal, TestResultModal } from '../components/Modals/FeedbackModals';
 import { FolderAclModal } from '../components/Modals/FolderAclModal';
 import { FolderManagerModal } from '../components/Modals/FolderManagerModal';
+import { SystemManagement } from '../components/SystemManagement';
 import { ACCEPTED_DOCUMENT_FILE_TYPES, DeleteScheduledVersionModal, EditDocumentModal, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal } from '../components/Modals/DocumentModals';
 
 interface MainLayoutProps {
@@ -71,6 +72,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 }) => {
   // --- UI 本地控制狀態 ---
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+  const [activeSystemPage, setActiveSystemPage] = useState<SystemPage | null>(null);
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isEditManagersOpen, setIsEditManagersOpen] = useState(false);
@@ -115,8 +117,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const currentFolder = currentFolderId ? foldersById.get(currentFolderId) || null : null;
   const currentFolderIsActive = currentFolderId === '' || currentFolder?.status === 1;
   const canLoadCurrentFolderDocuments = currentFolderId === '' || currentFolderIsActive;
-  const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments);
-  const isContentLoading = !hasLoadedFolders || isLoadingFolders || documentsHook.isLoadingDocuments;
+  const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments && activeSystemPage === null);
+  const isContentLoading = activeSystemPage === null && (!hasLoadedFolders || isLoadingFolders || documentsHook.isLoadingDocuments);
 
   // 管理權限由後端計算，前端只使用能力旗標，不接收管理員員工編號。
   const isFolderManager = useCallback((targetFolderId: string | null | undefined) => {
@@ -444,16 +446,33 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         folders={folders}
         currentFolderId={currentFolderId}
         onSelectFolder={(id) => {
+          setActiveSystemPage(null);
           setSearchQuery('');
           setCurrentFolderId(id);
         }}
         expandedFolders={expandedFolders}
         onToggleExpand={handleToggleExpand}
+        activeSystemPage={activeSystemPage}
+        onSelectSystemPage={setActiveSystemPage}
         onLogout={onLogout}
       />
 
       {/* 主內容區 */}
       <main className="main-content">
+        {activeSystemPage ? (
+          <SystemManagement
+            page={activeSystemPage}
+            currentUserId={user.id}
+            showToast={showToast}
+            refreshFolders={fetchFolders}
+            onOpenFolder={(folderId) => {
+              setCurrentFolderId(folderId);
+              setSearchQuery('');
+              setActiveSystemPage(null);
+            }}
+          />
+        ) : (
+          <>
         <header className="top-header">
           <div className="header-left">
             <nav className="breadcrumbs">
@@ -637,6 +656,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             )
           )}
         </div>
+          </>
+        )}
       </main>
 
       {/* --- Modals 組件調用群組 --- */}
