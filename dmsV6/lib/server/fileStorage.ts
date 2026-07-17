@@ -140,7 +140,7 @@ export const getStorageRoot = () => resolveConfiguredRoot(
   './storage'
 );
 
-const getLegacyStorageRoot = () =>
+export const getLegacyStorageRoot = () =>
   resolveConfiguredRoot(process.env.DMS_LEGACY_STORAGE_ROOT || '');
 
 export const getFileExt = (fileName: string) => {

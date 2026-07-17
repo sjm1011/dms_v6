@@ -11,13 +11,15 @@ export const GET = async (request: NextRequest) => {
     const session = requireSession(request);
     const purpose = request.nextUrl.searchParams.get('purpose') || '';
     const folderId = Number(request.nextUrl.searchParams.get('fid') || 0);
-    const validPurpose = purpose === 'folder_manager' || purpose === 'folder_acl';
+    const validPurpose = purpose === 'folder_manager' || purpose === 'folder_acl' || purpose === 'system_admin';
 
     if (!validPurpose) {
       return fail('此員工查詢用途未經授權。', 403);
     }
 
-    const allowed = folderId > 0
+    const allowed = purpose === 'system_admin'
+      ? isAdmin(session.user)
+      : folderId > 0
       ? purpose === 'folder_manager'
         ? await canAssignFolderManagers(session.user, folderId)
         : await canManageFolder(session.user, folderId)

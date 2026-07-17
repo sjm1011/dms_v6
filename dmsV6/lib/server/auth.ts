@@ -90,3 +90,11 @@ export const loginUser = async (uid: string, pwd: string) => {
 };
 
 export const isAdmin = (user: SessionUser) => user.role === 'ADMIN';
+
+export const requireAdmin = (user: SessionUser) => {
+  if (!isAdmin(user)) {
+    throw new Error('只有系統管理員可以使用此功能。');
+  }
+
+  return user;
+};

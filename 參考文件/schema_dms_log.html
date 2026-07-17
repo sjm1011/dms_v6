@@ -390,6 +390,8 @@ COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
   <li><code>dl_result</code> 必須使用 <code>SUCCESS</code>、<code>FAILED</code> 或 <code>DENIED</code>。</li>
   <li><code>dl_before_data</code>、<code>dl_after_data</code> 與 <code>dl_metadata</code> 必須保存合法 JSONB 資料；無額外資料時可使用 <code>{}</code>。</li>
   <li>一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。</li>
+  <li>系統管理介面新增 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>、<code>AUDIT_LOG_EXPORTED</code>、<code>FOLDER_RESTORED</code> 與 <code>FOLDER_PURGED</code> 事件。</li>
+  <li>稽核查詢與 CSV 匯出僅讀取 <code>dms_log</code>；CSV 單次最多 50,000 筆。</li>
 </ul>
 
     <div class="footer">

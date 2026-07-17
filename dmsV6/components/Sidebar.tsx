@@ -1,11 +1,12 @@
 import React from 'react';
-import { Folder, User } from '../types';
+import { Folder, SystemPage, User } from '../types';
 import { 
   ServerIcon, 
   ChevronRightIcon, 
   AccountCircleIcon, 
   LogoutIcon 
 } from './Icons';
+import { DeleteIcon, InfoIcon, LockIcon, PersonIcon, SearchIcon } from './Icons';
 
 interface SidebarProps {
   user: User | null;
@@ -14,6 +15,8 @@ interface SidebarProps {
   onSelectFolder: (id: string) => void;
   expandedFolders: Set<string>;
   onToggleExpand: (id: string) => void;
+  activeSystemPage: SystemPage | null;
+  onSelectSystemPage: (page: SystemPage) => void;
   onLogout: () => void;
 }
 
@@ -24,8 +27,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectFolder,
   expandedFolders,
   onToggleExpand,
+  activeSystemPage,
+  onSelectSystemPage,
   onLogout
 }) => {
+  const [isSystemExpanded, setIsSystemExpanded] = React.useState(false);
+  const systemItems: Array<{ page: SystemPage; label: string; icon: React.ReactNode }> = [
+    { page: 'audit', label: '系統稽核紀錄', icon: <SearchIcon size={18} /> },
+    { page: 'settings', label: '系統設定', icon: <PersonIcon size={18} /> },
+    { page: 'permissions', label: '權限總覽', icon: <LockIcon size={18} /> },
+    { page: 'status', label: '系統狀態', icon: <InfoIcon size={18} /> },
+    { page: 'recycle', label: '資源回收區', icon: <DeleteIcon size={18} /> }
+  ];
   
   // 建立以 parent_id 為 Key 的資料夾 Map，將搜尋時間複雜度優化為 O(N)
   const foldersByParentId = React.useMemo(() => {
@@ -116,6 +129,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {/* 動態渲染子目錄 */}
             {rootFolders.map(folder => renderFolderNode(folder))}
+
+            {user?.role === 'ADMIN' && (
+              <li className="folder-item-wrapper system-root-wrapper">
+                <div className="folder-link" onClick={() => setIsSystemExpanded(value => !value)}>
+                  <div className="folder-link-content folder-node-content">
+                    <div className={`folder-toggle-btn ${isSystemExpanded ? 'expanded' : ''}`}>
+                      <ChevronRightIcon size={18} />
+                    </div>
+                    <span>系統管理</span>
+                  </div>
+                </div>
+                {isSystemExpanded && (
+                  <ul className="folder-children system-menu-children">
+                    {systemItems.map(item => (
+                      <li key={item.page} className="folder-item-wrapper">
+                        <div className={`folder-link system-menu-link ${activeSystemPage === item.page ? 'active' : ''}`} onClick={() => onSelectSystemPage(item.page)}>
+                          <div className="folder-link-content">
+                            <span className="icon system-menu-icon">{item.icon}</span>
+                            <span>{item.label}</span>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )}
           </ul>
         </div>
       </div>
