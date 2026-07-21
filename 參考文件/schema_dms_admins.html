@@ -289,12 +289,10 @@ COMMENT ON COLUMN dms_admins.da_dcat IS '作廢時間';</code></pre>
 <p>* 同一員工在未作廢狀態（<code>da_dc = 'N'</code>）下，只能有一筆關聯紀錄。</p>
 <p>* 作廢管理員權限時，必須寫入作廢執行者員編 <code>da_dcby</code> 與作廢時間 <code>da_dcat</code>，且將 <code>da_dc</code> 設為 <code>'Y'</code>。</p>
 <p>* 系統不提供物理刪除（DELETE）系統管理員設定，異動一律以作廢（da_dc = 'Y'）處理。</p>
-<ul>
-  <li>當使用者登入時，後端應依據此表判斷並返回其系統管理員身分。</li>
-  <li>系統管理員設定介面不得撤銷目前登入者，也不得讓有效管理員人數降為 0。</li>
-  <li>指定或撤銷後，使用者必須重新登入，Session 內的角色才會更新。</li>
-  <li>指定與撤銷必須分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code> 與 <code>SYSTEM_ADMIN_REVOKED</code> 稽核事件。</li>
-</ul>
+<p>* 當使用者登入時，後端應依據此表判斷並返回其系統管理員身分。</p>
+<p>* 系統管理員設定介面不得撤銷目前登入者，也不得讓有效管理員人數降為 0。</p>
+<p>* 指定或撤銷後，使用者必須重新登入，Session 內的角色才會更新。</p>
+<p>* 指定與撤銷必須分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code> 與 <code>SYSTEM_ADMIN_REVOKED</code> 稽核事件。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

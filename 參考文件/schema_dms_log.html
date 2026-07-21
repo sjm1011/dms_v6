@@ -218,11 +218,9 @@
 <p>本專案資料庫不建立實體 <code>FOREIGN KEY</code>。下列關聯欄位僅為邏輯關聯，完整性由後端 API 交易檢核維護。</p>
 <p>---</p>
 <h2>1. 資料表說明</h2>
-<ul>
-  <li><strong>表名稱</strong>：<code>dms_log</code></li>
-  <li><strong>schema 檔名</strong>：<code>schema_dms_log.md</code>、<code>schema_dms_log.html</code></li>
-  <li><strong>用途</strong>：保存登入、文件預覽、文件下載、文件生命週期、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。</li>
-</ul>
+<p>* <strong>表名稱</strong>：<code>dms_log</code></p>
+<p>* <strong>schema 檔名</strong>：<code>schema_dms_log.md</code>、<code>schema_dms_log.html</code></p>
+<p>* <strong>用途</strong>：保存登入、文件預覽、文件下載、文件生命週期、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -300,7 +298,7 @@ CREATE INDEX idx_dms_log_version
 ON dms_log(ddv_id, dl_event_at);
 
 CREATE INDEX idx_dms_log_managed_folder
-ON dms_log(dl_managed_df_fid, dl_event_at);</code></pre>
+ON dms_log(dl_managed_df_fid, dl_event_at);</code></pre>
 </div>
 <p>---</p>
 <h2>3. 欄位與資料表註解</h2>
@@ -326,7 +324,7 @@ COMMENT ON COLUMN dms_log.dl_request_id IS '後端請求追蹤識別碼';
 COMMENT ON COLUMN dms_log.dl_reason IS '使用者填寫或系統產生的原因';
 COMMENT ON COLUMN dms_log.dl_before_data IS '異動前資料快照';
 COMMENT ON COLUMN dms_log.dl_after_data IS '異動後資料快照';
-COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
+COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
 </div>
 <p>---</p>
 <h2>4. 常用查詢方向</h2>
@@ -347,7 +345,7 @@ COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
  WHERE dl_event_at &gt;= :date_from
    AND dl_event_at &lt; :date_to
  ORDER BY dl_event_at DESC,
-          dl_id DESC;</code></pre>
+          dl_id DESC;</code></pre>
 <p>查詢單一文件的預覽、下載與生命週期紀錄：</p>
 <pre><code class="language-sql">SELECT dl_id,
        dl_event_at,
@@ -361,7 +359,7 @@ COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
   FROM dms_log
  WHERE dd_id = :dd_id
  ORDER BY dl_event_at DESC,
-          dl_id DESC;</code></pre>
+          dl_id DESC;</code></pre>
 <p>查詢特定使用者的操作軌跡：</p>
 <pre><code class="language-sql">SELECT dl_id,
        dl_event_at,
@@ -378,21 +376,19 @@ COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
    AND dl_event_at &gt;= :date_from
    AND dl_event_at &lt; :date_to
  ORDER BY dl_event_at DESC,
-          dl_id DESC;</code></pre>
+          dl_id DESC;</code></pre>
 <p>---</p>
 <h2>5. 後端檢核規則</h2>
-<ul>
-  <li>稽核紀錄採追加寫入模式，系統一般功能不提供修改或刪除稽核紀錄的操作。</li>
-  <li>稽核紀錄必須由後端統一寫入，不得只依賴前端事件紀錄。</li>
-  <li>管理類異動成功時，主要資料異動與稽核紀錄應在同一個短交易中完成；若稽核紀錄寫入失敗，該管理異動應回復。</li>
-  <li>查閱、預覽與下載屬高頻事件，仍須留下紀錄。</li>
-  <li><code>dl_actor_role</code> 只保存登入角色 <code>ADMIN</code> 或 <code>USER</code>。資料夾管理員不是登入角色，其管理範圍需由 <code>dl_managed_df_fid</code> 與後端權限計算判斷。</li>
-  <li><code>dl_result</code> 必須使用 <code>SUCCESS</code>、<code>FAILED</code> 或 <code>DENIED</code>。</li>
-  <li><code>dl_before_data</code>、<code>dl_after_data</code> 與 <code>dl_metadata</code> 必須保存合法 JSONB 資料；無額外資料時可使用 <code>{}</code>。</li>
-  <li>一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。</li>
-  <li>系統管理介面新增 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>、<code>AUDIT_LOG_EXPORTED</code>、<code>FOLDER_RESTORED</code> 與 <code>FOLDER_PURGED</code> 事件。</li>
-  <li>稽核查詢與 CSV 匯出僅讀取 <code>dms_log</code>；CSV 單次最多 50,000 筆。</li>
-</ul>
+<p>* 稽核紀錄採追加寫入模式，系統一般功能不提供修改或刪除稽核紀錄的操作。</p>
+<p>* 稽核紀錄必須由後端統一寫入，不得只依賴前端事件紀錄。</p>
+<p>* 管理類異動成功時，主要資料異動與稽核紀錄應在同一個短交易中完成；若稽核紀錄寫入失敗，該管理異動應回復。</p>
+<p>* 查閱、預覽與下載屬高頻事件，仍須留下紀錄。</p>
+<p>* <code>dl_actor_role</code> 只保存登入角色 <code>ADMIN</code> 或 <code>USER</code>。資料夾管理員不是登入角色，其管理範圍需由 <code>dl_managed_df_fid</code> 與後端權限計算判斷。</p>
+<p>* <code>dl_result</code> 必須使用 <code>SUCCESS</code>、<code>FAILED</code> 或 <code>DENIED</code>。</p>
+<p>* <code>dl_before_data</code>、<code>dl_after_data</code> 與 <code>dl_metadata</code> 必須保存合法 JSONB 資料；無額外資料時可使用 <code>{}</code>。</p>
+<p>* 一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。</p>
+<p>* 系統管理介面新增 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>、<code>AUDIT_LOG_EXPORTED</code>、<code>FOLDER_RESTORED</code> 與 <code>FOLDER_PURGED</code> 事件。</p>
+<p>* 稽核查詢與 CSV 匯出僅讀取 <code>dms_log</code>；CSV 單次最多 50,000 筆。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

@@ -56,6 +56,10 @@ interface FileTableProps {
   onObsoleteDocument?: (item: DMSItem) => void;
   onDeleteDocument?: (item: DMSItem) => void;
   onShowHistory?: (item: DMSItem) => void;
+  onOpenContainingFolder?: (folderId: string) => void;
+  showFolderPath?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 export const FileTable = React.memo<FileTableProps>(({
@@ -73,7 +77,11 @@ export const FileTable = React.memo<FileTableProps>(({
   onCancelVersion,
   onObsoleteDocument,
   onDeleteDocument,
-  onShowHistory
+  onShowHistory,
+  onOpenContainingFolder,
+  showFolderPath = false,
+  emptyTitle = '此目錄下尚無項目',
+  emptyDescription = '具備管理權限時，可以建立子資料夾或上傳正式文件。'
 }) => {
   const [openActionId, setOpenActionId] = React.useState<string | null>(null);
   const [actionMenuPlacement, setActionMenuPlacement] = React.useState<React.CSSProperties | null>(null);
@@ -225,6 +233,15 @@ export const FileTable = React.memo<FileTableProps>(({
               onClick: () => onDownloadDocument?.(item)
             }
       ];
+
+      if (onOpenContainingFolder && item.folder_id) {
+        actions.push({
+          key: 'open-containing-folder',
+          label: '前往所在資料夾',
+          icon: <FolderOpenIcon size={18} />,
+          onClick: () => onOpenContainingFolder(item.folder_id!)
+        });
+      }
 
       if (item.can_preview && (!item.is_pdf || item.can_manage)) {
         actions.push({
@@ -456,8 +473,8 @@ export const FileTable = React.memo<FileTableProps>(({
     return (
       <div id="empty-state" className="empty-state">
         <FolderOpenIcon size={64} style={{ color: 'var(--text-muted)', marginBottom: 16 }} />
-        <h3>此目錄下尚無項目</h3>
-        <p>具備管理權限時，可以建立子資料夾或上傳正式文件。</p>
+        <h3>{emptyTitle}</h3>
+        <p>{emptyDescription}</p>
       </div>
     );
   }
@@ -485,8 +502,9 @@ export const FileTable = React.memo<FileTableProps>(({
                 <td>
                   <div className="name-cell">
                     {renderItemIcon(item)}
-                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      {item.name}
+                    <span className="name-text">
+                      <span>{item.name}</span>
+                      {showFolderPath && item.folder_path && <small>{item.folder_path}</small>}
                     </span>
                   </div>
                 </td>

@@ -53,6 +53,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return map;
   }, [folders]);
 
+  const handleLabelMouseEnter = (event: React.MouseEvent<HTMLSpanElement>) => {
+    const label = event.currentTarget;
+
+    if (label.scrollWidth > label.clientWidth) {
+      label.title = label.textContent || '';
+    } else {
+      label.removeAttribute('title');
+    }
+  };
+
+  const renderSidebarLabel = (label: string) => (
+    <span onMouseEnter={handleLabelMouseEnter}>{label}</span>
+  );
+
   // 遞迴渲染資料夾節點
   const renderFolderNode = (folder: Folder, depth = 0) => {
     const subFolders = foldersByParentId.get(folder.id) || [];
@@ -86,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ) : (
               <div className="folder-toggle-placeholder"></div>
             )}
-            <span>{folder.name}</span>
+            {renderSidebarLabel(folder.name)}
           </div>
         </div>
 
@@ -122,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <div className="folder-link-content">
                   <ServerIcon className="icon" size={20} />
-                  <span>文件庫</span>
+                  {renderSidebarLabel('文件庫')}
                 </div>
               </div>
             </li>
@@ -137,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className={`folder-toggle-btn ${isSystemExpanded ? 'expanded' : ''}`}>
                       <ChevronRightIcon size={18} />
                     </div>
-                    <span>系統管理</span>
+                    {renderSidebarLabel('系統管理')}
                   </div>
                 </div>
                 {isSystemExpanded && (
@@ -147,7 +161,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <div className={`folder-link system-menu-link ${activeSystemPage === item.page ? 'active' : ''}`} onClick={() => onSelectSystemPage(item.page)}>
                           <div className="folder-link-content">
                             <span className="icon system-menu-icon">{item.icon}</span>
-                            <span>{item.label}</span>
+                            {renderSidebarLabel(item.label)}
                           </div>
                         </div>
                       </li>

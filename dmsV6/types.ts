@@ -57,6 +57,9 @@ export interface Document {
   title: string;
   status: 'Effective' | 'Obsolete';
   folder_id: string;
+  folder_name?: string;
+  folder_path?: string;
+  manager_role?: FolderManagerRole;
   created_by?: string;
   created_at?: string;
   versions: DocumentVersion[];
@@ -99,6 +102,8 @@ export interface DMSItem {
   mime?: string;
   ver_id?: string;
   file_name?: string;
+  folder_id?: string;
+  folder_path?: string;
   access_type?: number;
   acl_summary?: string;
   is_access_inherited?: boolean;
@@ -123,6 +128,13 @@ export interface ApiResponse<T> {
   success: boolean;
   data: T;
   error: string;
+}
+
+export interface DocumentSearchResult {
+  documents: Document[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 export interface Department {

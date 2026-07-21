@@ -5,6 +5,7 @@ import { FileTable } from '../components/FileTable';
 import { useDocuments } from '../hooks/useDocuments';
 import { DocumentsAPI } from '../api/documents';
 import { FoldersAPI } from '../api/folders';
+import { SearchAPI } from '../api/search';
 import {
   SearchIcon,
   CreateNewFolderIcon,
@@ -73,6 +74,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   // --- UI 本地控制狀態 ---
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [activeSystemPage, setActiveSystemPage] = useState<SystemPage | null>(null);
+  const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
+  const [searchDocuments, setSearchDocuments] = useState<Document[]>([]);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchPage, setSearchPage] = useState(1);
+  const [submittedSearchQuery, setSubmittedSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const searchRequestSeqRef = useRef(0);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isEditManagersOpen, setIsEditManagersOpen] = useState(false);
@@ -118,7 +128,72 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const currentFolderIsActive = currentFolderId === '' || currentFolder?.status === 1;
   const canLoadCurrentFolderDocuments = currentFolderId === '' || currentFolderIsActive;
   const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments && activeSystemPage === null);
-  const isContentLoading = activeSystemPage === null && (!hasLoadedFolders || isLoadingFolders || documentsHook.isLoadingDocuments);
+  const isSearchMode = hasSearched && Boolean(submittedSearchQuery);
+  const isContentLoading = activeSystemPage === null && (
+    !hasLoadedFolders
+    || isLoadingFolders
+    || (!isSearchMode && documentsHook.isLoadingDocuments)
+    || isSearching
+  );
+
+  const clearSearch = useCallback(() => {
+    searchRequestSeqRef.current += 1;
+    searchAbortRef.current?.abort();
+    searchAbortRef.current = null;
+    setSearchQuery('');
+    setSubmittedSearchQuery('');
+    setSearchDocuments([]);
+    setSearchTotal(0);
+    setSearchPage(1);
+    setHasSearched(false);
+    setIsSearching(false);
+  }, [setSearchQuery]);
+
+  const executeSearch = useCallback(async (page = 1) => {
+    const keyword = searchQuery.trim();
+    if (!keyword) {
+      clearSearch();
+      return;
+    }
+
+    const requestSeq = searchRequestSeqRef.current + 1;
+    searchRequestSeqRef.current = requestSeq;
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+    setIsSearching(true);
+
+    try {
+      const response = await SearchAPI.searchDocuments(
+        keyword,
+        searchScope,
+        currentFolderId || '0',
+        page,
+        controller.signal
+      );
+      if (requestSeq !== searchRequestSeqRef.current) return;
+      setSearchDocuments(response.data.documents || []);
+      setSearchTotal(Number(response.data.total || 0));
+      setSearchPage(Number(response.data.page || page));
+      setSubmittedSearchQuery(keyword);
+      setHasSearched(true);
+    } catch (error) {
+      if (requestSeq !== searchRequestSeqRef.current || (error instanceof DOMException && error.name === 'AbortError')) {
+        return;
+      }
+      showToast('搜尋文件失敗：' + (error instanceof Error ? error.message : String(error)), 'error');
+    } finally {
+      if (requestSeq === searchRequestSeqRef.current) {
+        setIsSearching(false);
+        if (searchAbortRef.current === controller) searchAbortRef.current = null;
+      }
+    }
+  }, [clearSearch, currentFolderId, searchQuery, searchScope, showToast]);
+
+  useEffect(() => () => {
+    searchRequestSeqRef.current += 1;
+    searchAbortRef.current?.abort();
+  }, []);
 
   // 管理權限由後端計算，前端只使用能力旗標，不接收管理員員工編號。
   const isFolderManager = useCallback((targetFolderId: string | null | undefined) => {
@@ -248,9 +323,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   const documentsById = useMemo(() => {
     const map = new Map<string, Document>();
-    documentsHook.documents.forEach(doc => map.set(doc.id.toString(), doc));
+    const source = isSearchMode ? searchDocuments : documentsHook.documents;
+    source.forEach(doc => map.set(doc.id.toString(), doc));
     return map;
-  }, [documentsHook.documents]);
+  }, [documentsHook.documents, isSearchMode, searchDocuments]);
 
   const formatFileSize = (size?: number) => {
     if (!size) return '-';
@@ -283,7 +359,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     return target ? target.name : '目錄資料夾';
   };
 
-  // 整合本層資料夾，供列表顯示與搜尋 (套用 useMemo 以避免無意義渲染)
+  // 整合目前資料夾的直屬資料夾與文件。
   const combinedItems = useMemo(() => {
     let list: DMSItem[] = [];
 
@@ -354,14 +430,60 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       });
     });
 
-    // 搜尋篩選 (不分大小寫)
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(item => item.name.toLowerCase().includes(q) || item.code?.toLowerCase().includes(q));
-    }
-
     return list;
-  }, [folders, currentFolder, currentFolderId, searchQuery, documentsHook.documents]);
+  }, [folders, currentFolder, currentFolderId, documentsHook.documents]);
+
+  const searchItems = useMemo(() => {
+    const list: DMSItem[] = [];
+    searchDocuments.forEach(doc => {
+      const scheduledVersion = doc.can_manage
+        ? doc.versions.find(version => version.status === 'Scheduled')
+        : undefined;
+      const effectiveVersion = doc.versions.find(version => version.status === 'Effective');
+      const displayVersions = scheduledVersion
+        ? [scheduledVersion, effectiveVersion].filter(
+            (version): version is DocumentVersion => Boolean(version)
+          )
+        : [effectiveVersion || doc.versions[0]].filter(
+            (version): version is DocumentVersion => Boolean(version)
+          );
+
+      displayVersions.forEach(displayVersion => {
+        const extension = displayVersion.ext?.replace(/^\./, '').toLowerCase();
+        list.push({
+          id: doc.id,
+          code: doc.code,
+          name: doc.title,
+          type: 'document',
+          size: formatFileSize(displayVersion.file_size),
+          creator: doc.created_by || '-',
+          time: displayVersion.effective_at || '-',
+          status: displayVersion.status,
+          version: displayVersion.ver_number || (displayVersion.seq ? `第 ${displayVersion.seq} 版` : '-'),
+          revision_date: displayVersion.revision_date || '-',
+          effective_at: displayVersion.effective_at,
+          obsolete_at: displayVersion.effective_until || null,
+          versions: doc.versions,
+          mime: displayVersion.mime,
+          ver_id: displayVersion.ver_id,
+          file_name: displayVersion.file_name,
+          folder_id: doc.folder_id,
+          folder_path: doc.folder_path || doc.folder_name || '文件庫',
+          can_manage: Boolean(doc.can_manage),
+          manager_role: doc.manager_role || null,
+          is_pdf: extension === 'pdf',
+          can_preview: extension
+            ? ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)
+            : false,
+          has_source_file: Boolean(displayVersion.has_source_file),
+          has_scheduled_version: Boolean(scheduledVersion)
+        });
+      });
+    });
+    return list;
+  }, [searchDocuments]);
+
+  const displayedItems = isSearchMode ? searchItems : combinedItems;
 
   const breadcrumbs = getBreadcrumbs();
 
@@ -447,13 +569,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         currentFolderId={currentFolderId}
         onSelectFolder={(id) => {
           setActiveSystemPage(null);
-          setSearchQuery('');
+          clearSearch();
           setCurrentFolderId(id);
         }}
         expandedFolders={expandedFolders}
         onToggleExpand={handleToggleExpand}
         activeSystemPage={activeSystemPage}
-        onSelectSystemPage={setActiveSystemPage}
+        onSelectSystemPage={(page) => {
+          clearSearch();
+          setActiveSystemPage(page);
+        }}
         onLogout={onLogout}
       />
 
@@ -467,7 +592,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             refreshFolders={fetchFolders}
             onOpenFolder={(folderId) => {
               setCurrentFolderId(folderId);
-              setSearchQuery('');
+              clearSearch();
               setActiveSystemPage(null);
             }}
           />
@@ -478,7 +603,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             <nav className="breadcrumbs">
               <span
                 className={`breadcrumb-item ${currentFolderId === '' ? 'active' : ''}`}
-                onClick={() => currentFolderId !== '' && setCurrentFolderId('')}
+                onClick={() => {
+                  if (currentFolderId === '') return;
+                  clearSearch();
+                  setCurrentFolderId('');
+                }}
               >
                 文件庫
               </span>
@@ -487,7 +616,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   <span className="breadcrumb-separator"> / </span>
                   <span
                     className={`breadcrumb-item ${idx === breadcrumbs.length - 1 ? 'active' : ''}`}
-                    onClick={() => idx !== breadcrumbs.length - 1 && setCurrentFolderId(crumb.id)}
+                    onClick={() => {
+                      if (idx === breadcrumbs.length - 1) return;
+                      clearSearch();
+                      setCurrentFolderId(crumb.id);
+                    }}
                   >
                     {crumb.name}
                   </span>
@@ -496,24 +629,46 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             </nav>
           </div>
           <div className="header-right">
-            <div className="search-box">
-              <SearchIcon size={16} style={{ position: 'absolute', left: 12, color: 'var(--text-muted)' }} />
-              <input
-                type="text"
-                placeholder="搜尋資料夾或文件..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+            <form className="document-search" onSubmit={(event) => {
+              event.preventDefault();
+              void executeSearch(1);
+            }}>
+              <select
+                aria-label="搜尋範圍"
+                value={searchScope}
+                onChange={(event) => setSearchScope(event.target.value as 'current' | 'all')}
+              >
+                <option value="current">目前資料夾及子資料夾</option>
+                <option value="all">所有可見資料夾</option>
+              </select>
+              <div className="search-box">
+                <SearchIcon size={16} style={{ position: 'absolute', left: 12, color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  maxLength={100}
+                  placeholder="搜尋文件..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+              </div>
+              <button type="submit" className="btn btn-primary btn-small" disabled={isSearching || !searchQuery.trim()}>
+                搜尋
+              </button>
+              {isSearchMode && (
+                <button type="button" className="btn btn-secondary btn-small" onClick={clearSearch}>
+                  清除
+                </button>
+              )}
+            </form>
           </div>
         </header>
 
         <div className="action-bar">
           <div className="action-left">
-            <h2>{getCurrentTitle()}</h2>
-            {renderCurrentFolderAccessBadge()}
-            <span className="badge">{combinedItems.length} 個項目</span>
-            {currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
+            <h2>{isSearchMode ? `搜尋結果：「${submittedSearchQuery}」` : getCurrentTitle()}</h2>
+            {!isSearchMode && renderCurrentFolderAccessBadge()}
+            <span className="badge">{isSearchMode ? `${searchTotal} 份文件` : `${combinedItems.length} 個項目`}</span>
+            {!isSearchMode && currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
               <button
                 type="button"
                 className="badge manager-assignment-badge"
@@ -539,7 +694,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 管理員：{currentManagerNames.length > 0 ? currentManagerNames.join('、') : '未指派'}
               </button>
             )}
-            {currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
+            {!isSearchMode && currentFolderId !== '' && isCurrentFolderManager() && hasLoadedCurrentManagerNames && (
               <button
                 type="button"
                 className="badge manager-assignment-badge"
@@ -567,13 +722,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             )}
           </div>
           <div className="action-right">
-            {canCreateFolder && (
+            {!isSearchMode && canCreateFolder && (
               <button className="btn btn-secondary" onClick={() => setIsNewFolderOpen(true)}>
                 <CreateNewFolderIcon size={18} />
                 <span>新建資料夾</span>
               </button>
             )}
-            {canCreateDocument && (
+            {!isSearchMode && canCreateDocument && (
               <button className="btn btn-primary" onClick={() => newDocFileInputRef.current?.click()}>
                 <CloudUploadIcon size={18} />
                 <span>新建文件</span>
@@ -590,7 +745,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           )}
 
           {!isContentLoading && (
-            combinedItems.length === 0 && currentFolderId === '' ? (
+            !isSearchMode && combinedItems.length === 0 && currentFolderId === '' ? (
               <div className="empty-state fade-in">
                 <div className="empty-icon">
                   <CreateNewFolderIcon size={48} />
@@ -600,10 +755,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               </div>
             ) : (
               <FileTable
-                items={combinedItems}
+                items={displayedItems}
                 onEnterFolder={(id) => {
+                  clearSearch();
                   setCurrentFolderId(id);
-                  setSearchQuery('');
                 }}
                 onRename={(id, name) => {
                   setRenameId(id);
@@ -652,8 +807,37 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   const doc = openDocument(item);
                   if (doc) setIsHistoryOpen(true);
                 }}
+                onOpenContainingFolder={isSearchMode ? (folderId) => {
+                  clearSearch();
+                  setCurrentFolderId(folderId === '0' ? '' : folderId);
+                } : undefined}
+                showFolderPath={isSearchMode}
+                emptyTitle={isSearchMode ? '查無符合關鍵字的文件' : undefined}
+                emptyDescription={isSearchMode ? '請更換關鍵字或搜尋範圍後再試。' : undefined}
               />
             )
+          )}
+          {!isContentLoading && isSearchMode && searchTotal > 0 && (
+            <div className="system-pagination search-pagination">
+              <span>共 {searchTotal} 份文件</span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                disabled={searchPage <= 1 || isSearching}
+                onClick={() => void executeSearch(searchPage - 1)}
+              >
+                上一頁
+              </button>
+              <span>第 {searchPage} / {Math.max(1, Math.ceil(searchTotal / 50))} 頁</span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                disabled={searchPage >= Math.ceil(searchTotal / 50) || isSearching}
+                onClick={() => void executeSearch(searchPage + 1)}
+              >
+                下一頁
+              </button>
+            </div>
           )}
         </div>
           </>
@@ -769,14 +953,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           setUploadVerFile(null);
         }}
         targetDoc={activeDoc}
-        onUpload={documentsHook.handleUploadVersion}
+        onUpload={async (...args) => {
+          const success = await documentsHook.handleUploadVersion(...args);
+          if (success && isSearchMode) await executeSearch(searchPage);
+          return success;
+        }}
       />
 
       <EditDocumentModal
         isOpen={isEditDocumentOpen}
         onClose={() => setIsEditDocumentOpen(false)}
         targetDoc={activeDoc}
-        onSave={documentsHook.handleEditDocument}
+        onSave={async (...args) => {
+          const success = await documentsHook.handleEditDocument(...args);
+          if (success && isSearchMode) await executeSearch(searchPage);
+          return success;
+        }}
       />
 
       <DeleteScheduledVersionModal
@@ -787,11 +979,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         effectiveAt={activeDoc?.effective_at || ''}
         onDelete={async () => {
           if (!activeDoc?.ver_id) return false;
-          return await documentsHook.handleDeleteScheduledVersion(
+          const success = await documentsHook.handleDeleteScheduledVersion(
             activeDoc.id,
             activeDoc.ver_id,
             activeDoc.title
           );
+          if (success && isSearchMode) await executeSearch(searchPage);
+          return success;
         }}
       />
 
@@ -804,6 +998,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           const success = await documentsHook.handleObsoleteDocument(activeDoc.id, activeDoc.title, reason, file);
           if (success) {
             await fetchFolders();
+            if (isSearchMode) await executeSearch(searchPage);
           }
           return success;
         }}
@@ -818,6 +1013,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           const success = await documentsHook.handleDeleteDocument(activeDoc.id, activeDoc.title);
           if (success) {
             await fetchFolders();
+            if (isSearchMode) await executeSearch(searchPage);
           }
           return success;
         }}
@@ -841,7 +1037,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         targetName={activeDoc?.title || ''}
         onCancelVersion={async (reason) => {
           if (!activeDoc) return false;
-          return await documentsHook.handleCancelLatestVersion(activeDoc.id, reason);
+          const success = await documentsHook.handleCancelLatestVersion(activeDoc.id, reason);
+          if (success && isSearchMode) await executeSearch(searchPage);
+          return success;
         }}
       />
 
