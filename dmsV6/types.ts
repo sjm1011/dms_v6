@@ -169,6 +169,9 @@ export interface AuditLogItem {
   actor_uid: string | null;
   actor_name: string | null;
   actor_role: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  request_id: string | null;
   action: string;
   resource_type: string | null;
   resource_id: string | null;
@@ -182,6 +185,10 @@ export interface AuditLogItem {
   version_id: string | null;
   folder_name: string | null;
   document_name: string | null;
+  resource_location: string | null;
+  target_type: string | null;
+  target_name: string | null;
+  target_version: string | null;
 }
 
 export interface SystemAdminItem {

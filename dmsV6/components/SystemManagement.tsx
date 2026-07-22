@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { EmployeeAPI } from '../api/employee';
 import { type AuditQuery, SystemAPI } from '../api/system';
-import { formatAuditActor, getAuditActionLabel, getAuditResourceLabel, getAuditResultLabel } from '../lib/auditLabels';
+import { formatAuditActor, getAuditActionLabel, getAuditResourceLabel, getAuditResultLabel, getAuditRoleLabel } from '../lib/auditLabels';
 import type { AuditLogItem, PermissionOverviewItem, PurgeJobItem, RecycleBatchItem, SystemAdminItem, SystemPage, SystemStatusData } from '../types';
 import { CheckCircleIcon, CloudDownloadIcon, DeleteIcon, ErrorOutlineIcon, PersonIcon, SearchIcon } from './Icons';
 import { Modal } from './Modal';
@@ -33,6 +33,17 @@ const localDate = (date: Date) => {
   const offset = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 };
+const recentDateRange = (months: number) => {
+  const today = new Date();
+  const dateTo = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const dateFrom = new Date(dateTo);
+  const targetMonth = dateFrom.getMonth() - months;
+  const targetYear = dateFrom.getFullYear() + Math.floor(targetMonth / 12);
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+  const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+  dateFrom.setFullYear(targetYear, normalizedMonth, Math.min(dateFrom.getDate(), lastDay));
+  return { date_from: localDate(dateFrom), date_to: localDate(dateTo) };
+};
 
 const PageShell: React.FC<{ title: string; description: string; actions?: React.ReactNode; children: React.ReactNode }> = ({ title, description, actions, children }) => (
   <div className="system-page">
@@ -47,11 +58,23 @@ const PageShell: React.FC<{ title: string; description: string; actions?: React.
 const Loading = () => <div className="system-loading" role="status">資料載入中...</div>;
 const Empty = ({ text }: { text: string }) => <div className="system-empty">{text}</div>;
 
+const formatAuditTarget = (row: AuditLogItem) => {
+  const targetType = getAuditResourceLabel(row.target_type || row.resource_type);
+  const targetName = row.target_name || row.document_name || row.folder_name || row.resource_id || '系統資源';
+  const version = row.target_version ? `，第 ${row.target_version} 版` : '';
+  return `${targetType}：${targetName}${version}`;
+};
+
+const withoutAuditContext = (metadata: Record<string, unknown>) => {
+  const result = { ...metadata };
+  delete result.audit_context;
+  return result;
+};
+
 const AuditPage: React.FC<{ showToast: SystemManagementProps['showToast'] }> = ({ showToast }) => {
-  const from = new Date();
-  from.setDate(from.getDate() - 30);
-  const [filters, setFilters] = useState<AuditQuery>({ date_from: localDate(from), date_to: localDate(new Date()), page: 1, page_size: 50 });
+  const [filters, setFilters] = useState<AuditQuery>({ ...recentDateRange(1), page: 1, page_size: 50 });
   const [draft, setDraft] = useState(filters);
+  const [dateRangePreset, setDateRangePreset] = useState('1');
   const [rows, setRows] = useState<AuditLogItem[]>([]);
   const [actions, setActions] = useState<string[]>([]);
   const [total, setTotal] = useState(0);
@@ -90,20 +113,27 @@ const AuditPage: React.FC<{ showToast: SystemManagementProps['showToast'] }> = (
     finally { setExporting(false); }
   };
 
-  return <PageShell title="系統稽核紀錄" description="查詢現行 dms_log，紀錄只可讀取與匯出，不可修改或刪除。" actions={<button className="btn btn-secondary" disabled={exporting} onClick={exportCsv}><CloudDownloadIcon size={18} />{exporting ? '匯出中...' : '匯出 CSV'}</button>}>
+  const updateDateRange = (value: string) => {
+    setDateRangePreset(value);
+    if (!value) return;
+    setDraft(current => ({ ...current, ...recentDateRange(Number(value)) }));
+  };
+
+  return <PageShell title="系統稽核紀錄" description="以事件時間、操作者、稽核事件、資源位置、操作標的及執行結果呈現現行 dms_log。" actions={<button className="btn btn-secondary" disabled={exporting} onClick={exportCsv}><CloudDownloadIcon size={18} />{exporting ? '匯出中...' : '匯出 CSV'}</button>}>
     <form className="system-filter-grid" onSubmit={event => { event.preventDefault(); setFilters({ ...draft, page: 1 }); }}>
-      <label>開始日期<input type="date" value={draft.date_from || ''} onChange={e => setDraft({ ...draft, date_from: e.target.value })} /></label>
-      <label>結束日期<input type="date" value={draft.date_to || ''} onChange={e => setDraft({ ...draft, date_to: e.target.value })} /></label>
+      <label>日期範圍<select value={dateRangePreset} onChange={e => updateDateRange(e.target.value)}><option value="">自訂日期</option><option value="1">最近一個月</option><option value="3">最近三個月</option><option value="6">最近六個月</option><option value="9">最近九個月</option><option value="12">最近一年</option></select></label>
+      <label>開始日期<input type="date" value={draft.date_from || ''} onChange={e => { setDateRangePreset(''); setDraft({ ...draft, date_from: e.target.value }); }} /></label>
+      <label>結束日期<input type="date" value={draft.date_to || ''} onChange={e => { setDateRangePreset(''); setDraft({ ...draft, date_to: e.target.value }); }} /></label>
       <label>操作者<input value={draft.actor || ''} onChange={e => setDraft({ ...draft, actor: e.target.value })} placeholder="員編或姓名" /></label>
-      <label>動作<select value={draft.action || ''} onChange={e => setDraft({ ...draft, action: e.target.value })}><option value="">全部</option>{actions.map(action => <option key={action} value={action}>{getAuditActionLabel(action)}</option>)}</select></label>
-      <label>結果<select value={draft.result || ''} onChange={e => setDraft({ ...draft, result: e.target.value })}><option value="">全部</option><option value="SUCCESS">成功</option><option value="FAILED">失敗</option><option value="DENIED">已拒絕</option></select></label>
-      <label>關鍵字<input value={draft.keyword || ''} onChange={e => setDraft({ ...draft, keyword: e.target.value })} placeholder="資源、原因或明細" /></label>
+      <label>稽核事件<select value={draft.action || ''} onChange={e => setDraft({ ...draft, action: e.target.value })}><option value="">全部</option>{actions.map(action => <option key={action} value={action}>{getAuditActionLabel(action)}</option>)}</select></label>
+      <label>執行結果<select value={draft.result || ''} onChange={e => setDraft({ ...draft, result: e.target.value })}><option value="">全部</option><option value="SUCCESS">成功</option><option value="FAILED">失敗</option><option value="DENIED">已拒絕</option></select></label>
+      <label>關鍵字<input value={draft.keyword || ''} onChange={e => setDraft({ ...draft, keyword: e.target.value })} placeholder="位置、標的或原因" /></label>
       <button className="btn btn-primary" type="submit"><SearchIcon size={18} />查詢</button>
     </form>
-    {loading ? <Loading /> : rows.length === 0 ? <Empty text="查無符合條件的稽核紀錄。" /> : <div className="system-table-wrap"><table className="system-table"><thead><tr><th>時間</th><th>操作者</th><th>動作</th><th>資源</th><th>結果</th><th></th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td>{formatAuditDateTime(row.event_at)}</td><td>{formatAuditActor(row.actor_name, row.actor_uid)}</td><td>{getAuditActionLabel(row.action)}</td><td>{getAuditResourceLabel(row.resource_type)}{row.resource_id && <small>識別碼：{row.resource_id}</small>}</td><td><span className={`status-chip ${row.result.toLowerCase()}`}>{getAuditResultLabel(row.result)}</span></td><td><button className="btn btn-secondary btn-small" onClick={() => setDetail(row)}>明細</button></td></tr>)}</tbody></table></div>}
+    {loading ? <Loading /> : rows.length === 0 ? <Empty text="查無符合條件的稽核紀錄。" /> : <div className="system-table-wrap"><table className="system-table audit-table"><thead><tr><th>事件時間</th><th>操作者</th><th>稽核事件</th><th>資源位置</th><th>操作標的</th><th>執行結果</th><th></th></tr></thead><tbody>{rows.map(row => <tr key={row.id}><td>{formatAuditDateTime(row.event_at)}</td><td>{formatAuditActor(row.actor_name, row.actor_uid)}</td><td>{getAuditActionLabel(row.action)}</td><td className="audit-location" title={row.resource_location || '系統'}>{row.resource_location || '系統'}</td><td className="audit-target" title={formatAuditTarget(row)}>{formatAuditTarget(row)}</td><td><span className={`status-chip ${row.result.toLowerCase()}`}>{getAuditResultLabel(row.result)}</span></td><td><button className="btn btn-secondary btn-small" onClick={() => setDetail(row)}>明細</button></td></tr>)}</tbody></table></div>}
     <div className="system-pagination"><span>共 {total} 筆</span><select value={pageSize} onChange={e => setFilters({ ...filters, page: 1, page_size: Number(e.target.value) })}><option value={25}>25 筆</option><option value={50}>50 筆</option><option value={100}>100 筆</option></select><button className="btn btn-secondary btn-small" disabled={page <= 1} onClick={() => setFilters({ ...filters, page: page - 1 })}>上一頁</button><span>{page} / {pages}</span><button className="btn btn-secondary btn-small" disabled={page >= pages} onClick={() => setFilters({ ...filters, page: page + 1 })}>下一頁</button></div>
     <Modal isOpen={Boolean(detail)} onClose={() => setDetail(null)} title="稽核紀錄明細" contentClassName="modal-content-history" footer={<button className="btn btn-secondary" onClick={() => setDetail(null)}>關閉</button>}>
-      {detail && <div className="audit-detail"><dl><dt>事件時間</dt><dd>{formatAuditDateTime(detail.event_at)}</dd><dt>操作者</dt><dd>{formatAuditActor(detail.actor_name, detail.actor_uid)}</dd><dt>動作</dt><dd>{getAuditActionLabel(detail.action)}</dd><dt>資源</dt><dd>{getAuditResourceLabel(detail.resource_type)}</dd><dt>結果</dt><dd>{getAuditResultLabel(detail.result)}</dd><dt>關聯識別碼</dt><dd>{detail.action === 'DOCUMENT_PREVIEWED' ? <>資料夾：{detail.folder_name || '—'}、文件：{detail.document_name || '—'}</> : detail.action === 'FOLDER_CREATED' ? <>資料夾：{detail.folder_name || '—'}</> : <>資料夾：{detail.folder_name || (detail.folder_id ? `識別碼 ${detail.folder_id}` : '—')}、文件：{detail.document_id || '—'}、版本：{detail.version_id || '—'}</>}</dd><dt>原因</dt><dd>{detail.reason || '—'}</dd></dl><h4>異動前</h4><pre>{JSON.stringify(detail.before_data || {}, null, 2)}</pre><h4>異動後</h4><pre>{JSON.stringify(detail.after_data || {}, null, 2)}</pre><h4>額外資料</h4><pre>{JSON.stringify(detail.metadata || {}, null, 2)}</pre></div>}
+      {detail && <div className="audit-detail"><dl><dt>事件時間</dt><dd>{formatAuditDateTime(detail.event_at)}</dd><dt>操作者</dt><dd>{formatAuditActor(detail.actor_name, detail.actor_uid)}</dd><dt>操作者角色</dt><dd>{getAuditRoleLabel(detail.actor_role)}</dd><dt>稽核事件</dt><dd>{getAuditActionLabel(detail.action)}</dd><dt>資源位置</dt><dd>{detail.resource_location || '系統'}</dd><dt>操作標的</dt><dd>{formatAuditTarget(detail)}</dd><dt>執行結果</dt><dd>{getAuditResultLabel(detail.result)}</dd><dt>結果原因</dt><dd>{detail.reason || '—'}</dd><dt>事件來源 IP</dt><dd>{detail.ip_address || '—'}</dd><dt>用戶端識別資訊</dt><dd>{detail.user_agent || '—'}</dd><dt>請求追蹤識別碼</dt><dd>{detail.request_id || '—'}</dd><dt>關聯識別碼</dt><dd>資源：{detail.resource_id || '—'}、資料夾：{detail.folder_id || '—'}、文件：{detail.document_id || '—'}、版本：{detail.version_id || '—'}</dd></dl><h4>異動前資料</h4><pre>{JSON.stringify(detail.before_data || {}, null, 2)}</pre><h4>異動後資料</h4><pre>{JSON.stringify(detail.after_data || {}, null, 2)}</pre><h4>其他技術資料</h4><pre>{JSON.stringify(withoutAuditContext(detail.metadata || {}), null, 2)}</pre></div>}
     </Modal>
   </PageShell>;
 };

@@ -95,6 +95,9 @@ export const listAuditLogs = async (filters: AuditFilters, exportAll = false) =>
             l.dl_actor_uid AS actor_uid,
             l.dl_actor_name AS actor_name,
             l.dl_actor_role AS actor_role,
+            l.dl_ip_address AS ip_address,
+            l.dl_user_agent AS user_agent,
+            l.dl_request_id AS request_id,
             l.dl_action AS action,
             l.dl_resource_type AS resource_type,
             l.dl_resource_id AS resource_id,
@@ -110,9 +113,43 @@ export const listAuditLogs = async (filters: AuditFilters, exportAll = false) =>
               WHEN l.df_fid = 0 THEN '檔案庫'
               ELSE COALESCE(fp.folder_path, l.dl_metadata ->> 'name')
             END AS folder_name,
-            COALESCE(vf.dfi_name, l.dl_metadata ->> 'file_name', d.dd_title) AS document_name
+            COALESCE(vf.dfi_name, l.dl_metadata ->> 'file_name', d.dd_title) AS document_name,
+            COALESCE(
+              l.dl_metadata #>> '{audit_context,resource_location}',
+              CASE
+                WHEN l.dl_resource_type = 'AUTH' THEN 'DMS 登入介面'
+                WHEN l.dl_resource_type = 'ADMIN' THEN '系統管理 / 系統設定'
+                WHEN l.dl_resource_type = 'AUDIT' THEN '系統管理 / 系統稽核紀錄'
+                WHEN l.df_fid = 0 THEN '檔案庫'
+                ELSE fp.folder_path
+              END,
+              '系統'
+            ) AS resource_location,
+            COALESCE(
+              l.dl_metadata #>> '{audit_context,target_type}',
+              l.dl_resource_type
+            ) AS target_type,
+            COALESCE(
+              l.dl_metadata #>> '{audit_context,target_name}',
+              CASE
+                WHEN l.dl_resource_type = 'AUTH' THEN 'DMS 文件管理系統'
+                WHEN l.dl_resource_type = 'ADMIN' THEN CONCAT_WS(' ', COALESCE(l.dl_after_data ->> 'emp_name', l.dl_before_data ->> 'emp_name'), l.dl_resource_id)
+                WHEN l.dl_resource_type = 'AUDIT' THEN '系統稽核紀錄'
+                WHEN l.dl_resource_type = 'ACL' THEN COALESCE(f.df_name, l.dl_metadata ->> 'name', '資料夾') || '（存取權限）'
+                WHEN l.dd_id IS NOT NULL THEN COALESCE(vf.dfi_name, l.dl_metadata ->> 'file_name', d.dd_title)
+                WHEN l.df_fid IS NOT NULL THEN COALESCE(f.df_name, l.dl_metadata ->> 'name')
+                ELSE l.dl_resource_id
+              END,
+              '系統資源'
+            ) AS target_name,
+            COALESCE(
+              l.dl_metadata #>> '{audit_context,target_version}',
+              v.ddv_no,
+              l.dl_metadata ->> 'version'
+            ) AS target_version
        FROM dms_log l
        LEFT JOIN folder_paths fp ON fp.df_fid = l.df_fid
+       LEFT JOIN dms_folders f ON f.df_fid = l.df_fid
        LEFT JOIN dms_doc d ON d.dd_id = l.dd_id
        LEFT JOIN dms_doc_ver v ON v.ddv_id = l.ddv_id
        LEFT JOIN dms_file vf ON vf.dfi_id = v.ddv_pub_dfi_id
@@ -139,13 +176,14 @@ const csvCell = (value: unknown) => {
 
 export const exportAuditCsv = async (user: SessionUser, filters: AuditFilters) => {
   const data = await listAuditLogs(filters, true);
-  const headers = ['時間', '操作者', '角色', '動作', '資源', '資源識別碼', '結果', '原因', '資料夾識別碼', '文件識別碼', '版本識別碼', '異動前', '異動後', '額外資料'];
+  const headers = ['事件時間', '操作者', '操作者角色', '稽核事件', '資源位置', '操作標的類型', '操作標的', '文件版本', '執行結果', '結果原因', '事件來源 IP', '用戶端識別資訊', '請求追蹤識別碼', '資源識別碼', '資料夾識別碼', '文件識別碼', '版本識別碼', '異動前', '異動後', '額外資料'];
   const lines = [headers.map(csvCell).join(',')];
   for (const row of data.rows as Record<string, unknown>[]) {
     lines.push([
       row.event_at, formatAuditActor(row.actor_name, row.actor_uid), getAuditRoleLabel(row.actor_role), getAuditActionLabel(row.action),
-      getAuditResourceLabel(row.resource_type), row.resource_id, getAuditResultLabel(row.result), row.reason, row.folder_id,
-      row.document_id, row.version_id, row.before_data, row.after_data, row.metadata
+      row.resource_location, getAuditResourceLabel(row.target_type), row.target_name, row.target_version, getAuditResultLabel(row.result),
+      row.reason, row.ip_address, row.user_agent, row.request_id, row.resource_id, row.folder_id, row.document_id,
+      row.version_id, row.before_data, row.after_data, row.metadata
     ].map(csvCell).join(','));
   }
   await writeAudit({

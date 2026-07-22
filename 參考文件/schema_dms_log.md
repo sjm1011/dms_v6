@@ -31,13 +31,13 @@
 | `dd_id` | INTEGER | Nullable | 事件所屬文件主檔識別碼，邏輯對應 `dms_doc.dd_id`。 |
 | `ddv_id` | INTEGER | Nullable | 事件所屬文件版本識別碼，邏輯對應 `dms_doc_ver.ddv_id`。 |
 | `dl_result` | VARCHAR(20) | Not Null | 執行結果。`SUCCESS`：成功，`FAILED`：失敗，`DENIED`：拒絕。 |
-| `dl_ip_address` | VARCHAR(80) | Nullable | 使用者來源 IP 位址。 |
+| `dl_ip_address` | VARCHAR(80) | Nullable | 事件來源 IP 位址。 |
 | `dl_user_agent` | TEXT | Nullable | 瀏覽器或用戶端識別資訊。 |
 | `dl_request_id` | VARCHAR(80) | Nullable | 後端請求追蹤識別碼，便於除錯與串接日誌。 |
 | `dl_reason` | TEXT | Nullable | 使用者填寫或系統產生的原因，例如撤回原因、廢止原因或拒絕原因。 |
 | `dl_before_data` | JSONB | Nullable | 異動前資料快照。 |
 | `dl_after_data` | JSONB | Nullable | 異動後資料快照。 |
-| `dl_metadata` | JSONB | Nullable | 額外資料，例如檔名、MIME Type、版本號、下載類型、浮水印內容或錯誤訊息。 |
+| `dl_metadata` | JSONB | Nullable | 額外資料及 `audit_context` 事件快照；快照保存資源位置、操作標的類型、名稱及文件版本。 |
 
 ---
 
@@ -196,6 +196,8 @@ SELECT dl_id,
 * `dl_actor_role` 只保存登入角色 `ADMIN` 或 `USER`。資料夾管理員不是登入角色，其管理範圍需由 `dl_managed_df_fid` 與後端權限計算判斷。
 * `dl_result` 必須使用 `SUCCESS`、`FAILED` 或 `DENIED`。
 * `dl_before_data`、`dl_after_data` 與 `dl_metadata` 必須保存合法 JSONB 資料；無額外資料時可使用 `{}`。
+* `dl_metadata.audit_context` 必須保存事件發生當下的 `resource_location`、`target_type`、`target_name` 與 `target_version`，避免後續更名造成歷史紀錄失真。
+* 所有由 HTTP API 觸發的事件應寫入 `dl_ip_address`、`dl_user_agent` 與 `dl_request_id`；登入失敗可保存嘗試登入的帳號，但不得保存密碼。
 * 一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。
 * 系統管理介面新增 `SYSTEM_ADMIN_ASSIGNED`、`SYSTEM_ADMIN_REVOKED`、`AUDIT_LOG_EXPORTED`、`FOLDER_RESTORED` 與 `FOLDER_PURGED` 事件。
 * 稽核查詢與 CSV 匯出僅讀取 `dms_log`；CSV 單次最多 50,000 筆。

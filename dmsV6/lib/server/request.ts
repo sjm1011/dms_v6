@@ -29,10 +29,13 @@ const getForwardedIp = (value: string | null) => {
     .replace(/^\[|\]$/g, '');
 };
 
-export const getClientIp = (request: NextRequest) =>
-  firstHeaderValue(request.headers.get('x-forwarded-for')) ||
-  firstHeaderValue(request.headers.get('x-real-ip')) ||
-  firstHeaderValue(request.headers.get('cf-connecting-ip')) ||
-  firstHeaderValue(request.headers.get('true-client-ip')) ||
-  getForwardedIp(request.headers.get('forwarded')) ||
+export const getClientIpFromHeaders = (headers: Pick<Headers, 'get'>) =>
+  firstHeaderValue(headers.get('x-forwarded-for')) ||
+  firstHeaderValue(headers.get('x-real-ip')) ||
+  firstHeaderValue(headers.get('cf-connecting-ip')) ||
+  firstHeaderValue(headers.get('true-client-ip')) ||
+  getForwardedIp(headers.get('forwarded')) ||
   '無法判定';
+
+export const getClientIp = (request: NextRequest) =>
+  getClientIpFromHeaders(request.headers);

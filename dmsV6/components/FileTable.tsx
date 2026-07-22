@@ -22,13 +22,6 @@ const KeyIcon = ({ size = 18, style }: { size?: number, style?: React.CSSPropert
   </svg>
 );
 
-const PrimaryManagerIcon = ({ size = 18 }: { size?: number }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 3l7 3v5c0 4.6-2.9 8.2-7 10-4.1-1.8-7-5.4-7-10V6l7-3z" />
-    <path d="M12 7l1.2 2.4 2.7.4-2 1.9.5 2.7-2.4-1.3-2.4 1.3.5-2.7-2-1.9 2.7-.4L12 7z" />
-  </svg>
-);
-
 const CoManagerIcon = ({ size = 18 }: { size?: number }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="9" cy="8" r="3" />
@@ -194,14 +187,6 @@ export const FileTable = React.memo<FileTableProps>(({
   };
 
   const renderManagerRoleIcon = (item: DMSItem) => {
-    if (item.manager_role === 'PRIMARY') {
-      return (
-        <span className="manager-role-icon primary" title="您是此資料夾的管理員" aria-label="您是此資料夾的管理員">
-          <PrimaryManagerIcon />
-        </span>
-      );
-    }
-
     if (item.manager_role === 'CO_MANAGER') {
       return (
         <span className="manager-role-icon co-manager" title="您是此資料夾的協同管理員" aria-label="您是此資料夾的協同管理員">
@@ -503,8 +488,22 @@ export const FileTable = React.memo<FileTableProps>(({
                   <div className="name-cell">
                     {renderItemIcon(item)}
                     <span className="name-text">
+                      {showFolderPath && item.folder_path && (
+                        <button
+                          type="button"
+                          className="folder-path-link"
+                          title={`前往資料夾：${item.folder_path}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (item.folder_id) {
+                              onOpenContainingFolder?.(item.folder_id);
+                            }
+                          }}
+                        >
+                          {item.folder_path}
+                        </button>
+                      )}
                       <span>{item.name}</span>
-                      {showFolderPath && item.folder_path && <small>{item.folder_path}</small>}
                     </span>
                   </div>
                 </td>
