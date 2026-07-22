@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>system_specifications</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS 文件管理系統 V6 - 系統功能規格說明書</h1>
+<p>本文件詳列「文件管理系統 V6（DMS V6）」之系統規格、架構設計、核心業務邏輯、API 與資料庫對接機制、狀態管理與版本控管規劃。</p>
+<p>---</p>
+<h2>1. 系統技術堆疊</h2>
+<h3>1.1. 前端與後端整合框架（Next.js 全端架構）</h3>
+<p>* 前端畫面與後端 API 均由 <strong>Next.js 16</strong>（搭配 <strong>React 19</strong>、<strong>TypeScript</strong>）App Router 統一承載。</p>
+<p>* 伺服器端進入點（Route Handlers，位於 <code>app/api/</code> 目錄）直接處理後端業務邏輯，並直接與 PostgreSQL 資料庫對接，無須依賴獨立的後端 API 伺服器。</p>
+<p>* 正式部署採 Next.js standalone 輸出，由 Node.js runtime 執行，再由 IIS / Apache / Nginx 反向代理對外提供服務。</p>
+<h3>1.2. 前端樣式設計</h3>
+<p>* Vanilla CSS 系統（不使用 TailwindCSS 框架，採本地端 HSL 顏色變數與毛玻璃效果之 Premium 視覺設計，以 <code>app/globals.css</code> 作為全域樣式基礎）。</p>
+<h3>1.3. 資料庫系統</h3>
+<p>* PostgreSQL。</p>
+<h3>1.4. 伺服器端資料庫與檔案處理</h3>
+<p>* <strong>資料庫連接</strong>：使用 PostgreSQL 官方 <code>pg</code> 程式庫之連接池（<code>Pool</code>）進行資料庫操作（透過 <code>lib/server/db.ts</code> 統一管理，並以 <code>BEGIN / COMMIT / ROLLBACK</code> 實現交易機制）。</p>
+<p>* <strong>檔案與文件處理</strong>：伺服器端獨立處理實體檔案儲存、副檔名與 MIME Type 白名單檢核，並使用 <code>pdf-lib</code> 進行 PDF 檔案處理與浮水印動態生成。</p>
+<h3>1.5. 資料表與欄位命名規則</h3>
+<p>本系統資料表與欄位採短表名與短欄位前綴。命名需符合既有 schema 文件風格，例如 <code>dms_folders</code> 使用 <code>df_</code> 前綴、<code>dms_folder_acl</code> 使用 <code>dfa_</code> 前綴、<code>dms_folder_managers</code> 使用 <code>dfm_</code> 前綴。</p>
+<p>文件管理與版本控管核心資料表命名如下：</p>
+<table>
+  <thead>
+    <tr><th>資料表</th><th>用途</th><th>欄位前綴</th><th>主鍵欄位</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>dms_doc</code></td><td>文件主檔</td><td><code>dd_</code></td><td><code>dd_id</code></td></tr>
+    <tr><td><code>dms_doc_ver</code></td><td>文件版本</td><td><code>ddv_</code></td><td><code>ddv_id</code></td></tr>
+    <tr><td><code>dms_file</code></td><td>檔案後設資料</td><td><code>dfi_</code></td><td><code>dfi_id</code></td></tr>
+    <tr><td><code>dms_ver_rev</code></td><td>版本修訂對照表</td><td><code>dvr_</code></td><td><code>dvr_id</code></td></tr>
+    <tr><td><code>dms_log</code></td><td>系統稽核紀錄</td><td><code>dl_</code></td><td><code>dl_id</code></td></tr>
+    <tr><td><code>dms_purge_job</code></td><td>實體檔案清理工作</td><td><code>dpj_</code></td><td><code>dpj_id</code></td></tr>
+  </tbody>
+</table>
+<p>欄位命名原則如下：</p>
+<p>* 主鍵採「資料表前綴 + <code>id</code>」格式，例如 <code>dms_doc.dd_id</code>、<code>dms_doc_ver.ddv_id</code>。</p>
+<p>* 主鍵不得重複放入業務名詞。例如文件主檔主鍵使用 <code>dd_id</code>，不使用 <code>dd_doc_id</code>；文件版本主鍵使用 <code>ddv_id</code>，不使用 <code>ddv_ver_id</code>。</p>
+<p>* 本專案資料庫不建立實體 <code>FOREIGN KEY</code> 約束。跨表關聯以欄位命名、索引、後端交易檢核與必要查詢條件維護，不依賴資料庫外鍵。</p>
+<p>* 索引定義只使用原始欄位，不得在索引欄位或條件內使用 <code>UPPER()</code>、<code>LOWER()</code>、<code>BTRIM()</code>、<code>CAST()</code>、<code>::type</code> 或其他函數與型別轉換。需要統一大小寫或格式的資料，必須由前端在送出前完成正規化，後端再執行防呆檢核。</p>
+<p>* 關聯欄位若只指向單一父表，沿用父表主鍵欄位名，例如 <code>dms_doc_ver.dd_id</code>、<code>dms_ver_rev.ddv_id</code>。</p>
+<p>* 同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 <code>ddv_pub_dfi_id</code> (正式發佈檔案) 與 <code>ddv_src_dfi_id</code> (原始編修檔案)。</p>
+<p>* 欄位名稱不得包含句點。<code>dms_doc.dd_id</code> 僅代表 SQL 查詢中的「資料表名稱 + 欄位名稱」參照方式，實際欄位名稱為 <code>dd_id</code>。</p>
+<p>* 文件版本不設 <code>ddv_status</code> 欄位。版本狀態需由 <code>ddv_eff_at</code>、<code>ddv_eff_to</code> 與 <code>ddv_cancel_at</code> 推導。</p>
+<p>* 建立、更新、作廢欄位延續既有命名慣例，例如 <code>crtby</code>、<code>crtat</code>、<code>updby</code>、<code>updat</code>、<code>dc</code>、<code>dcby</code>、<code>dcat</code>。</p>
+<p>常用縮寫規則如下：</p>
+<table>
+  <thead>
+    <tr><th>業務語意</th><th>縮寫</th><th>範例</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>文件</td><td><code>doc</code> 或 <code>dd</code> 前綴</td><td><code>dms_doc</code>、<code>dd_id</code></td></tr>
+    <tr><td>版本</td><td><code>ver</code> 或 <code>ddv</code> 前綴</td><td><code>dms_doc_ver</code>、<code>ddv_id</code></td></tr>
+    <tr><td>檔案</td><td><code>file</code> 或 <code>dfi</code> 前綴</td><td><code>dms_file</code>、<code>dfi_id</code></td></tr>
+    <tr><td>修訂</td><td><code>rev</code></td><td><code>ddv_rev_date</code>、<code>dms_ver_rev</code></td></tr>
+    <tr><td>生效</td><td><code>eff</code></td><td><code>ddv_eff_at</code></td></tr>
+    <tr><td>結束</td><td><code>to</code></td><td><code>ddv_eff_to</code></td></tr>
+    <tr><td>異動</td><td><code>chg</code></td><td><code>ddv_chg_note</code></td></tr>
+    <tr><td>廢止</td><td><code>obs</code></td><td><code>dd_obs_at</code>、<code>dd_obs_reason</code></td></tr>
+    <tr><td>撤回</td><td><code>cancel</code></td><td><code>ddv_cancel_at</code>、<code>ddv_cancel_reason</code></td></tr>
+    <tr><td>發佈</td><td><code>pub</code></td><td><code>ddv_pub_dfi_id</code></td></tr>
+    <tr><td>原始檔</td><td><code>src</code></td><td><code>ddv_src_dfi_id</code></td></tr>
+    <tr><td>作廢</td><td><code>dc</code></td><td><code>dvr_dc</code></td></tr>
+  </tbody>
+</table>
+<p>文件管理與版本控管核心資料表欄位命名方向如下：</p>
+<table>
+  <thead>
+    <tr><th>資料表</th><th>欄位方向</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>dms_doc</code></td><td><code>dd_id</code>、<code>df_fid</code>、<code>dd_code</code>、<code>dd_title</code>、<code>dd_status</code>、<code>dd_obs_at</code>、<code>dd_obs_by</code>、<code>dd_obs_reason</code>、<code>dfi_id</code>、<code>dd_obs_src</code>、<code>dd_crtby</code>、<code>dd_crtat</code>、<code>dd_updby</code>、<code>dd_updat</code></td></tr>
+    <tr><td><code>dms_doc_ver</code></td><td><code>ddv_id</code>、<code>dd_id</code>、<code>ddv_seq</code>、<code>ddv_no</code>、<code>ddv_rev_date</code>、<code>ddv_eff_at</code>、<code>ddv_eff_to</code>、<code>ddv_chg_note</code>、<code>ddv_pub_dfi_id</code>、<code>ddv_src_dfi_id</code>、<code>ddv_cancel_at</code>、<code>ddv_cancel_by</code>、<code>ddv_cancel_reason</code>、<code>ddv_crtby</code>、<code>ddv_crtat</code>、<code>ddv_updby</code>、<code>ddv_updat</code></td></tr>
+    <tr><td><code>dms_file</code></td><td><code>dfi_id</code>、<code>dfi_role</code>、<code>dfi_name</code>、<code>dfi_path</code>、<code>dfi_ext</code>、<code>dfi_mime</code>、<code>dfi_size</code>、<code>dfi_sha256</code>、<code>dfi_status</code>、<code>dfi_crtby</code>、<code>dfi_crtat</code></td></tr>
+    <tr><td><code>dms_ver_rev</code></td><td><code>dvr_id</code>、<code>ddv_id</code>、<code>dvr_base_ddv_id</code>、<code>dfi_id</code>、<code>dvr_note</code>、<code>dvr_dc</code>、<code>dvr_crtby</code>、<code>dvr_crtat</code>、<code>dvr_dcby</code>、<code>dvr_dcat</code></td></tr>
+    <tr><td><code>dms_log</code></td><td><code>dl_id</code>、<code>dl_event_at</code>、<code>dl_actor_uid</code>、<code>dl_actor_name</code>、<code>dl_actor_role</code>、<code>dl_action</code>、<code>dl_resource_type</code>、<code>dl_resource_id</code>、<code>dl_managed_df_fid</code>、<code>df_fid</code>、<code>dd_id</code>、<code>ddv_id</code>、<code>dl_result</code>、<code>dl_ip_address</code>、<code>dl_user_agent</code>、<code>dl_request_id</code>、<code>dl_reason</code>、<code>dl_before_data</code>、<code>dl_after_data</code>、<code>dl_metadata</code></td></tr>
+    <tr><td><code>dms_purge_job</code></td><td><code>dpj_id</code>、<code>df_fid</code>、<code>dpj_status</code>、<code>dpj_manifest</code>、<code>dpj_requested_by</code>、<code>dpj_requested_at</code>、<code>dpj_completed_at</code>、<code>dpj_retry_count</code>、<code>dpj_error</code></td></tr>
+  </tbody>
+</table>
+<p>第 5 節稽核資料表採同一命名原則。全域稽核表使用 <code>dms_log</code>。既有 <code>dms_audit_log</code> 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 <code>dms_doc_access_log</code>。</p>
+<p>---</p>
+<h2>2. 帳戶角色與權限矩陣 (基於資料夾的存取控制 Folder-based ACL)</h2>
+<p>系統採用「帳戶角色」與「資料夾管理身分」分離的權限模型。登入後的帳戶角色僅分為 <code>ADMIN</code> 與 <code>USER</code>；<code>FOLDER_MANAGER</code> 不作為登入角色，而是由 <code>dms_folder_managers</code> 依資料夾節點計算出的管理身分。原全站通用的「文件管理員 (MANAGER)」角色已全面廢除。</p>
+<h3>2.1. 系統管理員 (ADMIN)</h3>
+<p>* <strong>職責</strong>：全域系統管理、第一層資料夾建立、權限結構維護與例外處理。</p>
+<p>* <strong>根目錄管理權</strong>：根目錄與第一層資料夾的建立權固定僅屬於系統管理員 (ADMIN)。根目錄文件建立權也固定僅屬於 ADMIN，系統需以 <code>folder_id = 0</code> 表示根目錄文件歸屬。根目錄文件查閱權固定為公開，任何已登入使用者皆可看見符合一般使用者文件生效條件的根目錄文件。</p>
+<p>* <strong>全站強制管理權</strong>：ADMIN 對所有資料夾、ACL、文件與版本生命週期保有最高層級的管理與編輯權限。即使資料夾已指定資料夾管理員，或資料夾被設定為限閱，ADMIN 仍可執行建立子資料夾、修改資料夾屬性、封存資料夾、設定 ACL 與文件管理操作。</p>
+<p>* <strong>第一層資料夾建立規則</strong>：ADMIN 建立第一層資料夾時，只需輸入資料夾名稱，不在建立畫面指派資料夾管理員。建立完成時允許沒有有效資料夾管理員，該資料夾及其子資料夾的管理權仍由 ADMIN 保留。</p>
+<p>* <strong>第一層資料夾管理員指派規則</strong>：每一個第一層資料夾可不指派資料夾管理員；一旦指派，同一時間僅能有一名有效資料夾管理員。後續異動只能以指派、更換或撤銷方式處理，不得同時保留兩名以上的有效資料夾管理員。</p>
+<p>* <strong>未指派顯示與操作規則</strong>：ADMIN 進入尚未指派資料夾管理員的第一層資料夾或其子資料夾時，畫面上方必須顯示紅色可點擊文字框「管理員：未指派」。ADMIN 點擊該文字框後，開啟資料夾管理員指派 Modal；指派成功後，文字框改為顯示該資料夾管理員姓名與一般管理員顯示樣式。</p>
+<p>* <strong>協同管理員例外處理權</strong>：協同管理員原則上由該第一層資料夾的資料夾管理員指派或撤銷。ADMIN 保有全站例外處理權，可在必要時撤銷協同管理員、指派、更換或撤銷第一層資料夾管理員，但不得破壞「第一層資料夾最多一名有效資料夾管理員」的限制。</p>
+<p>* <strong>管理員姓名顯示規則</strong>：ADMIN 進入任一資料夾後，可於畫面上方查看該資料夾的有效管理員姓名。除該受限情境外，前端不得取得或顯示資料夾直接管理員、繼承管理員或有效管理員的身分資料。</p>
+<p>* <strong>存取限制豁免</strong>：ADMIN 不受一般使用者 ACL 限制，且不得因錯誤 ACL 設定被鎖出系統管理範圍之外。</p>
+<h3>2.2. 資料夾管理員 (Folder Manager，計算型管理身分)</h3>
+<p>* <strong>身分定義</strong>：資料夾管理員不是帳戶角色。每一個第一層資料夾可直接指派零名或一名資料夾管理員；該身分自第一層資料夾向下涵蓋其全部子資料夾與文件。未指派時，只有 ADMIN 具備該資料夾樹的管理權。</p>
+<p>* <strong>資料模型</strong>：<code>dms_folder_managers.dfm_type = 1</code> 表示第一層資料夾管理員，<code>dfm_type = 2</code> 表示協同管理員。後端不得只依資料夾與員工編號判斷其授權能力，必須同時檢查 <code>dfm_type</code>、<code>dfm_dc</code> 與資料夾階層。</p>
+<p>* <strong>協同管理員定義</strong>：第一層資料夾的資料夾管理員實際進入其可管理的任一資料夾後，可於該資料夾指派一位或多位協同管理員。協同管理員自被指派的資料夾節點起，向下管理該節點及其全部子資料夾與文件。</p>
+<p>* <strong>協同管理員顯示與指派</strong>：ADMIN、第一層資料夾管理員或協同管理員進入其可管理的資料夾時，畫面上方必須同時顯示「管理員」與「協同管理員」文字框及其姓名。「協同管理員」文字框顯示目前節點及所有上層節點仍有效的協同管理員聯集，相同人員需去除重複；沒有任何有效協同管理員時顯示「協同管理員：未指派」。ADMIN 或第一層資料夾管理員可點擊文字框開啟協同管理員指派 Modal，但 Modal 只編輯目前節點直接指派的協同管理員，不得作廢或改寫上層節點的繼承設定。協同管理員僅可檢視姓名，不得點擊或透過其他方式指派協同管理員。</p>
+<p>* <strong>有效管理員計算</strong>：某資料夾節點的有效管理員，為其所屬第一層資料夾的唯一資料夾管理員，加上該節點本身與所有祖先節點仍有效的協同管理員聯集。</p>
+<p>* <strong>空協同管理員清單規則</strong>：資料夾未指派協同管理員時，不影響第一層資料夾管理員的管理權，也不取消由祖先節點繼承而來的協同管理權。</p>
+<p>* <strong>權限範圍</strong>：</p>
+<p>- 第一層資料夾管理員在其有效範圍內，可建立子資料夾、修改資料夾名稱、指派或撤銷協同管理員、封存資料夾、建立文件、上傳新版、版更、作廢文件與維護 ACL。</p>
+<p>- 協同管理員具備前述資料夾與文件管理權限，但不得指派、撤銷或變更任何資料夾的資料夾管理員或協同管理員，也不得透過 API、前端參數或其他方式將協同管理權再授予其他人。</p>
+<p>- 不得建立第一層資料夾；第一層資料夾建立固定由 ADMIN 執行。</p>
+<p>- 不得於根目錄建立文件；根目錄文件建立固定由 ADMIN 執行。</p>
+<p>* <strong>ACL 授權管理</strong>：資料夾管理員可將其有效管理範圍內的資料夾設定為公開或限閱。限閱時可授權特定部門或特定使用者。</p>
+<p>* <strong>管理員身分資訊最小化</strong>：</p>
+<p>- 資料夾樹、搜尋結果及清單均不得顯示或夾帶其他人員的資料夾管理員身分資訊。資料夾與文件清單僅可顯示目前登入者本人的有效管理身分類型圖示，不得顯示姓名、員工編號、登入帳號、指派來源或其他管理員資料。</p>
+<p>- 資料夾與文件清單的「文件編號」欄位，若目前登入者是該資料夾的有效第一層資料夾管理員，顯示主要管理員圖示；若目前登入者是該資料夾本身或祖先節點指派的有效協同管理員，顯示協同管理員圖示。文件列依文件所屬資料夾的有效管理身分顯示，資料夾列依該資料夾的有效管理身分顯示。</p>
+<p>- ADMIN 的全站強制管理權不得直接產生管理身分圖示。ADMIN 只有同時存在有效的 <code>dms_folder_managers</code> 指派紀錄時，才依 <code>dfm_type = 1</code> 或 <code>dfm_type = 2</code> 顯示主要管理員或協同管理員圖示。未被指派的 ADMIN 與無有效管理權的使用者均不顯示管理身分圖示。</p>
+<p>- 同一使用者若在有效祖先範圍內同時符合主要管理員與協同管理員，清單以主要管理員圖示優先。圖示必須提供可辨識的顏色、形狀及滑鼠提示文字，不得只依顏色區分角色。</p>
+<p>- 只有 ADMIN，或對目前資料夾具有效管理權的資料夾管理員，在實際進入該資料夾後，才可於畫面上方看到該資料夾的有效管理員姓名。</p>
+<p>- 一般使用者，以及進入非其管理範圍資料夾的資料夾管理員，均不得取得或看到管理員姓名。</p>
+<p>- 一般資料夾畫面允許送往前端的管理員資料僅限顯示所需的姓名。員工編號、登入帳號、直接或繼承來源、內部關聯鍵及其他可識別資料均不得送往前端。</p>
+<p>- 員工編號僅可在具備指派權限的使用者開啟「指派資料夾管理員」、「指派協同管理員」或「編輯資料夾屬性」畫面時，按目前資料夾及本次權限授予作業需要送往前端。其他畫面不得取得資料夾管理員或協同管理員的員工編號。</p>
+<p>- 管理員姓名及上述受限員工編號只可暫存於目前資料夾或權限設定畫面的記憶體狀態；畫面關閉或切換資料夾時必須清除，不得寫入隱藏欄位、HTML data attribute、瀏覽器儲存空間、前端記錄或可重複利用的全域快取。</p>
+<p>- 除上述受限姓名顯示資料外，前端僅可接收目前登入者對該資料夾的操作能力，例如是否可修改、維護 ACL 或管理文件；不得接收完整管理員身分資料。</p>
+<p>- 管理權限必須由後端依 session 中的目前登入者身分、<code>dms_folder_managers</code> 與資料夾階層即時計算。前端傳入的角色、管理員旗標或員工編號不得作為授權依據。</p>
+<h3>2.3. 一般使用者 (USER)</h3>
+<p>* <strong>職責</strong>：文件查閱與下載。</p>
+<p>* <strong>預設權限</strong>：採資安優先原則。一般使用者預設無法看見任何資料夾與一般資料夾文件。例外：位於根目錄 (<code>folder_id = 0</code>) 的文件固定公開，任何已登入使用者皆可看見符合文件生效條件的根目錄文件。</p>
+<p>* <strong>公開規則</strong>：資料夾必須明確設定為公開，才可被一般使用者瀏覽。沒有 ACL 紀錄不代表公開。</p>
+<p>* <strong>限閱規則</strong>：資料夾設定為限閱時，必須明確授權特定部門或特定使用者。若限閱資料夾沒有任何有效授權對象，則一般使用者不可見。</p>
+<p>* <strong>唯讀限制</strong>：一般使用者僅具備唯讀、線上預覽與下載權限。PDF 不提供下載，僅提供預覽與列印；瀏覽器支援的圖檔提供預覽及下載；其他非 PDF 格式僅提供下載。一般使用者只能存取「生效中」且「處於生效區間內」之最新版文件，不得執行修改、建立、版更、作廢、封存與檢視歷史廢止紀錄等管理操作。</p>
+<p>* <strong>修訂對照表檢視規則</strong>：任何具備文件查閱權限的使用者皆可檢視其可見文件版本之修訂對照表。</p>
+<h3>2.4. 資料夾 ACL 狀態</h3>
+<p>* <code>access_type = 1</code>：公開。一般使用者可瀏覽該資料夾，並可查閱符合文件生效條件的文件。</p>
+<p>* <code>access_type = 2</code>：限閱。僅 ADMIN、有效資料夾管理員、被授權部門成員與被授權使用者可瀏覽。</p>
+<p>* 新建資料夾預設為 <code>access_type = 2</code>。若未設定授權部門或授權使用者，則只有 ADMIN 與有效資料夾管理員可見。</p>
+<p>* <strong>限閱屬性繼承規則</strong>：直接上層資料夾為限閱時，其子資料夾必須繼承上層資料夾的限閱屬性，不得再進行其他限閱的設定。</p>
+<p>* <strong>目前資料夾屬性顯示</strong>：進入實體資料夾後，畫面標題與項目數量之間必須顯示「公開」或「限閱」文字框。具備該資料夾管理權限的使用者可點擊非繼承屬性的文字框開啟資料夾屬性 Modal。繼承上層限閱屬性的文字框不得提供點擊功能，只能以提示文字顯示實際授權內容，且不得覆寫繼承設定。</p>
+<p>* <strong>限閱授權狀態辨識</strong>：目前資料夾標題列及清單「屬性／版本」欄位內的「限閱」文字框，都必須以圖示區分「未設定詳細授權」與「已授權」，不得只以顏色表達狀態。未設定詳細授權時顯示警示圖示；已有有效部門或特定使用者授權時顯示完成圖示，並以提示文字提供授權摘要。</p>
+<p>* 根目錄不是實體資料夾節點，不套用 <code>dms_folder_acl</code>。位於根目錄的文件固定公開查閱，但建立、版更、廢止與維護仍固定僅限 ADMIN。</p>
+<p>---</p>
+<h2>3. 資料夾結構管理</h2>
+<h3>3.1. 基本狀態</h3>
+<p>資料夾狀態（<code>status</code>）以代碼儲存，分為三種：</p>
+<p>* <code>1</code>：正常（使用中）。</p>
+<p>* <code>2</code>：封存（已封存）。</p>
+<p>* <code>0</code>：已刪除（作廢）。</p>
+<h3>3.2. 刪除（作廢）條件</h3>
+<p>若資料夾底下沒有任何有效物件（包含正常狀態子資料夾與有效文件），系統開放管理員執行刪除（作廢）操作，並將狀態代碼更新為 <code>0</code>。已封存、已作廢或已廢止的歷史紀錄不阻擋空資料夾刪除（作廢）。</p>
+<p>空資料夾的管理操作應直接提供「刪除（作廢）」功能，不需顯示「封存」項目。前端操作清單需將「刪除（作廢）」與「封存」視為互斥入口：資料夾底下沒有任何有效物件時，只顯示「刪除（作廢）」；資料夾底下仍有任何正常狀態子資料夾或有效文件時，才依封存規則顯示「封存」入口。</p>
+<h3>3.3. 封存資料夾（Recursive Archive，遞迴封存）</h3>
+<p>* 當管理員對某一正常狀態（<code>1</code>）的資料夾進行封存時，系統將執行遞迴封存，一併將其下所有子資料夾之狀態更新為 <code>2</code>。</p>
+<p>* <strong>文件聯動廢止</strong>：被封存資料夾及其子資料夾下的所有文件，其文件主檔狀態將被自動更新為 <code>Obsolete</code> (已廢止)，並於文件主檔註記廢止時間與廢止原因。文件版本的有效期間與撤回紀錄不因資料夾封存而改寫，以確保版本歷史維持原始紀錄。</p>
+<p>* <strong>文件庫顯示規則</strong>：已封存資料夾不得顯示於文件庫的資料夾樹、資料夾清單與一般文件瀏覽流程中。已封存資料夾與其文件保留於資料庫及檔案儲存中，改由「資源回收區」檢視。</p>
+<p>* <strong>還原與永久刪除</strong>：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 8.5 節規則永久作廢資料並刪除實體檔案。</p>
+<p>---</p>
+<h2>4. 文件管理與版本控管</h2>
+<p>DMS 不負責文件簽核流程。文件內容之擬稿、會簽、核准均由 BPM 系統處理；DMS 僅負責保存 BPM 簽核完成後，由資料夾管理員上傳之正式文件，並管理其版本、預約生效、有效期間、撤回、廢止、查閱與下載規則。</p>
+<p>本系統採「預約生效模式」與「版本有效期間模型」。資料夾管理員可上傳已完成 BPM 核准之正式文件，並指定今天或未來日期作為版本生效日。一般使用者只會看到目前有效版本，不會看到尚未生效、已結束、已撤回或已廢止文件的內容。</p>
+<h3>4.1. 文件主檔與版本分離</h3>
+<p>系統採「文件主檔」與「文件版本」分離設計。</p>
+<p>* <strong>文件主檔</strong>：代表一份文件本身，例如文件編號、文件名稱、所屬資料夾、文件是否廢止、廢止原因與廢止公文等資料。</p>
+<p>* <strong>文件版本</strong>：代表該文件某一次正式發佈的版本，包含版本號、修訂日期、生效日期、結束日期、異動說明、正式發佈檔案、撤回紀錄與修訂對照表等資料。</p>
+<p>同一份文件可以有多個版本，但同一時間對一般使用者僅能解析出一個目前有效版本。</p>
+<p>版本不另設版本狀態欄位。版本是否尚未生效、目前有效、已成為歷史版本或已撤回，均由版本有效期間與撤回欄位推導。</p>
+<h3>4.2. 文件主檔狀態</h3>
+<p>文件主檔狀態只表示整份文件是否仍具備流通資格，不表示哪一個版本目前有效。</p>
+<p>* <code>Effective</code> (有效的)：文件未廢止。若存在符合有效期間的版本，該版本可依權限供一般使用者查閱或下載。</p>
+<p>* <code>Obsolete</code> (已廢止)：文件已廢止，不再流通。</p>
+<p>文件被手動廢止或因資料夾封存而廢止時，應在文件主檔註記，不改寫既有版本的有效期間。</p>
+<h3>4.3. 版本有效期間規則</h3>
+<p>每一個文件版本以有效期間判斷是否為目前有效版本。</p>
+<p>版本有效期間欄位如下：</p>
+<p>* <strong>生效時間 <code>effective_at</code> (生效時間)</strong>：版本開始生效時間，必填。</p>
+<p>* <strong>結束時間 <code>effective_until</code> (結束時間)</strong>：版本結束時間，可空白。空白代表該版本尚未被後續版本排定取代。</p>
+<p>一般使用者查詢目前版本時，版本必須同時符合以下條件：</p>
+<p>* 文件主檔狀態為 <code>Effective</code> (有效的)。</p>
+<p>* 版本未被撤回。</p>
+<p>* <code>effective_at</code> (生效時間) 欄位值小於或等於目前時間。</p>
+<p>* <code>effective_until</code> (結束時間) 為空白，或目前時間小於 <code>effective_until</code> (結束時間)。</p>
+<p>* 位置權限符合下列任一條件：</p>
+<p>- 位於根目錄 (<code>folder_id = 0</code>)。</p>
+<p>- 所屬一般資料夾為正常狀態，且使用者符合該管理資料夾節點 ACL 授權規則。</p>
+<p>版本有效期間採半開區間：</p>
+<pre><code class="language-text">effective_at (生效時間), effective_until (結束時間)
+effective_at &lt;= 目前時間
+AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
+<p>同一份文件同一時間不得存在兩筆對一般使用者同時有效的版本。</p>
+<p>文件仍處於第一版狀態時，資料夾管理員可執行「刪除文件」。刪除文件僅允許在文件主檔仍有效、版本總數為 1、未撤回版本總數為 1，且該版本 <code>ddv_seq = 1</code> 時執行；刪除後仍需保留全域稽核紀錄。</p>
+<p>若版本 <code>effective_at</code> (生效時間) 晚於目前時間，該版本屬於尚未生效版本，僅資料夾管理員可見。系統不得因尚未生效版本存在，而讓一般使用者看不到上一個仍在有效期間內的版本。</p>
+<h3>4.4. 版本欄位規則</h3>
+<p>每一個文件版本需保存以下資訊：</p>
+<p>* <strong>版本號</strong>：可空白，由管理員依實際文件規範自行填寫。</p>
+<p>* <strong>修訂日期</strong>：必填，代表該文件內容正式修訂日期。</p>
+<p>* <strong>生效日期 <code>effective_at</code> (生效時間)</strong>：必填，可指定今天或未來日期，不允許早於上傳日期。</p>
+<p>* <strong>結束日期 <code>effective_until</code> (結束時間)</strong>：由系統於預約新版或立即版更時寫入，不提供使用者手動填寫。</p>
+<p>* <strong>異動說明</strong>：必填，欄位需支援下拉片語選擇與手動輸入。使用者可從下拉選單選取常用異動說明項目，也可直接輸入自訂說明內容。下拉選單至少包含：</p>
+<p>- <code>初版發行</code></p>
+<p>- <code>內容修訂</code></p>
+<p>- <code>格式調整</code></p>
+<p>- <code>錯字或文字修正</code></p>
+<p>- <code>法規或制度更新</code></p>
+<p>- <code>流程變更</code></p>
+<p>- <code>組織或職責調整</code></p>
+<p>- <code>表單欄位調整</code></p>
+<p>- <code>附件或範本更新</code></p>
+<p>- <code>週期性檢討，內容無異動</code></p>
+<p>- <code>文件整併</code></p>
+<p>- <code>文件拆分</code></p>
+<p>- <code>替代舊版文件</code></p>
+<p>* <strong>正式發佈檔案</strong>：必填，代表該版本對外流通的正式檔案。</p>
+<p>* <strong>撤回日期 <code>cancelled_at</code> (撤回日期)</strong>：資料夾管理員執行「撤回版本並回復前版」時自動寫入。</p>
+<p>* <strong>撤回人員 <code>cancelled_by</code> (撤回人員)</strong>：資料夾管理員執行「撤回版本並回復前版」時自動寫入。</p>
+<p>* <strong>撤回原因 <code>cancel_reason</code> (撤回原因)</strong>：資料夾管理員執行「撤回版本並回復前版」時必填。</p>
+<p>日期輸入欄位通用規則如下：</p>
+<p>* 凡需由使用者輸入日期的欄位，均需提供月曆介面選擇。</p>
+<p>* 月曆介面不得取代後端日期檢核；後端仍需依欄位規則驗證日期是否允許。</p>
+<p>生效日期之時間粒度規則如下：</p>
+<p>* 若生效日期為上傳當日，版本於上傳交易完成後立即生效。</p>
+<p>* 若生效日期晚於上傳當日，版本於該日期 <code>00:00:00</code> 生效。</p>
+<p>* 系統以伺服器時間作為版本有效期間判斷基準，前端不得自行判斷版本是否生效。</p>
+<p>* 本系統僅在本地環境使用，所有「目前時間」均指後端伺服器本地時間，資料庫保存系統本地時間即可。</p>
+<p>文件主檔需保存以下廢止資訊：</p>
+<p>* <strong>廢止日期</strong>：手動廢止或資料夾封存造成文件廢止時自動寫入。</p>
+<p>* <strong>廢止原因</strong>：手動廢止或系統自動廢止時寫入。</p>
+<p>* <strong>廢止公文或核准文件</strong>：手動廢止時必填；資料夾封存造成的系統自動廢止不強制要求。</p>
+<p>文件類型暫不納入規格，不依規章、SOP、表單或 ISO 文件類型套用不同規則。</p>
+<h3>4.5. 正式發佈檔案格式規則</h3>
+<p>每一個文件版本必須上傳一個「正式發佈檔案」。</p>
+<p>系統採白名單方式限制可上傳格式，預設允許 PDF、Microsoft Office 常用文件格式與常用圖檔格式。</p>
+<p>允許之正式發佈檔案格式：</p>
+<p>* PDF：<code>.pdf</code></p>
+<p>* Word：<code>.docx</code>、<code>.doc</code></p>
+<p>* Excel：<code>.xlsx</code>、<code>.xls</code></p>
+<p>* PowerPoint：<code>.pptx</code>、<code>.ppt</code></p>
+<p>* 圖檔：<code>.jpg</code>、<code>.jpeg</code>、<code>.png</code>、<code>.gif</code>、<code>.tif</code>、<code>.tiff</code>、<code>.webp</code></p>
+<p>系統不提供 Word、Excel、PowerPoint 與 PDF 之間的自動轉檔功能，也不自動變更檔案格式。所有正式發佈檔案皆以資料夾管理員上傳之檔案為準。</p>
+<p>為降低資安風險，系統不允許上傳含巨集、可執行、腳本、安裝檔、捷徑或壓縮封裝類型檔案。</p>
+<p>禁止之高風險檔案類型包含但不限於：</p>
+<p>* Office 巨集格式：<code>.docm</code>、<code>.dotm</code>、<code>.xlsm</code>、<code>.xltm</code>、<code>.xlam</code>、<code>.pptm</code>、<code>.potm</code>、<code>.ppam</code></p>
+<p>* 可執行與系統檔：<code>.exe</code>、<code>.msi</code>、<code>.dll</code>、<code>.com</code>、<code>.scr</code></p>
+<p>* HTML、腳本與指令檔：<code>.html</code>、<code>.htm</code>、<code>.mhtml</code>、<code>.bat</code>、<code>.cmd</code>、<code>.ps1</code>、<code>.vbs</code>、<code>.js</code>、<code>.hta</code></p>
+<p>* 捷徑與設定檔：<code>.lnk</code>、<code>.reg</code></p>
+<p>* 壓縮檔與封裝檔：<code>.zip</code>、<code>.rar</code>、<code>.7z</code>、<code>.tar</code>、<code>.gz</code></p>
+<p>正式發佈檔案大小上限為 100 MB，以 Base64 解碼後的實際位元組數為準；超過上限時，後端必須拒絕上傳。</p>
+<p>後端必須拒絕 0 byte 的空檔案，以及格式不合法、無法完整解碼或含非 Base64 字元的 Base64 內容。不得僅依前端驗證結果接受檔案。</p>
+<p>檔案上傳時，系統必須交叉驗證副檔名、MIME Type (媒體類型) 與檔案特徵碼。三者必須互相一致，且同時符合允許格式白名單；任一項不符、無法辨識或具有偽裝格式時，後端必須拒絕上傳。</p>
+<h3>4.6. PDF 文件規則</h3>
+<p>若正式發佈檔案為 PDF (可攜式文件格式)：</p>
+<p>* 一般使用者僅能線上預覽 PDF。</p>
+<p>* 一般使用者不提供 PDF 下載按鈕。</p>
+<p>* 一般使用者即使直接呼叫 PDF 正式原檔下載 API (應用程式介面)，或以 URL (網址) 猜測檔案路徑，後端仍必須依角色與 ACL (存取控制清單) 拒絕下載。</p>
+<p>* PDF 預覽畫面必須顯示浮水印。</p>
+<p>* 浮水印必須由 Next.js Route Handler 在伺服器端讀取 PDF 原始檔後動態套用，不得由瀏覽器端產生或合成，避免客戶端繞過浮水印取得預覽內容。</p>
+<p>* 浮水印使用內建 <code>Noto Sans TC</code> 字型資源產生中文字形，並以半透明、斜向方式置中顯示於每一頁；輸出結果僅供當次預覽，不得覆寫磁碟上的正式 PDF 原檔。</p>
+<p>* 使用者如需紙本或另存 PDF，可使用瀏覽器列印功能。</p>
+<p>* 資料夾管理員可下載正式 PDF 原檔。</p>
+<p>* 資料夾管理員介面需顯示「上傳原始檔案」按鈕。</p>
+<p>* 原始檔案為選填，供日後編修、追溯使用。</p>
+<p>* 原始檔案格式必須符合 4.5「正式發佈檔案格式規則」之白名單規範。</p>
+<p>* 原始檔案僅限資料夾管理員可見與下載，一般使用者不可見。</p>
+<p>浮水印內容應包含：</p>
+<p>* 使用者姓名及帳號</p>
+<p>* 預覽時間，固定使用 <code>Asia/Taipei</code> 時區</p>
+<p>* 用戶端 IP；伺服器依序讀取 <code>X-Forwarded-For</code>、<code>X-Real-IP</code>、<code>CF-Connecting-IP</code>、<code>True-Client-IP</code> 與標準 <code>Forwarded</code> header，均無有效值時顯示「無法判定」</p>
+<p>* 文件編號</p>
+<p>* 「內部文件，禁止外流」</p>
+<h3>4.7. 非 PDF 文件規則</h3>
+<p>若正式發佈檔案不是 PDF (可攜式文件格式)：</p>
+<p>* 系統不套用浮水印。</p>
+<p>* 不顯示「上傳原始檔案」按鈕。</p>
+<p>* 該檔案即為此版本之正式發佈檔案。</p>
+<p>圖檔依瀏覽器原生支援能力提供開新視窗預覽及下載。目前提供預覽的格式為 <code>.jpg</code>、<code>.jpeg</code>、<code>.png</code>、<code>.gif</code> 與 <code>.webp</code>；<code>.tif</code>、<code>.tiff</code> 因主流瀏覽器未提供一致的原生顯示能力，僅提供下載。圖檔預覽不得套用 PDF 浮水印處理。</p>
+<p>Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由瀏覽器原生顯示的非 PDF 格式，僅提供下載，不提供線上預覽。</p>
+<p>此規則主要適用於表單、範本、試算表、簡報或需要使用者下載後編輯、填寫、使用之文件。</p>
+<h3>4.8. 新建文件</h3>
+<p>文件可建立於一般資料夾或根目錄，但權限來源不同：</p>
+<p>* <strong>一般資料夾建立文件</strong>：有效資料夾管理員與 ADMIN 可在其管理範圍內建立文件。</p>
+<p>* <strong>根目錄建立文件</strong>：僅 ADMIN 可在根目錄建立文件。前端僅對 ADMIN 顯示根目錄「新建文件」入口；後端 API 必須再次驗證登入角色，不得只依賴前端防呆。</p>
+<p>* <strong>根目錄文件公開規則</strong>：位於根目錄的文件固定公開查閱。任何已登入使用者進入文件庫根層時，皆可看見符合文件主檔狀態、版本生效期間與 PDF / 非 PDF 操作規則的根目錄文件。</p>
+<p>* <strong>根目錄識別規則</strong>：建立或查詢根目錄文件時，系統以 <code>folder_id = 0</code> 表示根目錄。一般資料夾文件則使用實際 <code>dms_folders.df_fid</code>。</p>
+<p>* <strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息。</p>
+<p>管理員建立文件時：</p>
+<p>1. 文件編號可填寫或留空；有填寫時，前端必須去除前後空白並轉為大寫。</p>
+<p>2. 建立文件主檔。</p>
+<p>3. 上傳第一個正式發佈檔案。</p>
+<p>4. 填寫修訂日期、生效日期，並選取或輸入異動說明。</p>
+<p>- 生效日期預設為當下日期。</p>
+<p>5. 版本號可填寫或留空。</p>
+<p>6. 文件主檔狀態設為 <code>Effective</code> (有效的)。</p>
+<p>7. 第一個文件版本寫入 <code>effective_at</code> (生效時間)。</p>
+<p>8. 第一個文件版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
+<p>9. 若第一個版本尚未到生效日期，一般使用者不可看到該文件；系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員可看到此尚未生效版本。</p>
+<p>10. 管理員查看尚未生效文件時，文件清單的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。第一版尚未生效時，清單只顯示該預約版本。</p>
+<p>文件編號留空時，後端必須將 <code>dd_code</code> 儲存為 <code>NULL</code>，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 <code>dd_code</code>，不得在索引定義內使用 <code>UPPER()</code>、型別轉換或其他函數。</p>
+<h3>4.9. 文件版更與預約生效</h3>
+<p>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，必須可從文件操作選單的「修改文件」進入點修改文件編號、目前顯示版本的文件名稱、版本號、修訂日期、生效日期及異動說明。未編號文件可補填文件編號，已編號文件亦可修改或清空；修改後的非空白文件編號不得與其他文件重複。「修改文件」只更新文件主檔與既有版本資料，不得建立新版本，並需於同一筆交易完成及於稽核紀錄保存異動前後資料。</p>
+<p>目前顯示版本的正式發佈檔案為 PDF，且尚未保存 PDF 原始編修檔案時，「修改文件」可顯示原始檔案選擇欄位並接受新增檔案。該版本已有 PDF 原始編修檔案時，不得顯示可提交的檔案欄位，也不得接受前端或直接 API 請求覆蓋既有檔案；後端必須以版本資料重新驗證，不得只依賴前端狀態。</p>
+<p>上傳新版文件時：</p>
+<p>1. 新增一筆文件版本。</p>
+<p>2. 上傳新的正式發佈檔案。</p>
+<p>3. 填寫修訂日期、生效日期，並選取或輸入異動說明。</p>
+<p>4. 版本號可填寫或留空。</p>
+<p>5. 正式發佈檔案為 PDF 時，可上傳該新版本的 PDF 原始編修檔案。</p>
+<p>6. 新版本寫入 <code>effective_at</code> (生效時間)。</p>
+<p>7. 新版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
+<p>8. 系統將上一個未撤回版本的 <code>effective_until</code> (結束時間) 設為新版本的 <code>effective_at</code> (生效時間)。</p>
+<p>若新版本生效日期晚於目前時間：</p>
+<p>* 一般使用者在新版本生效前仍看到上一個版本。</p>
+<p>* 新版本到達生效時間後，一般使用者看到新版本。</p>
+<p>* 資料夾管理員在新版本生效前即可查閱與下載該版本。</p>
+<p>* 系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，文件清單必須同時分列顯示預約版本與目前有效版本，不得以預約版本取代目前有效版本的清單列。</p>
+<p>* 預約版本的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。目前有效版本仍顯示其版本號。</p>
+<p>* 管理員可從預約版本的操作選單執行「修改文件」，但只允許修改新版本號、修訂日期、發行日期與異動說明，不得藉此修改文件編號、文件名稱或替換版本檔案。</p>
+<p>* 管理員可刪除尚未生效的最新預約版本。刪除後，該版本、修訂對照資料與檔案有效狀態必須於同一筆交易處理，並將前一個未撤回版本的 <code>effective_until</code> 清空，使目前有效版本繼續生效。</p>
+<p>* 若刪除的是尚未生效的第一版，且文件沒有其他版本，系統必須一併刪除文件主檔。</p>
+<p>若新版本生效日期為上傳當日：</p>
+<p>* 上一個版本的 <code>effective_until</code> (結束時間) 設為新版本生效時間。</p>
+<p>* 一般使用者於版更完成後看到新版本。</p>
+<p>同一份文件同一時間只允許一個尚未撤回且尚未生效的預約版本。此限制必須由後端 API (應用程式介面) 檢查，不得僅依賴前端畫面防呆；判斷條件為同一 <code>document_id</code> (文件識別碼) 下不存在 <code>cancelled_at</code> (撤回日期) 為空白且 <code>effective_at</code> (生效時間) 晚於目前時間的版本。若已存在預約版本，資料夾管理員必須先撤回該版本並回復前版，才能再上傳新的預約版本。</p>
+<p>版本生效不需另行改寫版本狀態；系統以 <code>effective_at</code> (生效時間)、<code>effective_until</code> (結束時間) 與 <code>cancelled_at</code> (撤回日期) 判斷目前有效版本。</p>
+<h3>4.10. 撤回版本並回復前版</h3>
+<p>資料夾管理員可對最新一筆未撤回版本執行「撤回版本並回復前版」。</p>
+<p>不論該版本是否已到生效日期，撤回時均依下列規則處理：</p>
+<p>* 被撤回版本寫入 <code>cancelled_at</code> (撤回日期)、<code>cancelled_by</code> (撤回人員) 與 <code>cancel_reason</code> (撤回原因)。</p>
+<p>* 被撤回版本的正式發佈檔案、異動說明與修訂對照表永久保留。</p>
+<p>* 前一個版本的 <code>effective_until</code> (結束時間) 清空。</p>
+<p>* 撤回完成後，一般使用者只看到前一個版本。</p>
+<p>* 被撤回版本僅資料夾管理員可查閱，作為稽核紀錄。</p>
+<p>若被撤回版本曾經生效，系統不得刪除或改寫其 <code>effective_at</code> (生效時間)。該版本的 <code>effective_at</code> (生效時間) 與 <code>cancelled_at</code> (撤回日期) 共同表示該版本曾經流通，並於撤回時間停止對一般使用者可見。前一版 <code>effective_until</code> (結束時間) 清空僅用於目前有效版本解析，不代表抹除新版曾經流通之事實，實際時間線需由全域稽核紀錄保存。</p>
+<p>已撤回版本不得重新啟用。若未來要再次使用相同內容，必須走一般文件版更流程重新建立版本。</p>
+<h3>4.11. 手動廢止文件</h3>
+<p>資料夾管理員可手動廢止整份文件。</p>
+<p>手動廢止時：</p>
+<p>* 必須填寫廢止原因。</p>
+<p>* 必須上傳廢止公文或核准文件。</p>
+<p>* 文件主檔狀態改為 <code>Obsolete</code> (已廢止)。</p>
+<p>* 文件主檔寫入廢止日期。</p>
+<p>* 文件主檔寫入廢止原因。</p>
+<p>* 文件主檔保存廢止公文或核准文件。</p>
+<p>* 既有版本的 <code>effective_at</code> (生效時間)、<code>effective_until</code> (結束時間) 與撤回紀錄不改寫。</p>
+<p>廢止成功後，一般使用者不再看到該文件。</p>
+<p>文件主檔狀態為 <code>Obsolete</code> (已廢止) 後，不得再執行上傳新版、預約生效、撤回版本並回復前版等版本生命週期操作。若需重新啟用相同內容，應建立新文件或另行定義重新發行流程。</p>
+<h3>4.12. 資料夾封存造成的文件廢止</h3>
+<p>當資料夾被封存時，其下文件需同步處理：</p>
+<p>* 文件主檔狀態改為 <code>Obsolete</code> (已廢止)。</p>
+<p>* 文件主檔寫入廢止日期。</p>
+<p>* 文件主檔自動填入廢止原因：「因所屬資料夾封存而自動廢止」。</p>
+<p>* 此類系統自動廢止不強制要求上傳廢止公文。</p>
+<p>* 既有版本的 <code>effective_at</code> (生效時間)、<code>effective_until</code> (結束時間) 與撤回紀錄不改寫。</p>
+<p>資料夾封存與文件主檔廢止註記需於同一個資料庫交易內完成。若任一文件廢止註記失敗，整個封存交易必須回復。</p>
+<p>因資料夾封存而變為 <code>Obsolete</code> (已廢止) 的文件，同樣不得再執行上傳新版、預約生效、撤回版本並回復前版等版本生命週期操作。</p>
+<h3>4.13. 一般使用者權限</h3>
+<p>一般使用者僅能看到符合下列文件狀態與版本條件的文件：</p>
+<p>* 文件主檔狀態為 <code>Effective</code> (有效的) 的文件。</p>
+<p>* 未被撤回且目前時間落在有效期間內的目前版本。</p>
+<p>一般使用者可見文件的位置權限需符合下列任一條件：</p>
+<p>* 位於根目錄 (<code>folder_id = 0</code>)。</p>
+<p>* 所屬一般資料夾為正常狀態，且符合該管理資料夾節點 ACL 授權規則。</p>
+<p>一般使用者不可看到：</p>
+<p>* 尚未生效版本。</p>
+<p>* 歷史版本。</p>
+<p>* 已撤回版本。</p>
+<p>* 已廢止文件。</p>
+<p>* 廢止原因。</p>
+<p>* 廢止公文。</p>
+<p>* PDF 原始檔。</p>
+<p>* PDF 文件之原始編修檔案。</p>
+<p>一般使用者對 PDF、圖檔與其他非 PDF 文件之操作如下：</p>
+<p>* PDF (可攜式文件格式)：僅可線上預覽，不提供下載按鈕；後端 API (應用程式介面) 亦不得提供一般使用者下載正式 PDF 原檔。</p>
+<p>* 瀏覽器支援的圖檔：提供開新視窗預覽及下載。</p>
+<p>* 其他非 PDF 文件：僅提供下載，不提供線上預覽。</p>
+<p>一般使用者的資料夾瀏覽與搜尋結果均須套用上述規則；不得在搜尋結果中揭露無權限、尚未生效、歷史、已撤回或已廢止文件的標題、版本、檔名或其他可識別資訊。</p>
+<h4>4.13.1. 跨資料夾文件關鍵字搜尋</h4>
+<p>* 系統提供跨資料夾文件關鍵字搜尋，不使用前端目前清單篩選，也不搜尋符合條件的資料夾。</p>
+<p>* 預設搜尋範圍為目前資料夾及其所有正常狀態子資料夾；使用者可切換為所有目前帳號可見的資料夾。位於文件庫根目錄時，兩種範圍均包含根目錄文件及所有可見資料夾。</p>
+<p>* 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發布檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。</p>
+<p>* 搜尋必須由使用者按下 <code>Enter</code> 或「搜尋」按鈕後執行，不得於每次輸入字元時送出跨資料夾查詢。</p>
+<p>* 一般使用者只可搜尋有效文件的目前有效版本。對文件所屬資料夾具有管理權的使用者，可同時搜尋及看到該管理範圍內尚未生效的預約版本；不得看到其他資料夾的預約、歷史、撤回或廢止資料。</p>
+<p>* 搜尋範圍、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。</p>
+<p>* 搜尋結果只顯示文件，並顯示文件所在資料夾完整路徑。結果提供前往所在資料夾、預覽、下載及符合目前使用者權限的既有文件管理操作。</p>
+<p>* 搜尋結果採伺服器端分頁，每頁固定 50 份文件；關鍵字或搜尋範圍改變時從第 1 頁重新查詢。</p>
+<h3>4.14. 資料夾管理員權限</h3>
+<p>ADMIN 除具備所有資料夾管理員權限外，另可於根目錄建立文件。根目錄文件不屬於任何資料夾管理員繼承範圍，非 ADMIN 不得建立、版更、廢止或維護根目錄文件；非 ADMIN 僅可依一般使用者權限查閱符合生效條件的根目錄文件。</p>
+<p>資料夾管理員可：</p>
+<p>* 新增子資料夾。</p>
+<p>* 在其可管理的資料夾指派或撤銷多位協同管理員。</p>
+<p>* 建立文件。</p>
+<p>* 上傳新版。</p>
+<p>* 透過「修改文件」修改文件編號，以及目前顯示版本的文件名稱、版本號、修訂日期、生效日期與異動說明。</p>
+<p>* 目前顯示版本為 PDF 且尚無原始編修檔案時，透過「修改文件」補上原始編修檔案；既有原始編修檔案不得覆蓋。</p>
+<p>* 上傳預約生效版本。</p>
+<p>* 撤回最新版本並回復前版。</p>
+<p>* 查看所有版本歷史。</p>
+<p>* 查看尚未生效版本。</p>
+<p>* 查看已撤回版本。</p>
+<p>* 下載歷史版本檔案。</p>
+<p>* 下載 PDF 正式原檔。</p>
+<p>* 上傳與下載 PDF 文件之原始檔案。</p>
+<p>* 查看廢止原因。</p>
+<p>* 下載廢止公文。</p>
+<p>* 手動廢止文件。</p>
+<p>協同管理員可執行上述資料夾與文件管理操作，但不得指派、撤銷或變更資料夾管理員及協同管理員。後端必須依目前登入者的管理身分類型執行授權檢查，不得只判斷其是否為有效管理員。</p>
+<h3>4.15. 修訂對照表</h3>
+<p>系統應支援修訂對照表功能。修訂對照表亦可稱為「修訂前後對照表」。</p>
+<p>依文件簽核流程原則，文件更版時應於簽核資料中附上修訂前後對照表。DMS 不負責產生修訂前後對照表，僅提供資料夾管理員於上傳新版時選擇是否一併保存修訂前後對照表。</p>
+<p>DMS 不強制要求每次上傳新版時必須提供修訂前後對照表。未上傳修訂前後對照表不得阻擋文件建檔、上傳新版或預約生效；系統可提示資料夾管理員確認是否需要保存修訂前後對照表。資料夾管理員可於版本建立後後補或更新該版本的修訂前後對照表。</p>
+<p>修訂對照表隸屬於單一文件版本。每一份修訂對照表需記錄本次版本與比較基準版本，預設以被本次版本排定取代的前一個版本作為比較基準。</p>
+<p>修訂明細可包含：</p>
+<p>* 修訂章節或頁碼。</p>
+<p>* 修訂前內容。</p>
+<p>* 修訂後內容。</p>
+<p>* 修訂原因。</p>
+<p>* 備註。</p>
+<p>修訂對照表屬於 DMS 的版本紀錄，不取代正式發佈檔案內容。</p>
+<p>任何具備文件查閱權限的使用者皆可檢視其可見文件版本之修訂對照表。若版本被撤回，該版本之修訂對照表仍需保留，並依版本可見性與歷史紀錄權限控管；無權檢視該版本者，不得透過修訂對照表取得已撤回版本內容。</p>
+<p>---</p>
+<h2>5. 全域稽核紀錄規格</h2>
+<p>DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登入、調閱、下載、資料夾屬性、資料夾管理員、ACL (存取控制清單)、調閱拒絕與 PDF 正式原檔下載拒絕等事件。</p>
+<h3>5.1. 稽核設計原則</h3>
+<p>* 稽核紀錄採追加寫入模式，系統一般功能不提供修改或刪除稽核紀錄的操作。</p>
+<p>* 稽核紀錄應由後端統一寫入，不得只依賴前端事件紀錄。</p>
+<p>* 管理類異動成功時，主要資料異動與稽核紀錄應在同一個短交易中完成；若稽核紀錄寫入失敗，該管理異動應回復。</p>
+<p>* 查閱、預覽與下載屬高頻事件，仍須留下紀錄；目前寫入 <code>dms_log</code> (系統稽核紀錄表)。後續若獨立為 <code>dms_doc_access_log</code> (文件存取紀錄表) 與分區表，查詢介面上應視為同一套全域稽核資料。</p>
+<ul>
+  <li>稽核紀錄應保存足以還原「事件時間、操作者、稽核事件、事件來源、資源位置、操作標的及執行結果」的資訊。</li>
+  <li>各類事件均使用相同稽核語意；文件與資料夾事件的資源位置為完整資料夾路徑，登入事件的資源位置為登入介面，系統管理事件的資源位置為對應功能區。</li>
+  <li>清單用的資源位置、操作標的名稱及文件版本必須保存事件發生當下的快照，不得只依賴查詢當下的文件或資料夾名稱，以免後續更名造成歷史紀錄失真。</li>
+</ul>
+<h3>5.2. 必須記錄的事件範圍</h3>
+<p>下列事件均需寫入全域稽核紀錄：</p>
+<p>* 驗證事件：<code>AUTH_LOGIN_SUCCESS</code> (登入成功)、<code>AUTH_LOGIN_FAILED</code> (登入失敗)。</p>
+<ul>
+  <li>存取事件：<code>DOCUMENT_PREVIEWED</code> (調閱文件)、<code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)、<code>DOCUMENT_DOWNLOADED</code> (下載文件)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)。</li>
+</ul>
+<p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
+<p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
+<ul>
+  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</li>
+</ul>
+<h3>5.3. 稽核資料欄位</h3>
+<p>全域稽核紀錄建議至少保存下列欄位：</p>
+<table>
+  <thead>
+    <tr><th>欄位</th><th>說明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>dl_id</code> (流水號)</td><td>稽核紀錄唯一識別碼。</td></tr>
+    <tr><td><code>dl_event_at</code> (事件時間)</td><td>事件發生時間，以後端伺服器本地時間寫入。</td></tr>
+    <tr><td><code>dl_actor_uid</code> (操作者帳號)</td><td>執行動作的使用者帳號；未登入或登入失敗時可依實際情境留空或記錄輸入帳號。</td></tr>
+    <tr><td><code>dl_actor_name</code> (操作者姓名)</td><td>執行動作的使用者姓名。</td></tr>
+    <tr><td><code>dl_actor_role</code> (操作者角色)</td><td>執行動作當下的登入角色，僅記錄 <code>ADMIN</code> (系統管理員) 或 <code>USER</code> (一般使用者)。資料夾管理員屬於計算型管理身分，不寫入為登入角色。</td></tr>
+    <tr><td><code>dl_action</code> (動作代碼)</td><td>本次事件類型，例如 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)。</td></tr>
+    <tr><td><code>dl_resource_type</code> (資源類型)</td><td>被操作的資源類型，例如 <code>AUTH</code> (驗證)、<code>FOLDER</code> (資料夾)、<code>DOCUMENT</code> (文件主檔)、<code>VERSION</code> (文件版本)、<code>ACL</code> (存取控制清單)。</td></tr>
+    <tr><td><code>dl_resource_id</code> (資源識別碼)</td><td>被操作資源的主要識別碼。</td></tr>
+    <tr><td><code>dl_managed_df_fid</code> (管理資料夾節點識別碼)</td><td>事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。</td></tr>
+    <tr><td><code>df_fid</code> (資料夾識別碼)</td><td>事件所屬資料夾識別碼。</td></tr>
+    <tr><td><code>dd_id</code> (文件主檔識別碼)</td><td>事件所屬文件主檔識別碼。</td></tr>
+    <tr><td><code>ddv_id</code> (文件版本識別碼)</td><td>事件所屬文件版本識別碼。</td></tr>
+    <tr><td><code>dl_result</code> (執行結果)</td><td><code>SUCCESS</code> (成功)、<code>FAILED</code> (失敗) 或 <code>DENIED</code> (拒絕)。</td></tr>
+    <tr><td><code>dl_ip_address</code> (事件來源 IP)</td><td>使用者來源 IP 位址。</td></tr>
+    <tr><td><code>dl_user_agent</code> (瀏覽器識別資訊)</td><td>瀏覽器或用戶端識別資訊。</td></tr>
+    <tr><td><code>dl_request_id</code> (請求追蹤識別碼)</td><td>後端請求追蹤用識別碼，便於除錯與串接日誌。</td></tr>
+    <tr><td><code>dl_reason</code> (原因)</td><td>使用者填寫或系統產生的原因，例如撤回原因、廢止原因或拒絕原因。</td></tr>
+    <tr><td><code>dl_before_data</code> (變更前資料)</td><td>異動前快照，可使用 <code>JSONB</code> (JSON 二進位格式) 保存。</td></tr>
+    <tr><td><code>dl_after_data</code> (變更後資料)</td><td>異動後快照，可使用 <code>JSONB</code> (JSON 二進位格式) 保存。</td></tr>
+    <tr><td><code>dl_metadata</code> (額外資料)</td><td>其他補充資訊與 <code>audit_context</code> 事件快照；快照包含 <code>resource_location</code> (資源位置)、<code>target_type</code> (操作標的類型)、<code>target_name</code> (操作標的名稱) 與 <code>target_version</code> (文件版本)。</td></tr>
+  </tbody>
+</table>
+<h3>5.4. 查閱、預覽與下載紀錄</h3>
+<p>一般使用者與資料夾管理員的查閱、預覽、下載行為均需記錄。</p>
+<ul>
+  <li>PDF (可攜式文件格式) 預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (調閱文件)，並於 <code>metadata</code> (額外資料) 中保存文件編號、版本、預覽時間與浮水印相關資訊。</li>
+  <li>圖檔預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (調閱文件)，並保存檔名、副檔名、MIME Type (媒體類型) 與文件版本；圖檔預覽不記錄 PDF 浮水印資訊。</li>
+  <li>非 PDF 文件下載應記錄 <code>DOCUMENT_DOWNLOADED</code> (下載文件)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。</li>
+  <li>資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 <code>DOCUMENT_DOWNLOADED</code> (下載文件)，並於 <code>metadata</code> (額外資料) 中標示 <code>file_purpose</code> (檔案用途)，例如 <code>PUBLISHED_FILE</code> (正式發佈檔案)、<code>SOURCE_FILE</code> (原始編修檔)、<code>OBSOLETE_APPROVAL_FILE</code> (廢止公文)。</li>
+  <li>已登入使用者直接呼叫預覽 API，嘗試調閱無權限、已廢止、尚未生效、已撤回、已失效或不存在的文件版本時，後端應拒絕並記錄 <code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)。</li>
+  <li>一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)。</li>
+</ul>
+<h3>5.5. 權限異動與資料夾異動紀錄</h3>
+<p>資料夾屬性、資料夾管理員與 ACL (存取控制清單) 異動需保留變更前後資料。</p>
+<p>* 建立、修改、作廢或封存資料夾時，應記錄資料夾名稱、父層資料夾、狀態、異動人員與異動結果。</p>
+<p>* 指派、更換或撤銷第一層資料夾的資料夾管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存異動前後的資料夾管理員；異動完成後允許零名或一名有效資料夾管理員，但不得超過一名。</p>
+<p>* 指派或撤銷協同管理員時，應於 <code>before_data</code> (變更前資料) 與 <code>after_data</code> (變更後資料) 保存協同管理員清單差異、授權資料夾節點與操作者的管理身分類型。協同管理員嘗試再授權他人時，後端必須拒絕。</p>
+<p>* 修改管理資料夾節點 ACL (存取控制清單) 時，應保存授權模式，例如公開、特定群組或特定使用者，以及群組與使用者清單差異。</p>
+<h3>5.6. 文件與版本生命週期紀錄</h3>
+<p>文件主檔與文件版本的生命週期異動，均需寫入全域稽核紀錄。</p>
+<p>* 新建文件與上傳第一版時，需記錄文件主檔、第一筆版本、正式發佈檔案與生效時間。</p>
+<ul>
+  <li>上傳新版或預約生效版本時，需記錄 <code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、新版本資料，以及前一版本 <code>effective_until</code> (結束時間) 被設定為新版本 <code>effective_at</code> (生效時間) 的異動。</li>
+  <li>修改文件或預約版本資料時，需記錄 <code>DOCUMENT_UPDATED</code> (修改文件描述)，並在 <code>metadata</code> (額外資料) 保存異動前後資料。</li>
+  <li>撤回版本並回復前版時，需記錄 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)，並保存撤回原因。</li>
+</ul>
+<p>* 刪除第一版文件時，需記錄 <code>DOCUMENT_DELETED</code> (刪除文件)，並保存操作者、所屬資料夾、文件主檔識別碼、第一版版本識別碼、刪除原因與請求來源資訊。</p>
+<p>* 手動廢止文件時，需記錄廢止原因、廢止公文、文件主檔狀態從 <code>Effective</code> (有效的) 改為 <code>Obsolete</code> (已廢止) 的異動。</p>
+<h3>5.7. 存取拒絕紀錄</h3>
+<p>目前全域稽核紀錄已實作調閱拒絕與 PDF 正式原檔下載拒絕。</p>
+<ul>
+  <li>登入失敗需記錄 <code>AUTH_LOGIN_FAILED</code> (登入失敗)，但不得記錄明文密碼。</li>
+  <li>已登入使用者嘗試調閱無權限、已廢止或非目前有效的文件版本時，需記錄 <code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)，並保存文件、版本、資料夾、拒絕原因及請求來源資訊。</li>
+  <li>使用不存在或格式錯誤的版本識別碼調閱時，需保存嘗試值、操作者及請求來源資訊；因無法確認資料夾歸屬，只能由系統管理員查詢。</li>
+  <li>不支援線上預覽的檔案格式、檔案讀取錯誤、網路中斷或使用者取消操作，不列為 <code>DOCUMENT_PREVIEW_DENIED</code>。</li>
+  <li>一般使用者嘗試下載 PDF 正式原檔時，需記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)，並保存文件、版本與檔名資訊。</li>
+</ul>
+<h3>5.8. 稽核紀錄保存與不可竄改原則</h3>
+<p>* 稽核紀錄未另訂保存期限前，原則上永久保存。</p>
+<p>* 系統前端不提供稽核紀錄修改或刪除功能。</p>
+<p>* 後端應限制一般 API (應用程式介面) 不可更新或刪除稽核紀錄，僅允許查詢。</p>
+<p>* 高權限維護人員若需進行資料庫層級維護，應另以資料庫備份、維護紀錄或外部程序留存軌跡，不得透過 DMS 一般功能竄改稽核紀錄。</p>
+<p>---</p>
+<h2>6. API (應用程式介面) 對接與部署設定規格</h2>
+<p>V6 採用 Next.js 全端架構。瀏覽器端只呼叫同源 Next.js <code>/api/*</code> 路由；Route Handler 於伺服器端直接執行 PostgreSQL 存取、權限判斷、檔案處理與稽核紀錄。瀏覽器不得直接連線資料庫，也不得持有資料庫帳密、session 密鑰或實體檔案路徑。</p>
+<h3>6.1. 目前正式架構</h3>
+<pre><code class="language-text">使用者瀏覽器
+  ↓
+IIS / Apache / Nginx
+  ↓
+Next.js standalone server
+  ├→ PostgreSQL
+  └→ 本機或指定磁碟上的文件儲存目錄</code></pre>
+<p>* <strong>瀏覽器責任</strong>：渲染操作畫面、呼叫同源 <code>/api/*</code> 路由、接收下載或預覽檔案 stream。</p>
+<p>* <strong>Next.js 責任</strong>：提供 App Router 畫面、Route Handler API、<code>HttpOnly Cookie</code> session 管理，並於伺服器端執行 PostgreSQL 存取、權限判斷、文件版本生命週期、PDF / 非 PDF 規則、稽核紀錄、檔案存取控制，以及檔案 stream 與 response header 輸出。</p>
+<p>* <strong>Web Server 責任</strong>：IIS / Apache / Nginx 僅作為正式環境對外入口，將請求反向代理到 Next.js server。</p>
+<h3>6.2. 正式環境設定檔</h3>
+<p>V6 不再使用獨立後端主機網址。正式環境設定改由 Next.js server 讀取 <code>.env.production</code>（或環境變數）。</p>
+<pre><code class="language-text">DATABASE_URL=postgres://user:password@host:port/database
+PGPOOL_MAX=10
+DMS_STORAGE_ROOT=.\storage
+DMS_LEGACY_STORAGE_ROOT=
+SESSION_COOKIE_NAME=dms_session
+SESSION_SECRET=請改成至少 32 字元的隨機字串
+SESSION_MAX_AGE_SECONDS=28800
+SESSION_COOKIE_SECURE=true
+DMS_NEXT_HOST=127.0.0.1
+DMS_NEXT_PORT=3000</code></pre>
+<p>* <code>DATABASE_URL</code> PostgreSQL 資料庫連線字串（包含帳密、主機、埠與資料庫名稱）。</p>
+<p>* 未設定 <code>DATABASE_URL</code> 時，可改用 <code>PGHOST</code>、<code>PGPORT</code>、<code>PGDATABASE</code>、<code>PGUSER</code>、<code>PGPASSWORD</code> 分別設定 PostgreSQL 連線資訊。</p>
+<p>* <code>PGPOOL_MAX</code> 連線池最大連線數，預設為 <code>10</code>。</p>
+<p>* <code>DMS_STORAGE_ROOT</code> 為 V6 新上傳檔案的根目錄。完整路徑直接使用；相對路徑以 Next.js 執行目錄 <code>process.cwd()</code> 為基準解析；未設定時預設為 <code>./storage</code>。</p>
+<p>* <code>DMS_LEGACY_STORAGE_ROOT</code> 為既有 DMS 檔案的相容讀取根目錄，可使用完整路徑或相對路徑；不需讀取舊檔案時保持空白。</p>
+<p>* 新上傳檔案依 <code>YYYYMM</code> 月份建立子目錄，磁碟檔名使用時間戳記與 UUID 組合；資料庫保存相對儲存路徑，不向瀏覽器揭露實體絕對路徑。</p>
+<p>* <code>SESSION_SECRET</code> 必須使用正式環境專用隨機字串。</p>
+<p>* <code>SESSION_COOKIE_SECURE=true</code> 時，Web Server 對外入口必須使用 HTTPS。</p>
+<p>* <code>DMS_NEXT_HOST</code> 建議固定為 <code>127.0.0.1</code>，避免 Next.js server 直接暴露到使用者網段。</p>
+<p>* <code>DMS_NEXT_PORT</code> 必須與 Web Server 反向代理目標一致。</p>
+<h3>6.3. 登入連線規格與失敗處理</h3>
+<p>* <strong>瀏覽器登入請求</strong>：</p>
+<p>* <strong>Request URL</strong>：<code>/api/login</code></p>
+<p>* <strong>Method</strong>：<code>POST</code></p>
+<p>* <strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼"}</code></p>
+<p>* <strong>Content-Type</strong>：<code>application/json</code></p>
+<p>* <strong>Next.js 伺服器端行為</strong>：</p>
+<p>* Route Handler 解析請求中的帳號密碼。</p>
+<p>* Route Handler 直接查詢 PostgreSQL 資料庫中的使用者與系統管理員資料（透過 <code>lib/server/auth.ts</code>）。</p>
+<p>* 驗證通過後，將使用者資訊與管理員身分封裝成 session payload。</p>
+<p>* session payload 以 <code>HttpOnly Cookie</code> 加密保存，瀏覽器端 JavaScript 不可讀取敏感資料。</p>
+<p>* <strong>登入頁面欄位</strong>：</p>
+<p>* 登入畫面使用共用 <code>Modal</code> 元件顯示，禁止點擊背景遮罩關閉，且不顯示右上角關閉按鈕。</p>
+<p>* 進入登入畫面時，帳號與密碼輸入欄位預設保持空白。</p>
+<p>* 網頁初次載入、或點選登出時，滑鼠游標會自動定位在「使用者帳號」輸入框。</p>
+<p>* <strong>驗證失敗處理</strong>：</p>
+<p>* 當 API 回傳 <code>success: false</code> 時，系統會於介面顯示後端返回的 <code>error</code> 訊息。</p>
+<p>* 自動將「使用者帳號」與「密碼」輸入框之內容清空，且游標焦點會重新自動定位於「使用者帳號」輸入框。</p>
+<h3>6.4. Token (權杖)、Session 與路由管理</h3>
+<p>* <strong>Session 保存方式</strong>：</p>
+<p>* 使用者登入資訊不存放於 <code>sessionStorage</code>，防止 XSS 竊取。</p>
+<p>* 登入驗證資訊不放在 URL 參數中傳遞。</p>
+<p>* 登入狀態由 Next.js <code>HttpOnly Cookie</code> 管理。</p>
+<p>* <code>SESSION_MAX_AGE_SECONDS</code> 用於伺服器端驗證 session payload 的最長有效時間。</p>
+<p>* <strong>請求授權驗證</strong>：</p>
+<p>* 瀏覽器呼叫同源 <code>/api/*</code> 時自動帶上 cookie。</p>
+<p>* Next.js route handler 從 cookie 解析並解密驗證 session，確認當前使用者身分。</p>
+<p>* 所有的資料庫查詢與權限限制（例如資料夾 ACL）皆在 Next.js 伺服器端根據解密後的 session 資訊直接執行。</p>
+<p>* <strong>前端路由機制</strong>：</p>
+<p>* 前端畫面由 Next.js App Router 承載。</p>
+<p>* 切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</p>
+<p>* <code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤。</p>
+<h3>6.5. Next.js Route Handler 路由與處理服務清單</h3>
+<table>
+  <thead>
+    <tr><th>瀏覽器端呼叫</th><th>Next.js Route Handler</th><th>伺服器端核心服務與邏輯 (<code>lib/server/</code>)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>透過 <code>auth.ts</code> 驗證帳密並寫入 session cookie</td></tr>
+    <tr><td><code>POST /api/logout</code></td><td><code>app/api/logout/route.ts</code></td><td>清除 session cookie</td></tr>
+    <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>讀取 session cookie 並回傳登入狀態與身分</td></tr>
+    <tr><td><code>GET /api/test</code></td><td><code>app/api/test/route.ts</code></td><td>進行伺服器端資料庫連線測試</td></tr>
+    <tr><td><code>GET /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 查詢資料夾樹與 ACL</td></tr>
+    <tr><td><code>POST /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 建立新資料夾</td></tr>
+    <tr><td><code>PUT /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 重新命名或移動資料夾</td></tr>
+    <tr><td><code>DELETE /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 封存或刪除空資料夾</td></tr>
+    <tr><td><code>GET /api/folders/acl</code></td><td><code>app/api/folders/acl/route.ts</code></td><td>透過 <code>folderService.ts</code> 查詢資料夾有效 ACL 規則</td></tr>
+    <tr><td><code>POST /api/folders/acl</code></td><td><code>app/api/folders/acl/route.ts</code></td><td>透過 <code>folderService.ts</code> 新增或修改資料夾 ACL 授權</td></tr>
+    <tr><td><code>GET /api/employee?uid=...</code></td><td><code>app/api/employee/route.ts</code></td><td>透過 <code>employeeService.ts</code> 以 UID 精準檢索員工資料</td></tr>
+    <tr><td><code>GET /api/departments</code></td><td><code>app/api/departments/route.ts</code></td><td>透過 <code>employeeService.ts</code> 查詢所有部門</td></tr>
+    <tr><td><code>GET /api/documents?folder_id=...</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 查詢指定資料夾下之有效文件</td></tr>
+    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件、上傳新版本或修訂</td></tr>
+    <tr><td><code>GET /api/search?keyword=...&amp;scope=...&amp;folder_id=...&amp;page=...</code></td><td><code>app/api/search/route.ts</code></td><td>透過 <code>searchService.ts</code> 依 ACL、管理範圍及版本可見性執行跨資料夾文件關鍵字搜尋</td></tr>
+    <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 讀取實體檔案並傳送下載串流</td></tr>
+    <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得預覽串流，PDF 檔案則動態加入浮水印</td></tr>
+    <tr><td><code>GET /api/system/audit</code></td><td><code>app/api/system/audit/route.ts</code></td><td>透過 <code>systemService.ts</code> 查詢及分頁顯示 <code>dms_log</code></td></tr>
+    <tr><td><code>GET /api/system/audit/export</code></td><td><code>app/api/system/audit/export/route.ts</code></td><td>匯出目前條件的稽核 CSV 並記錄匯出事件</td></tr>
+    <tr><td><code>GET</code>、<code>POST</code>、<code>DELETE /api/system/settings/admins</code></td><td><code>app/api/system/settings/admins/route.ts</code></td><td>查詢、指定或撤銷系統管理員</td></tr>
+    <tr><td><code>GET /api/system/permissions</code></td><td><code>app/api/system/permissions/route.ts</code></td><td>查詢第一層資料夾權限總覽</td></tr>
+    <tr><td><code>GET /api/system/status</code></td><td><code>app/api/system/status/route.ts</code></td><td>查詢應用程式、資料庫、儲存空間與資料統計</td></tr>
+    <tr><td><code>GET</code>、<code>POST /api/system/recycle</code></td><td><code>app/api/system/recycle/route.ts</code></td><td>查詢、還原、永久刪除封存批次及重試檔案清理</td></tr>
+  </tbody>
+</table>
+<p><code>DELETE /api/folders</code> 透過 JSON body 的 <code>action</code> 欄位區分資料夾生命週期操作：<code>action = "archive"</code> 代表封存資料夾；<code>action = "delete"</code> 代表刪除（作廢）空資料夾。若未提供 <code>action</code>，後端為相容既有呼叫，視為封存資料夾。</p>
+<p>資料夾相關 API 必須遵守管理員身分資料最小化規則：</p>
+<p>* <code>GET /api/folders</code>、<code>GET /api/folders/acl</code>、文件清單與搜尋 API 的一般回應，不得包含資料夾管理員姓名、員工編號、登入帳號、直接管理員清單、繼承管理員清單或有效管理員清單。<code>GET /api/folders</code> 可依 session 與資料夾階層回傳目前登入者本人的 <code>manager_role</code>，值僅限 <code>PRIMARY</code>、<code>CO_MANAGER</code> 或 <code>null</code>，供清單顯示本人管理身分圖示；此欄位不得包含其他人員資料，也不得作為後端授權依據。</p>
+<p>* 使用者實際進入單一資料夾後，前端才可另行要求該資料夾的管理員顯示資料。後端必須先依 session 驗證目前登入者為 ADMIN，或為該資料夾的有效管理員，驗證成功後才回傳有效管理員姓名。</p>
+<p>* 一般資料夾畫面的管理員顯示資料回應只可包含姓名陣列，不得包含員工編號、登入帳號、直接或繼承來源、內部關聯鍵或其他個人資料，並須設定為不可由瀏覽器或共用代理伺服器持久快取。</p>
+<p>* 只有 ADMIN 點擊「管理員：未指派」或執行第一層資料夾管理員更換時，或該第一層資料夾的資料夾管理員開啟「指派協同管理員」畫面時，後端才可回傳目前權限授予作業所需的員工編號。協同管理員不得取得指派畫面所需資料。回傳範圍不得擴大至其他資料夾、其他使用者清單或與本次授權無關的個人資料。</p>
+<p>* 員工編號查詢回應必須設定 <code>Cache-Control: no-store</code>。前端關閉權限設定畫面或切換資料夾時，必須立即清除相關員工編號與查詢結果。</p>
+<p>* 一般使用者，或不具目前資料夾管理權的資料夾管理員，直接呼叫管理員顯示資料或權限設定員工編號 API 時，後端必須拒絕且不得回傳部分姓名、員工編號、筆數或其他可推導管理員身分的資訊。</p>
+<p>* API 不得以縮寫欄位、巢狀物件、除錯欄位、顯示文字或其他替代欄位，向非上述授權畫面夾帶管理員員工編號或其他禁止送往前端的資料。</p>
+<p>* 除受限的管理員姓名顯示與權限設定畫面所需的員工編號外，前端只接收完成畫面操作所需的資料與目前登入者的操作能力旗標；管理員身分比對及權限判斷全數留在伺服器端。</p>
+<p>* 第一層資料夾管理員指派、更換或撤銷，以及協同管理員指派或撤銷請求，只能提交該次操作必要的目標員工編號。後端必須同時驗證操作者身分、目標資料夾層級及授權類型；協同管理員提出任何管理員授權異動請求時一律拒絕。資料異動完成後，回應僅包含成功狀態、錯誤代碼及不含個人資料的訊息；前端需另依本節受限查詢規則重新取得目前資料夾的權限設定資料。</p>
+<h3>6.6. 檔案下載與 PDF 預覽處理規格</h3>
+<p>檔案下載與 PDF 預覽由 Next.js Route Handler 直接讀取磁碟實體檔案並處理，向瀏覽器輸出 binary stream 與必要 response header。</p>
+<p>* <strong>非 PDF 文件下載</strong>：</p>
+<p>* 瀏覽器呼叫 <code>GET /api/documents/download?version_id=...</code>。</p>
+<p>* Route Handler 呼叫 <code>documentService.downloadDocument</code> 取得磁碟實體檔案與元資料。</p>
+<p>* Next.js 必須保留並設定 <code>content-type</code>、<code>content-disposition</code>（含原始檔名）、<code>content-length</code>、<code>cache-control</code> 等檔案回應 header。</p>
+<p>* <strong>PDF 文件預覽</strong>：</p>
+<p>* 瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</p>
+<p>* Route Handler 透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得 PDF 原始檔，並呼叫 <code>pdfWatermark.ts</code>，使用 <code>pdf-lib</code> 與 <code>@pdf-lib/fontkit</code> 在伺服器端逐頁套用浮水印。</p>
+<p>* 加入浮水印後，Route Handler 必須重新設定正確的 <code>content-length</code> 與 <code>content-type: application/pdf</code>，再將處理後內容回傳瀏覽器。</p>
+<p>* PDF 預覽仍須遵守第 4 節規則：一般使用者僅可線上預覽，不提供 PDF 正式原檔下載。</p>
+<p>* <strong>禁止事項</strong>：</p>
+<p>* 不得將敏感之資料庫密碼或密鑰洩漏至瀏覽器端。</p>
+<p>* 不得在客戶端暴露檔案伺服器的實體儲存絕對路徑（如磁碟目錄路徑）。</p>
+<h3>6.7. 使用者即時檢索 (Lazy Lookup，即時檢索) 規格</h3>
+<p>為避免使用者人數過大時造成網路頻寬與資料庫效能耗損，本系統全面禁止一次撈出所有使用者資料的行為。</p>
+<p>本節即時檢索僅適用於 ACL 的「授權特定同仁」，以及「指派資料夾管理員」、「指派協同管理員」與「編輯資料夾屬性」畫面的單一員工精準檢索，不得用於載入完整管理員或員工清單。資料夾管理員、協同管理員姓名與既有授權員工編號必須由第 6.5 節所定義的受限單一資料夾查詢流程取得；其他畫面不得使用 <code>/api/employee</code> 或其他端點反查管理員的姓名、員工編號或登入帳號。</p>
+<p>* <strong>API 限制</strong>：後端 <code>/employee</code> API 僅限單一使用者 UID 精準檢索。</p>
+<p>* <strong>檢索端點</strong>：<code>GET /api/employee?uid=&lt;使用者代碼&gt;</code>。</p>
+<p>* <strong>空參數處理</strong>：若未傳入 <code>uid</code> 參數，系統不得執行完整使用者清單查詢。</p>
+<p>* <strong>前端輸入與防呆</strong>：</p>
+<p>* <strong>動態多列輸入框 (Dynamic Row Inputs)</strong>：在指派「授權特定同仁」時，使用者以手動逐列輸入使用者代碼，並捨棄傳統的「+ 新增列」按鈕以提升操作流暢度。當輸入框失去焦點 (Blur) 時，系統將自動以非同步方式進行姓名匹配。</p>
+<p>* <strong>自動追加與聚焦 (Auto-append &amp; Focus)</strong>：代碼輸入完成並成功檢索出姓名後，系統會自動於下方追加一列新的空白輸入列，並將游標焦點 (Focus) 自動轉移至新欄位，讓使用者能雙手不離鍵盤連續輸入多位同仁代碼。</p>
+<p>* <strong>視覺反饋</strong>：若檢索成功，以綠色粗體顯示姓名並標記該列有效；若查無此人，以紅色字樣顯示「查無此使用者」並標記該列無效。</p>
+<p>* <strong>嚴格防呆與強制對話框</strong>：</p>
+<p>* 若至少一列輸入了代碼但未成功檢索姓名（無效代碼），則系統會顯示紅字警告阻擋存檔，且「確定」按鈕會被禁用。</p>
+<p>* 權限設定等重要對話框 (Modal) 採用強制遮罩 (<code>closeOnOverlayClick=false</code>)，禁止使用者因誤觸背景而關閉視窗導致設定資料遺失。</p>
+<h3>6.8. 輸入畫面、鍵盤導航與必填驗證規格</h3>
+<p>* <strong>統一顯示方式</strong>：所有輸入畫面使用共用 <code>Modal</code> 元件顯示；工具列搜尋框不屬於輸入畫面，不適用此規則。</p>
+<p>* <strong>開啟時焦點</strong>：<code>Modal</code> 開啟後，焦點自動位於第一個可見且可編輯的輸入框。</p>
+<p>* <strong>Enter 導航</strong>：</p>
+<p>* 在非最後一個可編輯輸入框按下 <code>Enter</code>，系統阻止預設提交，並將焦點移至下一個可編輯輸入框。</p>
+<p>* 僅在最後一個可編輯輸入框按下 <code>Enter</code> 時，才觸發 <code>Modal</code> 底部操作區中第一個符合 <code>.btn-primary</code> 或 <code>.btn-danger</code> 且未停用的主要按鈕。</p>
+<p>* 中文輸入法組字期間的 <code>Enter</code> 不得觸發欄位導航或提交。</p>
+<p>* 隱藏、唯讀、停用、核取方塊、選項按鈕及檔案欄位不列入鍵盤導航順序。</p>
+<p>* <strong>必填欄位驗證</strong>：</p>
+<p>* 使用者提交輸入畫面時，若必填欄位未填寫，系統必須顯示明確的錯誤訊息框，不得僅以停用主要按鈕或無訊息返回阻擋操作。</p>
+<p>* 使用者關閉錯誤訊息框後，焦點必須回到第一個未通過驗證的必填欄位；檔案必填欄位則聚焦至對應的檔案選擇按鈕。</p>
+<p>---</p>
+<h2>7. 版本控管與自動紀錄腳本</h2>
+<p>本專案使用 Git (版本控管工具) 保存本機版本，並以 GitHub (遠端程式碼代管服務) 作為遠端備份位置。根目錄提供兩個批次檔，分別處理「本機 commit (提交)」與「推送 GitHub (遠端程式碼代管服務)」。</p>
+<h3>7.1. 排除配置 (<code>.gitignore</code>)</h3>
+<p>* 根目錄 <code>.gitignore</code> 排除了 <code>dms/node_modules/</code>、<code>dms/dist/</code>、<code>dms/.next/</code>、<code>_deploy/</code>、Delphi 編譯輸出 <code>dmsapi/Win64/</code>、<code>__history/</code>、<code>__recovery/</code>、暫存檔與日誌等不應進入版本庫的內容。</p>
+<p>* 若新增工具或產物目錄，應先確認是否需要加入 <code>.gitignore</code>，避免把大型依賴、編譯產物或本機設定提交進 Git (版本控管工具)。</p>
+<h3>7.2. 本機 Git 備份 (<code>_git.bat</code>)</h3>
+<p>用途：將目前專案變更保存成本機 Git commit (提交)，不會推送到 GitHub (遠端程式碼代管服務)。</p>
+<p>執行方式：</p>
+<pre><code class="language-bat">_git.bat</code></pre>
+<p>可指定 commit (提交) 訊息：</p>
+<pre><code class="language-bat">_git.bat "修正登入與資料夾權限"</code></pre>
+<p>流程：</p>
+<p>* 檢查 Git (版本控管工具) 是否可用。</p>
+<p>* 若目前資料夾尚未初始化 Git (版本控管工具)，會自動執行 <code>git init</code>。</p>
+<p>* 若尚未設定 Git (版本控管工具) 使用者資訊，會設定本專案的本機預設值。</p>
+<p>* 顯示目前異動檔案。</p>
+<p>* 有變更時執行 <code>git add -A</code> 與 <code>git commit</code>。</p>
+<p>* 沒有變更時不建立空 commit (提交)。</p>
+<p>適用時機：完成一段功能修改、修 bug、調整文件或批次檔後，先用此腳本建立本機還原點。</p>
+<h3>7.3. GitHub 遠端備份 (<code>_github.bat</code>)</h3>
+<p>用途：將本機 <code>main</code> 分支推送到 GitHub repository (GitHub 儲存庫)。實際遠端位置以根目錄 Git remote 設定為準。</p>
+<p>執行方式：</p>
+<pre><code class="language-bat">_github.bat</code></pre>
+<p>可指定自動本機備份的 commit (提交) 訊息：</p>
+<pre><code class="language-bat">_github.bat "完成資料夾 ACL 調整"</code></pre>
+<p>流程：</p>
+<p>* 檢查目前是否為 Git repository (Git 儲存庫)。</p>
+<p>* 檢查目前分支與 <code>origin</code> remote (遠端來源)。</p>
+<p>* 若偵測到尚未提交的檔案變更，會自動先呼叫 <code>_git.bat</code> 建立本機 commit (提交)。</p>
+<p>* <code>_git.bat</code> 成功後，重新確認工作目錄乾淨。</p>
+<p>* 顯示尚未推送到 GitHub (遠端程式碼代管服務) 的 commit (提交)。</p>
+<p>* 執行 <code>git push -u origin &lt;目前分支&gt;</code>。</p>
+<p>若 <code>_git.bat</code> 失敗、工作目錄仍有未提交變更、或 GitHub (遠端程式碼代管服務) 權限/網路驗證失敗，腳本會中止推送。</p>
+<h3>7.4. 建議使用順序</h3>
+<p>只想先保存本機版本時，執行：</p>
+<pre><code class="language-bat">_git.bat "本次修改摘要"</code></pre>
+<p>要同時保存本機並同步 GitHub (遠端程式碼代管服務) 時，直接執行：</p>
+<pre><code class="language-bat">_github.bat "本次修改摘要"</code></pre>
+<p><code>_github.bat</code> 已會自動處理本機 commit (提交)，因此日常同步遠端時可直接使用 <code>_github.bat</code>。</p>
+<h2>8. 系統管理功能區</h2>
+<h3>8.1. 導覽與權限</h3>
+<ul>
+  <li>左側樹狀選單在「文件庫」下方提供第二個 root「系統管理」。登入角色為 <code>ADMIN</code> 的系統管理員，以及具有至少一項目前有效資料夾管理員或協同管理員指派的使用者可見。</li>
+  <li>系統管理員展開「系統管理」後，依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。資料夾管理員及協同管理員只顯示「系統稽核紀錄」。</li>
+  <li>系統管理頁面開啟時不得載入文件清單；返回文件庫時保留原資料夾位置。</li>
+  <li><code>/api/system/audit</code> 與 <code>/api/system/audit/export</code> 必須在後端驗證目前登入者為系統管理員、資料夾管理員或協同管理員；其他 <code>/api/system/*</code> API 仍只允許 <code>ADMIN</code> 使用。未具相應權限時回傳 HTTP <code>403</code>。</li>
+</ul>
+<h3>8.2. 系統稽核紀錄</h3>
+<ul>
+  <li>查詢來源固定為現行 <code>dms_log</code>，不合併早期保留的 <code>dms_audit_log</code>。</li>
+  <li>系統管理員可查詢全部稽核紀錄。資料夾管理員及協同管理員只能查詢目前有效管理節點及其全部子資料夾的 <code>DOCUMENT</code>、<code>VERSION</code> 文件事件。</li>
+  <li>管理範圍於每次列表、總筆數、篩選選項、明細及 CSV 匯出時，依目前有效的 <code>dms_folder_managers</code> 指派與事件 <code>df_fid</code> 重新判斷，不得依賴前端隱藏或 <code>dl_managed_df_fid</code> 快照。</li>
+  <li>新接任的資料夾管理員或協同管理員可查看接任前的歷史文件紀錄；管理權撤銷後立即失去該範圍的查詢與匯出權限。系統不保存每筆事件發生當時的管理者名單。</li>
+  <li>同一使用者具有多個管理指派時，查詢範圍為各管理資料夾子樹的聯集，同一筆稽核紀錄不得重複顯示。</li>
+  <li>不存在或格式錯誤的版本識別碼所產生的 <code>DOCUMENT_PREVIEW_DENIED</code> 沒有資料夾歸屬，只提供系統管理員查詢。</li>
+  <li>提供日期區間、操作者、稽核事件、執行結果、關鍵字、分頁與單筆明細。</li>
+  <li>預設查詢最近一個月，每頁可選 25、50 或 100 筆。</li>
+</ul>
+<p>* CSV 匯出沿用目前條件，採 UTF-8 BOM，單次上限 50,000 筆；超過上限時必須要求縮小條件，不得截斷。</p>
+<p>* 匯出成功後寫入 <code>AUDIT_LOG_EXPORTED</code>。</p>
+<ul>
+  <li>清單固定依序顯示「事件時間、操作者、稽核事件、資源位置、操作標的、執行結果」及明細操作，單筆紀錄應維持單列，內容過長時允許以省略號截斷並提供完整提示。</li>
+  <li>清單、篩選選項、明細與 CSV 的稽核事件、操作標的及執行結果一律使用中文顯示，不得直接顯示資料庫代碼或英文狀態。</li>
+  <li>操作者欄位固定使用「姓名 + 半形空格 + 員工編號」格式；無登入身分的系統事件以「系統 無員工編號」顯示。</li>
+  <li>明細另顯示操作者角色、結果原因、事件來源 IP、用戶端識別資訊、請求追蹤識別碼、關聯識別碼、異動前後資料及其他技術資料。</li>
+  <li>登入失敗必須保存使用者嘗試登入的帳號與事件來源，但不得保存密碼。</li>
+</ul>
+<h3>8.3. 系統設定</h3>
+<p>* 系統設定為後續系統層級設定的統一入口，目前只提供「系統管理員」設定，不顯示空白或尚未實作的分類。</p>
+<p>* 系統管理員以員工編號指定，後端必須驗證員工存在且在職。</p>
+<p>* 撤銷管理員採 <code>dms_admins.da_dc = 'Y'</code>，不得物理刪除紀錄。</p>
+<p>* 系統管理員不得撤銷自己，也不得撤銷最後 1 位有效管理員。</p>
+<p>* 指定與撤銷分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>，保存異動前後資料。</p>
+<p>* 管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。</p>
+<h3>8.4. 權限總覽與系統狀態</h3>
+<p>* 權限總覽唯讀顯示有效第一層資料夾的主要管理員、協同管理員、公開或限閱狀態、授權摘要、子資料夾數與文件數。</p>
+<p>* 權限總覽提供篩選及「前往資料夾」，實際權限異動仍由文件庫中的資料夾管理畫面處理。</p>
+<p>* 系統狀態顯示應用程式、PostgreSQL、連線池、儲存空間、必要環境設定、資料統計及待清理工作數量。</p>
+<p>* 系統狀態不得回傳資料庫密碼、Session 密鑰或完整連線字串，只能回傳設定是否安全或完整。</p>
+<h3>8.5. 資源回收區</h3>
+<p>* 資源回收區以根資料夾的 <code>df_arcat</code> 識別同一次遞迴封存批次，只顯示批次根節點。</p>
+<p>* 還原只恢復同批資料夾，以及 <code>dd_obs_src = 2</code> 且封存時間相符的文件；手動廢止文件不得恢復。</p>
+<p>* 封存滿 90 天後才允許永久刪除，執行者必須輸入完整資料夾名稱確認。</p>
+<p>* 永久刪除將資料夾及關聯 <code>dms_file</code> 後設資料改為作廢，保留文件、版本、修訂與稽核後設資料，並刪除所有關聯實體檔案。</p>
+<p>* 實體檔案先移入 <code>.purge/&lt;清理工作 ID&gt;</code> 隔離區，再於資料庫交易內作廢資料並寫入 <code>FOLDER_PURGED</code>。</p>
+<p>* 資料庫提交後若隔離區刪除失敗，<code>dms_purge_job</code> 維持 <code>CLEANUP_PENDING</code>，管理員可於資源回收區重試。</p>
+<p>* 還原成功寫入 <code>FOLDER_RESTORED</code>。永久刪除完成後不得由介面還原。</p>
+<h3>8.6. 系統管理稽核事件</h3>
+<p>* <code>SYSTEM_ADMIN_ASSIGNED</code>：指定系統管理員。</p>
+<p>* <code>SYSTEM_ADMIN_REVOKED</code>：撤銷系統管理員。</p>
+<p>* <code>AUDIT_LOG_EXPORTED</code>：匯出稽核紀錄。</p>
+<p>* <code>FOLDER_RESTORED</code>：還原封存批次。</p>
+<p>* <code>FOLDER_PURGED</code>：永久作廢封存批次並啟動實體檔案清理。</p>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -31,12 +31,17 @@ const unauthorizedMessages = new Set([
   '帳號或密碼錯誤。'
 ]);
 
+const forbiddenMessages = new Set([
+  '只有系統管理員可以使用此功能。',
+  '只有系統管理員、資料夾管理員或協同管理員可以使用此功能。'
+]);
+
 export const authOrServerError = (error: unknown) => {
   if (error instanceof Error && unauthorizedMessages.has(error.message)) {
     return fail(error.message, 401);
   }
 
-  if (error instanceof Error && error.message === '只有系統管理員可以使用此功能。') {
+  if (error instanceof Error && forbiddenMessages.has(error.message)) {
     return fail(error.message, 403);
   }
 
@@ -47,7 +52,7 @@ export const systemRouteError = (error: unknown) => {
   if (error instanceof Error && unauthorizedMessages.has(error.message)) {
     return fail(error.message, 401);
   }
-  if (error instanceof Error && error.message === '只有系統管理員可以使用此功能。') {
+  if (error instanceof Error && forbiddenMessages.has(error.message)) {
     return fail(error.message, 403);
   }
   return fail(error instanceof Error ? error.message : String(error), 400);

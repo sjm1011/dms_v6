@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const GET = async (request: NextRequest) => {
   try {
     const session = requireSession(request);
-    const versionId = Number(request.nextUrl.searchParams.get('version_id') || 0);
+    const versionId = request.nextUrl.searchParams.get('version_id') || '';
     const file = await getFileForAccess(session.user, versionId, 'download');
 
     return new NextResponse(Readable.toWeb(file.stream) as ReadableStream, {

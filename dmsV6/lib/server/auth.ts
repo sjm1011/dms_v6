@@ -98,3 +98,32 @@ export const requireAdmin = (user: SessionUser) => {
 
   return user;
 };
+
+export const canAccessAuditLogs = async (user: SessionUser) => {
+  if (isAdmin(user)) {
+    return true;
+  }
+
+  const result = await query<{ allowed: boolean }>(
+    `SELECT EXISTS (
+        SELECT 1
+          FROM dms_folder_managers m
+          JOIN dms_folders f ON f.df_fid = m.df_fid
+         WHERE m.usr_uid = $1
+           AND m.dfm_type IN (1, 2)
+           AND m.dfm_dc = 'N'
+           AND f.df_status = 1
+      ) AS allowed`,
+    [user.id.toUpperCase()]
+  );
+
+  return Boolean(result.rows[0]?.allowed);
+};
+
+export const requireAuditAccess = async (user: SessionUser) => {
+  if (!await canAccessAuditLogs(user)) {
+    throw new Error('只有系統管理員、資料夾管理員或協同管理員可以使用此功能。');
+  }
+
+  return user;
+};

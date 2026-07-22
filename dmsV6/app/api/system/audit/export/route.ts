@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { requireAdmin, requireSession } from '../../../../../lib/server/auth';
+import { requireAuditAccess, requireSession } from '../../../../../lib/server/auth';
 import { systemRouteError } from '../../../../../lib/server/http';
 import { exportAuditCsv } from '../../../../../lib/server/systemService';
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const GET = async (request: NextRequest) => {
   try {
     const session = requireSession(request);
-    requireAdmin(session.user);
+    await requireAuditAccess(session.user);
     const q = request.nextUrl.searchParams;
     const csv = await exportAuditCsv(session.user, {
       dateFrom: q.get('date_from') || undefined,

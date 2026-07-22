@@ -7,6 +7,7 @@ import { formatAuditActor, getAuditActionLabel, getAuditResourceLabel, getAuditR
 import { writeAudit } from './auditService';
 import { pool, query, withTransaction } from './db';
 import { getLegacyStorageRoot, getStorageRoot, resolveStoredPath } from './fileStorage';
+import { isAdmin } from './auth';
 
 export interface AuditFilters {
   dateFrom?: string;
@@ -33,7 +34,21 @@ const normalizeDate = (value: string | undefined, endOfToday = false) => {
   return date;
 };
 
-const buildAuditWhere = (filters: AuditFilters) => {
+const managedFoldersCte = `managed_folders AS (
+        SELECT f.df_fid
+          FROM dms_folders f
+          JOIN dms_folder_managers m ON m.df_fid = f.df_fid
+         WHERE m.usr_uid = $1
+           AND m.dfm_type IN (1, 2)
+           AND m.dfm_dc = 'N'
+           AND f.df_status = 1
+        UNION
+        SELECT child.df_fid
+          FROM dms_folders child
+          JOIN managed_folders parent ON child.df_pid = parent.df_fid
+      )`;
+
+const buildAuditWhere = (user: SessionUser, filters: AuditFilters) => {
   const conditions: string[] = [];
   const params: unknown[] = [];
   const add = (sql: string, value: unknown) => {
@@ -41,43 +56,60 @@ const buildAuditWhere = (filters: AuditFilters) => {
     conditions.push(sql.replace('?', `$${params.length}`));
   };
 
+  if (!isAdmin(user)) {
+    params.push(user.id.toUpperCase());
+    conditions.push(`l.dl_resource_type IN ('DOCUMENT', 'VERSION')`);
+    conditions.push('l.df_fid IN (SELECT df_fid FROM managed_folders)');
+  }
+
   const defaultFrom = new Date();
   defaultFrom.setDate(defaultFrom.getDate() - 30);
   const dateFrom = normalizeDate(filters.dateFrom) || defaultFrom;
   const dateTo = normalizeDate(filters.dateTo, true) || new Date();
   if (dateFrom > dateTo) throw new Error('開始日期不可晚於結束日期。');
 
-  add('dl_event_at >= ?', dateFrom);
-  add('dl_event_at <= ?', dateTo);
+  add('l.dl_event_at >= ?', dateFrom);
+  add('l.dl_event_at <= ?', dateTo);
   if (filters.actor?.trim()) {
     const actor = `%${filters.actor.trim()}%`;
     params.push(actor);
     const actorParam = `$${params.length}`;
-    conditions.push(`(dl_actor_uid ILIKE ${actorParam} OR dl_actor_name ILIKE ${actorParam})`);
+    conditions.push(`(l.dl_actor_uid ILIKE ${actorParam} OR l.dl_actor_name ILIKE ${actorParam})`);
   }
-  if (filters.action?.trim()) add('dl_action = ?', filters.action.trim());
-  if (filters.result?.trim()) add('dl_result = ?', filters.result.trim());
+  if (filters.action?.trim()) add('l.dl_action = ?', filters.action.trim());
+  if (filters.result?.trim()) add('l.dl_result = ?', filters.result.trim());
   if (filters.keyword?.trim()) {
     const keyword = `%${filters.keyword.trim()}%`;
     params.push(keyword);
     const p = `$${params.length}`;
-    conditions.push(`(dl_resource_type ILIKE ${p} OR dl_resource_id ILIKE ${p} OR dl_reason ILIKE ${p} OR dl_metadata::text ILIKE ${p})`);
+    conditions.push(`(l.dl_resource_type ILIKE ${p} OR l.dl_resource_id ILIKE ${p} OR l.dl_reason ILIKE ${p} OR l.dl_metadata::text ILIKE ${p})`);
   }
 
-  return { where: `WHERE ${conditions.join('\n         AND ')}`, params };
+  return {
+    cte: isAdmin(user) ? '' : managedFoldersCte,
+    where: `WHERE ${conditions.join('\n         AND ')}`,
+    params
+  };
 };
 
-export const listAuditLogs = async (filters: AuditFilters, exportAll = false) => {
-  const { where, params } = buildAuditWhere(filters);
+export const listAuditLogs = async (user: SessionUser, filters: AuditFilters, exportAll = false) => {
+  const { cte, where, params } = buildAuditWhere(user, filters);
   const pageSize = exportAll ? 50_001 : Math.min(Math.max(Number(filters.pageSize) || 50, 1), 100);
   const page = exportAll ? 1 : Math.max(Number(filters.page) || 1, 1);
-  const countResult = await query<{ total: string }>(`SELECT COUNT(*) AS total FROM dms_log ${where}`, params);
+  const countResult = await query<{ total: string }>(
+    `${cte ? `WITH RECURSIVE ${cte}` : ''}
+      SELECT COUNT(*) AS total
+        FROM dms_log l
+        ${where}`,
+    params
+  );
   const total = Number(countResult.rows[0]?.total || 0);
   if (exportAll && total > 50_000) throw new Error('匯出資料超過 50,000 筆，請縮小查詢條件。');
 
   const dataParams = [...params, pageSize, (page - 1) * pageSize];
   const result = await query(
-    `WITH RECURSIVE folder_paths AS (
+    `WITH RECURSIVE ${cte ? `${cte},` : ''}
+      folder_paths AS (
         SELECT f.df_fid,
                f.df_pid,
                ('檔案庫 / ' || f.df_name)::text AS folder_path
@@ -162,7 +194,15 @@ export const listAuditLogs = async (filters: AuditFilters, exportAll = false) =>
   );
   const actions = exportAll
     ? []
-    : (await query<{ action: string }>('SELECT DISTINCT dl_action AS action FROM dms_log ORDER BY dl_action')).rows.map(row => row.action);
+    : (await query<{ action: string }>(
+      `${cte ? `WITH RECURSIVE ${cte}` : ''}
+       SELECT DISTINCT l.dl_action AS action
+         FROM dms_log l
+        ${isAdmin(user) ? '' : `WHERE l.dl_resource_type IN ('DOCUMENT', 'VERSION')
+          AND l.df_fid IN (SELECT df_fid FROM managed_folders)`}
+        ORDER BY l.dl_action`,
+      isAdmin(user) ? [] : [user.id.toUpperCase()]
+    )).rows.map(row => row.action);
 
   return { rows: result.rows, total, page, page_size: pageSize, actions };
 };
@@ -175,7 +215,7 @@ const csvCell = (value: unknown) => {
 };
 
 export const exportAuditCsv = async (user: SessionUser, filters: AuditFilters) => {
-  const data = await listAuditLogs(filters, true);
+  const data = await listAuditLogs(user, filters, true);
   const headers = ['事件時間', '操作者', '操作者角色', '稽核事件', '資源位置', '操作標的類型', '操作標的', '文件版本', '執行結果', '結果原因', '事件來源 IP', '用戶端識別資訊', '請求追蹤識別碼', '資源識別碼', '資料夾識別碼', '文件識別碼', '版本識別碼', '異動前', '異動後', '額外資料'];
   const lines = [headers.map(csvCell).join(',')];
   for (const row of data.rows as Record<string, unknown>[]) {

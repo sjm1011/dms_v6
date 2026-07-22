@@ -554,7 +554,7 @@ DMS 不強制要求每次上傳新版時必須提供修訂前後對照表。未�
 
 ## 5. 全域稽核紀錄規格
 
-DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登入、預覽、下載、資料夾屬性、資料夾管理員、ACL (存取控制清單) 與 PDF 正式原檔下載拒絕等事件。
+DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登入、調閱、下載、資料夾屬性、資料夾管理員、ACL (存取控制清單)、調閱拒絕與 PDF 正式原檔下載拒絕等事件。
 
 ### 5.1. 稽核設計原則
 
@@ -571,10 +571,10 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 下列事件均需寫入全域稽核紀錄：
 
 * 驗證事件：`AUTH_LOGIN_SUCCESS` (登入成功)、`AUTH_LOGIN_FAILED` (登入失敗)。
-* 存取事件：`DOCUMENT_PREVIEWED` (文件預覽)、`DOCUMENT_DOWNLOADED` (文件下載)、`DOCUMENT_DOWNLOAD_DENIED` (文件下載被拒絕)。
+* 存取事件：`DOCUMENT_PREVIEWED` (調閱文件)、`DOCUMENT_PREVIEW_DENIED` (調閱文件遭拒)、`DOCUMENT_DOWNLOADED` (下載文件)、`DOCUMENT_DOWNLOAD_DENIED` (文件下載遭拒)。
 * 資料夾事件：`FOLDER_CREATED` (建立資料夾)、`FOLDER_UPDATED` (修改資料夾)、`FOLDER_ARCHIVED` (封存資料夾)、`FOLDER_DELETED` (作廢資料夾)。
 * 權限事件：`FOLDER_MANAGER_UPDATED` (資料夾管理員異動)、`FOLDER_CO_MANAGER_UPDATED` (協同管理員異動)、`FOLDER_ACL_UPDATED` (資料夾存取控制清單異動)。
-* 文件事件：`DOCUMENT_CREATED` (建立文件)、`DOCUMENT_VERSION_CREATED` (建立文件版本)、`DOCUMENT_UPDATED` (修改文件或預約版本資料)、`DOCUMENT_VERSION_CANCELLED` (撤回文件版本)、`DOCUMENT_VERSION_DELETED` (刪除尚未生效的預約版本)、`DOCUMENT_DELETED` (刪除文件)、`DOCUMENT_OBSOLETED` (手動廢止文件)。
+* 文件事件：`DOCUMENT_CREATED` (建立文件)、`DOCUMENT_VERSION_CREATED` (上傳新版文件)、`DOCUMENT_UPDATED` (修改文件描述)、`DOCUMENT_VERSION_CANCELLED` (撤回新版文件)、`DOCUMENT_VERSION_DELETED` (刪除預約版本)、`DOCUMENT_DELETED` (刪除文件)、`DOCUMENT_OBSOLETED` (廢止文件)。
 
 ### 5.3. 稽核資料欄位
 
@@ -587,7 +587,7 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 | `dl_actor_uid` (操作者帳號) | 執行動作的使用者帳號；未登入或登入失敗時可依實際情境留空或記錄輸入帳號。 |
 | `dl_actor_name` (操作者姓名) | 執行動作的使用者姓名。 |
 | `dl_actor_role` (操作者角色) | 執行動作當下的登入角色，僅記錄 `ADMIN` (系統管理員) 或 `USER` (一般使用者)。資料夾管理員屬於計算型管理身分，不寫入為登入角色。 |
-| `dl_action` (動作代碼) | 本次事件類型，例如 `DOCUMENT_VERSION_CANCELLED` (撤回文件版本)。 |
+| `dl_action` (動作代碼) | 本次事件類型，例如 `DOCUMENT_VERSION_CANCELLED` (撤回新版文件)。 |
 | `dl_resource_type` (資源類型) | 被操作的資源類型，例如 `AUTH` (驗證)、`FOLDER` (資料夾)、`DOCUMENT` (文件主檔)、`VERSION` (文件版本)、`ACL` (存取控制清單)。 |
 | `dl_resource_id` (資源識別碼) | 被操作資源的主要識別碼。 |
 | `dl_managed_df_fid` (管理資料夾節點識別碼) | 事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。 |
@@ -607,11 +607,12 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 
 一般使用者與資料夾管理員的查閱、預覽、下載行為均需記錄。
 
-* PDF (可攜式文件格式) 預覽應記錄 `DOCUMENT_PREVIEWED` (文件預覽)，並於 `metadata` (額外資料) 中保存文件編號、版本、預覽時間與浮水印相關資訊。
-* 圖檔預覽應記錄 `DOCUMENT_PREVIEWED` (文件預覽)，並保存檔名、副檔名、MIME Type (媒體類型) 與文件版本；圖檔預覽不記錄 PDF 浮水印資訊。
-* 非 PDF 文件下載應記錄 `DOCUMENT_DOWNLOADED` (文件下載)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。
-* 資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 `DOCUMENT_DOWNLOADED` (文件下載)，並於 `metadata` (額外資料) 中標示 `file_purpose` (檔案用途)，例如 `PUBLISHED_FILE` (正式發佈檔案)、`SOURCE_FILE` (原始編修檔)、`OBSOLETE_APPROVAL_FILE` (廢止公文)。
-* 一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 `DOCUMENT_DOWNLOAD_DENIED` (文件下載被拒絕)。
+* PDF (可攜式文件格式) 預覽應記錄 `DOCUMENT_PREVIEWED` (調閱文件)，並於 `metadata` (額外資料) 中保存文件編號、版本、預覽時間與浮水印相關資訊。
+* 圖檔預覽應記錄 `DOCUMENT_PREVIEWED` (調閱文件)，並保存檔名、副檔名、MIME Type (媒體類型) 與文件版本；圖檔預覽不記錄 PDF 浮水印資訊。
+* 非 PDF 文件下載應記錄 `DOCUMENT_DOWNLOADED` (下載文件)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。
+* 資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 `DOCUMENT_DOWNLOADED` (下載文件)，並於 `metadata` (額外資料) 中標示 `file_purpose` (檔案用途)，例如 `PUBLISHED_FILE` (正式發佈檔案)、`SOURCE_FILE` (原始編修檔)、`OBSOLETE_APPROVAL_FILE` (廢止公文)。
+* 已登入使用者直接呼叫預覽 API，嘗試調閱無權限、已廢止、尚未生效、已撤回、已失效或不存在的文件版本時，後端應拒絕並記錄 `DOCUMENT_PREVIEW_DENIED` (調閱文件遭拒)。
+* 一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 `DOCUMENT_DOWNLOAD_DENIED` (文件下載遭拒)。
 
 ### 5.5. 權限異動與資料夾異動紀錄
 
@@ -627,18 +628,21 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 文件主檔與文件版本的生命週期異動，均需寫入全域稽核紀錄。
 
 * 新建文件與上傳第一版時，需記錄文件主檔、第一筆版本、正式發佈檔案與生效時間。
-* 上傳新版或預約生效版本時，需記錄 `DOCUMENT_VERSION_CREATED` (建立文件版本)、新版本資料，以及前一版本 `effective_until` (結束時間) 被設定為新版本 `effective_at` (生效時間) 的異動。
-* 修改文件或預約版本資料時，需記錄 `DOCUMENT_UPDATED` (修改文件或預約版本資料)，並在 `metadata` (額外資料) 保存異動前後資料。
-* 撤回版本並回復前版時，需記錄 `DOCUMENT_VERSION_CANCELLED` (撤回文件版本)，並保存撤回原因。
+* 上傳新版或預約生效版本時，需記錄 `DOCUMENT_VERSION_CREATED` (上傳新版文件)、新版本資料，以及前一版本 `effective_until` (結束時間) 被設定為新版本 `effective_at` (生效時間) 的異動。
+* 修改文件或預約版本資料時，需記錄 `DOCUMENT_UPDATED` (修改文件描述)，並在 `metadata` (額外資料) 保存異動前後資料。
+* 撤回版本並回復前版時，需記錄 `DOCUMENT_VERSION_CANCELLED` (撤回新版文件)，並保存撤回原因。
 * 刪除第一版文件時，需記錄 `DOCUMENT_DELETED` (刪除文件)，並保存操作者、所屬資料夾、文件主檔識別碼、第一版版本識別碼、刪除原因與請求來源資訊。
 * 手動廢止文件時，需記錄廢止原因、廢止公文、文件主檔狀態從 `Effective` (有效的) 改為 `Obsolete` (已廢止) 的異動。
 
-### 5.7. 下載拒絕紀錄
+### 5.7. 存取拒絕紀錄
 
-目前全域稽核紀錄已實作的拒絕事件為 PDF 正式原檔下載拒絕。
+目前全域稽核紀錄已實作調閱拒絕與 PDF 正式原檔下載拒絕。
 
 * 登入失敗需記錄 `AUTH_LOGIN_FAILED` (登入失敗)，但不得記錄明文密碼。
-* 一般使用者嘗試下載 PDF 正式原檔時，需記錄 `DOCUMENT_DOWNLOAD_DENIED` (文件下載被拒絕)，並保存文件、版本與檔名資訊。
+* 已登入使用者嘗試調閱無權限、已廢止或非目前有效的文件版本時，需記錄 `DOCUMENT_PREVIEW_DENIED` (調閱文件遭拒)，並保存文件、版本、資料夾、拒絕原因及請求來源資訊。
+* 使用不存在或格式錯誤的版本識別碼調閱時，需保存嘗試值、操作者及請求來源資訊；因無法確認資料夾歸屬，只能由系統管理員查詢。
+* 不支援線上預覽的檔案格式、檔案讀取錯誤、網路中斷或使用者取消操作，不列為 `DOCUMENT_PREVIEW_DENIED`。
+* 一般使用者嘗試下載 PDF 正式原檔時，需記錄 `DOCUMENT_DOWNLOAD_DENIED` (文件下載遭拒)，並保存文件、版本與檔名資訊。
 
 ### 5.8. 稽核紀錄保存與不可竄改原則
 
@@ -907,14 +911,19 @@ _github.bat "本次修改摘要"
 
 ### 8.1. 導覽與權限
 
-* 左側樹狀選單在「文件庫」下方提供第二個 root「系統管理」，僅登入角色為 `ADMIN` 的系統管理員可見。
-* 「系統管理」預設收合，展開後依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。
+* 左側樹狀選單在「文件庫」下方提供第二個 root「系統管理」。登入角色為 `ADMIN` 的系統管理員，以及具有至少一項目前有效資料夾管理員或協同管理員指派的使用者可見。
+* 系統管理員展開「系統管理」後，依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。資料夾管理員及協同管理員只顯示「系統稽核紀錄」。
 * 系統管理頁面開啟時不得載入文件清單；返回文件庫時保留原資料夾位置。
-* 所有 `/api/system/*` API 必須在後端驗證 Session 角色，非 `ADMIN` 回傳 HTTP `403`。
+* `/api/system/audit` 與 `/api/system/audit/export` 必須在後端驗證目前登入者為系統管理員、資料夾管理員或協同管理員；其他 `/api/system/*` API 仍只允許 `ADMIN` 使用。未具相應權限時回傳 HTTP `403`。
 
 ### 8.2. 系統稽核紀錄
 
 * 查詢來源固定為現行 `dms_log`，不合併早期保留的 `dms_audit_log`。
+* 系統管理員可查詢全部稽核紀錄。資料夾管理員及協同管理員只能查詢目前有效管理節點及其全部子資料夾的 `DOCUMENT`、`VERSION` 文件事件。
+* 管理範圍於每次列表、總筆數、篩選選項、明細及 CSV 匯出時，依目前有效的 `dms_folder_managers` 指派與事件 `df_fid` 重新判斷，不得依賴前端隱藏或 `dl_managed_df_fid` 快照。
+* 新接任的資料夾管理員或協同管理員可查看接任前的歷史文件紀錄；管理權撤銷後立即失去該範圍的查詢與匯出權限。系統不保存每筆事件發生當時的管理者名單。
+* 同一使用者具有多個管理指派時，查詢範圍為各管理資料夾子樹的聯集，同一筆稽核紀錄不得重複顯示。
+* 不存在或格式錯誤的版本識別碼所產生的 `DOCUMENT_PREVIEW_DENIED` 沒有資料夾歸屬，只提供系統管理員查詢。
 * 提供日期區間、操作者、稽核事件、執行結果、關鍵字、分頁與單筆明細。
 * 預設查詢最近一個月，每頁可選 25、50 或 100 筆。
 * CSV 匯出沿用目前條件，採 UTF-8 BOM，單次上限 50,000 筆；超過上限時必須要求縮小條件，不得截斷。

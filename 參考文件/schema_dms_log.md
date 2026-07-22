@@ -12,7 +12,7 @@
 
 * **表名稱**：`dms_log`
 * **schema 檔名**：`schema_dms_log.md`、`schema_dms_log.html`
-* **用途**：保存登入、文件預覽、文件下載、文件生命週期、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。
+* **用途**：保存登入、文件調閱、調閱拒絕、文件下載、文件生命週期、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。
 
 ### 欄位規劃
 
@@ -23,7 +23,7 @@
 | `dl_actor_uid` | VARCHAR(50) | Nullable | 操作者帳號；未登入或登入失敗時可依情境留空或記錄輸入帳號。 |
 | `dl_actor_name` | VARCHAR(255) | Nullable | 操作者姓名。 |
 | `dl_actor_role` | VARCHAR(20) | Nullable | 操作者登入角色，僅記錄 `ADMIN` 或 `USER`。資料夾管理員屬於計算型管理身分，不寫入為登入角色。 |
-| `dl_action` | VARCHAR(80) | Not Null | 動作代碼，例如 `DOCUMENT_PREVIEWED`、`DOCUMENT_DOWNLOADED`、`DOCUMENT_VERSION_CANCELLED`。 |
+| `dl_action` | VARCHAR(80) | Not Null | 動作代碼，例如 `DOCUMENT_PREVIEWED`、`DOCUMENT_PREVIEW_DENIED`、`DOCUMENT_DOWNLOADED`、`DOCUMENT_VERSION_CANCELLED`。 |
 | `dl_resource_type` | VARCHAR(30) | Nullable | 被操作的資源類型，例如 `AUTH`、`FOLDER`、`DOCUMENT`、`VERSION`、`ACL`。 |
 | `dl_resource_id` | VARCHAR(80) | Nullable | 被操作資源的主要識別碼。 |
 | `dl_managed_df_fid` | INTEGER | Nullable | 事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。 |

@@ -1045,9 +1045,26 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
 
 export const getFileForAccess = async (
   user: SessionUser,
-  versionId: number,
+  requestedVersionId: number | string,
   mode: 'preview' | 'download'
 ) => {
+  const versionId = Number(requestedVersionId);
+
+  if (!Number.isInteger(versionId) || versionId <= 0) {
+    if (mode === 'preview') {
+      await writeAudit({
+        user,
+        action: 'DOCUMENT_PREVIEW_DENIED',
+        resourceType: 'VERSION',
+        resourceId: String(requestedVersionId),
+        result: 'DENIED',
+        reason: '找不到文件版本。',
+        metadata: { attempted_version_id: String(requestedVersionId) }
+      });
+    }
+    throw new Error('找不到文件版本。');
+  }
+
   const result = await query<FileRow>(
     `SELECT d.dd_id,
             d.df_fid,
@@ -1071,6 +1088,18 @@ export const getFileForAccess = async (
   const row = result.rows[0];
 
   if (!row) {
+    if (mode === 'preview') {
+      await writeAudit({
+        user,
+        action: 'DOCUMENT_PREVIEW_DENIED',
+        resourceType: 'VERSION',
+        resourceId: versionId,
+        result: 'DENIED',
+        versionId,
+        reason: '找不到文件版本。',
+        metadata: { attempted_version_id: String(requestedVersionId) }
+      });
+    }
     throw new Error('找不到文件版本。');
   }
 
@@ -1078,12 +1107,26 @@ export const getFileForAccess = async (
   const isPdf = isPdfExt(row.dfi_ext);
   const isPreviewable = isPreviewableExt(row.dfi_ext);
 
-  if (mode === 'preview' && !isPreviewable) {
-    throw new Error('此檔案格式不支援線上預覽。');
-  }
+  const writePreviewDenied = async (reason: string) => {
+    await writeAudit({
+      user,
+      action: 'DOCUMENT_PREVIEW_DENIED',
+      resourceType: 'DOCUMENT',
+      resourceId: row.dd_id,
+      result: 'DENIED',
+      folderId: row.df_fid,
+      documentId: row.dd_id,
+      versionId: row.ddv_id,
+      reason,
+      metadata: { file_name: row.dfi_name }
+    });
+  };
 
   if (!canManage) {
     if (row.dd_status !== 1) {
+      if (mode === 'preview') {
+        await writePreviewDenied('文件已廢止。');
+      }
       throw new Error('文件已廢止。');
     }
 
@@ -1109,6 +1152,11 @@ export const getFileForAccess = async (
     );
 
     if (!valid.rows[0]?.allowed) {
+      if (mode === 'preview') {
+        await writePreviewDenied(
+          hasFolderAccess ? '文件版本不是目前有效版本。' : '沒有資料夾存取權限。'
+        );
+      }
       throw new Error('沒有此文件的存取權限。');
     }
 
@@ -1126,6 +1174,10 @@ export const getFileForAccess = async (
       throw new Error('一般使用者不可下載 PDF 正式原檔。');
     }
 
+  }
+
+  if (mode === 'preview' && !isPreviewable) {
+    throw new Error('此檔案格式不支援線上預覽。');
   }
 
   const { stream, size } = await createFileStream(row.dfi_path);

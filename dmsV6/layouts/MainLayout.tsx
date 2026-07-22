@@ -588,6 +588,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           <SystemManagement
             page={activeSystemPage}
             currentUserId={user.id}
+            isSystemAdmin={isAdmin}
             showToast={showToast}
             refreshFolders={fetchFolders}
             onOpenFolder={(folderId) => {

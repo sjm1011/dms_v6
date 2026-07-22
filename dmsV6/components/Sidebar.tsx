@@ -32,13 +32,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout
 }) => {
   const [isSystemExpanded, setIsSystemExpanded] = React.useState(false);
-  const systemItems: Array<{ page: SystemPage; label: string; icon: React.ReactNode }> = [
+  const allSystemItems: Array<{ page: SystemPage; label: string; icon: React.ReactNode }> = [
     { page: 'audit', label: '系統稽核紀錄', icon: <SearchIcon size={18} /> },
     { page: 'settings', label: '系統設定', icon: <PersonIcon size={18} /> },
     { page: 'permissions', label: '權限總覽', icon: <LockIcon size={18} /> },
     { page: 'status', label: '系統狀態', icon: <InfoIcon size={18} /> },
     { page: 'recycle', label: '資源回收區', icon: <DeleteIcon size={18} /> }
   ];
+  const canAccessAudit = user?.role === 'ADMIN' || folders.some(folder => folder.can_manage);
+  const systemItems = user?.role === 'ADMIN'
+    ? allSystemItems
+    : allSystemItems.filter(item => item.page === 'audit');
   
   // 建立以 parent_id 為 Key 的資料夾 Map，將搜尋時間複雜度優化為 O(N)
   const foldersByParentId = React.useMemo(() => {
@@ -144,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* 動態渲染子目錄 */}
             {rootFolders.map(folder => renderFolderNode(folder))}
 
-            {user?.role === 'ADMIN' && (
+            {canAccessAudit && (
               <li className="folder-item-wrapper system-root-wrapper">
                 <div className="folder-link" onClick={() => setIsSystemExpanded(value => !value)}>
                   <div className="folder-link-content folder-node-content">

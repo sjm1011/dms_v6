@@ -11,6 +11,7 @@ import { Modal } from './Modal';
 interface SystemManagementProps {
   page: SystemPage;
   currentUserId: string;
+  isSystemAdmin: boolean;
   onOpenFolder: (folderId: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
@@ -71,7 +72,10 @@ const withoutAuditContext = (metadata: Record<string, unknown>) => {
   return result;
 };
 
-const AuditPage: React.FC<{ showToast: SystemManagementProps['showToast'] }> = ({ showToast }) => {
+const AuditPage: React.FC<{
+  isSystemAdmin: boolean;
+  showToast: SystemManagementProps['showToast'];
+}> = ({ isSystemAdmin, showToast }) => {
   const [filters, setFilters] = useState<AuditQuery>({ ...recentDateRange(1), page: 1, page_size: 50 });
   const [draft, setDraft] = useState(filters);
   const [dateRangePreset, setDateRangePreset] = useState('1');
@@ -105,7 +109,7 @@ const AuditPage: React.FC<{ showToast: SystemManagementProps['showToast'] }> = (
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `系統稽核紀錄_${localDate(new Date())}.csv`;
+      anchor.download = `${isSystemAdmin ? '系統稽核紀錄' : '管理範圍文件稽核紀錄'}_${localDate(new Date())}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
       showToast('稽核紀錄已匯出。', 'success');
@@ -119,7 +123,12 @@ const AuditPage: React.FC<{ showToast: SystemManagementProps['showToast'] }> = (
     setDraft(current => ({ ...current, ...recentDateRange(Number(value)) }));
   };
 
-  return <PageShell title="系統稽核紀錄" description="以事件時間、操作者、稽核事件、資源位置、操作標的及執行結果呈現現行 dms_log。" actions={<button className="btn btn-secondary" disabled={exporting} onClick={exportCsv}><CloudDownloadIcon size={18} />{exporting ? '匯出中...' : '匯出 CSV'}</button>}>
+  const pageTitle = isSystemAdmin ? '系統稽核紀錄' : '管理範圍文件稽核紀錄';
+  const pageDescription = isSystemAdmin
+    ? '以事件時間、操作者、稽核事件、資源位置、操作標的及執行結果呈現現行 dms_log。'
+    : '顯示目前管理資料夾及其所有子資料夾的歷史文件操作紀錄。';
+
+  return <PageShell title={pageTitle} description={pageDescription} actions={<button className="btn btn-secondary" disabled={exporting} onClick={exportCsv}><CloudDownloadIcon size={18} />{exporting ? '匯出中...' : '匯出 CSV'}</button>}>
     <form className="system-filter-grid" onSubmit={event => { event.preventDefault(); setFilters({ ...draft, page: 1 }); }}>
       <label>日期範圍<select value={dateRangePreset} onChange={e => updateDateRange(e.target.value)}><option value="">自訂日期</option><option value="1">最近一個月</option><option value="3">最近三個月</option><option value="6">最近六個月</option><option value="9">最近九個月</option><option value="12">最近一年</option></select></label>
       <label>開始日期<input type="date" value={draft.date_from || ''} onChange={e => { setDateRangePreset(''); setDraft({ ...draft, date_from: e.target.value }); }} /></label>
@@ -229,8 +238,8 @@ const RecyclePage: React.FC<{ showToast: SystemManagementProps['showToast']; onC
   </PageShell>;
 };
 
-export const SystemManagement: React.FC<SystemManagementProps & { refreshFolders: () => Promise<void> }> = ({ page, currentUserId, onOpenFolder, showToast, refreshFolders }) => {
-  if (page === 'audit') return <AuditPage showToast={showToast} />;
+export const SystemManagement: React.FC<SystemManagementProps & { refreshFolders: () => Promise<void> }> = ({ page, currentUserId, isSystemAdmin, onOpenFolder, showToast, refreshFolders }) => {
+  if (page === 'audit') return <AuditPage isSystemAdmin={isSystemAdmin} showToast={showToast} />;
   if (page === 'settings') return <SettingsPage currentUserId={currentUserId} showToast={showToast} />;
   if (page === 'permissions') return <PermissionsPage onOpenFolder={onOpenFolder} showToast={showToast} />;
   if (page === 'status') return <StatusPage showToast={showToast} />;
