@@ -138,6 +138,7 @@ interface NewDocModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialFile: File | null;
+  parentDocument?: Document | null;
   onCreate: (
     code: string,
     title: string,
@@ -150,7 +151,13 @@ interface NewDocModalProps {
   ) => Promise<boolean>;
 }
 
-export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initialFile, onCreate }) => {
+export const NewDocModal: React.FC<NewDocModalProps> = ({
+  isOpen,
+  onClose,
+  initialFile,
+  parentDocument = null,
+  onCreate
+}) => {
   const [code, setCode] = useState('');
   const [title, setTitle] = useState('');
   const [version, setVersion] = useState('');
@@ -219,7 +226,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initi
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="新建文件"
+      title={parentDocument ? '新增相關文件' : '新建文件'}
       useNativeDialog
       closeOnOverlayClick={false}
       footer={
@@ -230,6 +237,12 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({ isOpen, onClose, initi
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {parentDocument && (
+          <div className="related-document-parent">
+            <span>隸屬於</span>
+            <strong>{[parentDocument.code, parentDocument.title].filter(Boolean).join(' ')}</strong>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 12 }}>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
             <label>文件編號（選填）</label>
@@ -616,10 +629,17 @@ interface ObsoleteDocModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetName: string;
+  relatedDocumentCount?: number;
   onObsolete: (reason: string, file: File) => Promise<boolean>;
 }
 
-export const ObsoleteDocModal: React.FC<ObsoleteDocModalProps> = ({ isOpen, onClose, targetName, onObsolete }) => {
+export const ObsoleteDocModal: React.FC<ObsoleteDocModalProps> = ({
+  isOpen,
+  onClose,
+  targetName,
+  relatedDocumentCount = 0,
+  onObsolete
+}) => {
   const [reason, setReason] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const reasonInputRef = useRef<HTMLInputElement>(null);
@@ -659,7 +679,11 @@ export const ObsoleteDocModal: React.FC<ObsoleteDocModalProps> = ({ isOpen, onCl
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <p>您即將廢止文件「<strong>{targetName}</strong>」。手動廢止必須填寫原因並上傳核准文件。</p>
+        <p>
+          您即將廢止文件「<strong>{targetName}</strong>」。
+          {relatedDocumentCount > 0 && ` 系統會一併廢止底下 ${relatedDocumentCount} 份相關文件。`}
+          手動廢止必須填寫原因並上傳核准文件。
+        </p>
         <div className="input-group" style={{ marginBottom: 0 }}>
           <label>廢止原因</label>
           <input ref={reasonInputRef} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="例如：改由新文件取代" />
@@ -680,10 +704,19 @@ interface DeleteDocModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetName: string;
+  relatedDocumentCount?: number;
+  totalVersionCount?: number;
   onDelete: () => Promise<boolean>;
 }
 
-export const DeleteDocModal: React.FC<DeleteDocModalProps> = ({ isOpen, onClose, targetName, onDelete }) => {
+export const DeleteDocModal: React.FC<DeleteDocModalProps> = ({
+  isOpen,
+  onClose,
+  targetName,
+  relatedDocumentCount = 0,
+  totalVersionCount = 1,
+  onDelete
+}) => {
   const handleConfirm = async () => {
     const success = await onDelete();
     if (success) onClose();
@@ -702,7 +735,14 @@ export const DeleteDocModal: React.FC<DeleteDocModalProps> = ({ isOpen, onClose,
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <p>您即將刪除第一版文件「<strong>{targetName}</strong>」。刪除後文件主檔與第一版紀錄會移除，系統會保留稽核紀錄。</p>
+        {relatedDocumentCount > 0 ? (
+          <p>
+            您即將強制刪除主文件「<strong>{targetName}</strong>」、底下 {relatedDocumentCount} 份相關文件，
+            共 {totalVersionCount} 筆版本。文件主檔及全部版本會移除，系統只保留稽核紀錄。
+          </p>
+        ) : (
+          <p>您即將刪除第一版文件「<strong>{targetName}</strong>」。刪除後文件主檔與第一版紀錄會移除，系統會保留稽核紀錄。</p>
+        )}
       </div>
     </Modal>
   );

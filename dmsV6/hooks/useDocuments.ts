@@ -87,9 +87,10 @@ export const useDocuments = (
     revisionDate: string,
     effAt: string,
     file: File,
-    sourceFile?: File | null
+    sourceFile?: File | null,
+    parentDocumentId?: string | null
   ) => {
-    showToast('正在建立文件與上傳檔案...', 'info');
+    showToast(parentDocumentId ? '正在建立相關文件與上傳檔案...' : '正在建立文件與上傳檔案...', 'info');
     try {
       const res = await DocumentsAPI.createDocument(
         currentFolderId || '0',
@@ -100,10 +101,11 @@ export const useDocuments = (
         revisionDate,
         effAt,
         file,
-        sourceFile
+        sourceFile,
+        parentDocumentId
       );
       if (res.success) {
-        showToast(`文件「${title}」建立並上傳成功。`, 'success');
+        showToast(`${parentDocumentId ? '相關文件' : '文件'}「${title}」建立並上傳成功。`, 'success');
         fetchDocuments();
         return true;
       } else {

@@ -139,6 +139,7 @@ COMMENT ON COLUMN dms_folder_acl.dfa_dcat IS '作廢時間';
 CREATE TABLE dms_doc (
     dd_id SERIAL PRIMARY KEY,
     df_fid INTEGER NOT NULL,
+    dd_parent_id INTEGER,
     dd_code VARCHAR(50),
     dd_title VARCHAR(255) NOT NULL,
     dd_status SMALLINT NOT NULL DEFAULT 1,
@@ -160,6 +161,9 @@ WHERE dd_code IS NOT NULL;
 CREATE INDEX idx_dms_doc_folder
 ON dms_doc(df_fid, dd_status);
 
+CREATE INDEX idx_dms_doc_parent
+ON dms_doc(dd_parent_id);
+
 CREATE INDEX idx_dms_doc_obs
 ON dms_doc(dd_obs_at)
 WHERE dd_status = 2;
@@ -167,6 +171,7 @@ WHERE dd_status = 2;
 COMMENT ON TABLE dms_doc IS '文件主檔';
 COMMENT ON COLUMN dms_doc.dd_id IS '文件主檔唯一識別碼';
 COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
+COMMENT ON COLUMN dms_doc.dd_parent_id IS '主文件識別碼；空白代表第一階文件';
 COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
 COMMENT ON COLUMN dms_doc.dd_title IS '文件名稱';
 COMMENT ON COLUMN dms_doc.dd_status IS '文件狀態。1：有效，2：廢止';

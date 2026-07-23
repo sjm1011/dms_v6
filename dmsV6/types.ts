@@ -57,6 +57,11 @@ export interface Document {
   title: string;
   status: 'Effective' | 'Obsolete';
   folder_id: string;
+  parent_document_id?: string | null;
+  parent_code?: string | null;
+  parent_title?: string | null;
+  related_document_count?: number;
+  related_version_count?: number;
   folder_name?: string;
   folder_path?: string;
   manager_role?: FolderManagerRole;
@@ -104,6 +109,11 @@ export interface DMSItem {
   file_name?: string;
   folder_id?: string;
   folder_path?: string;
+  parent_document_id?: string | null;
+  parent_code?: string | null;
+  parent_title?: string | null;
+  related_document_count?: number;
+  related_version_count?: number;
   access_type?: number;
   acl_summary?: string;
   is_access_inherited?: boolean;

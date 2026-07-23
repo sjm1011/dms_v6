@@ -279,7 +279,7 @@
     <tr><th>資料表</th><th>欄位方向</th></tr>
   </thead>
   <tbody>
-    <tr><td><code>dms_doc</code></td><td><code>dd_id</code>、<code>df_fid</code>、<code>dd_code</code>、<code>dd_title</code>、<code>dd_status</code>、<code>dd_obs_at</code>、<code>dd_obs_by</code>、<code>dd_obs_reason</code>、<code>dfi_id</code>、<code>dd_obs_src</code>、<code>dd_crtby</code>、<code>dd_crtat</code>、<code>dd_updby</code>、<code>dd_updat</code></td></tr>
+    <tr><td><code>dms_doc</code></td><td><code>dd_id</code>、<code>df_fid</code>、<code>dd_parent_id</code>、<code>dd_code</code>、<code>dd_title</code>、<code>dd_status</code>、<code>dd_obs_at</code>、<code>dd_obs_by</code>、<code>dd_obs_reason</code>、<code>dfi_id</code>、<code>dd_obs_src</code>、<code>dd_crtby</code>、<code>dd_crtat</code>、<code>dd_updby</code>、<code>dd_updat</code></td></tr>
     <tr><td><code>dms_doc_ver</code></td><td><code>ddv_id</code>、<code>dd_id</code>、<code>ddv_seq</code>、<code>ddv_no</code>、<code>ddv_rev_date</code>、<code>ddv_eff_at</code>、<code>ddv_eff_to</code>、<code>ddv_chg_note</code>、<code>ddv_pub_dfi_id</code>、<code>ddv_src_dfi_id</code>、<code>ddv_cancel_at</code>、<code>ddv_cancel_by</code>、<code>ddv_cancel_reason</code>、<code>ddv_crtby</code>、<code>ddv_crtat</code>、<code>ddv_updby</code>、<code>ddv_updat</code></td></tr>
     <tr><td><code>dms_file</code></td><td><code>dfi_id</code>、<code>dfi_role</code>、<code>dfi_name</code>、<code>dfi_path</code>、<code>dfi_ext</code>、<code>dfi_mime</code>、<code>dfi_size</code>、<code>dfi_sha256</code>、<code>dfi_status</code>、<code>dfi_crtby</code>、<code>dfi_crtat</code></td></tr>
     <tr><td><code>dms_ver_rev</code></td><td><code>dvr_id</code>、<code>ddv_id</code>、<code>dvr_base_ddv_id</code>、<code>dfi_id</code>、<code>dvr_note</code>、<code>dvr_dc</code>、<code>dvr_crtby</code>、<code>dvr_crtat</code>、<code>dvr_dcby</code>、<code>dvr_dcat</code></td></tr>
@@ -512,7 +512,25 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 一般使用者在新版本生效前仍看到上一個版本。</p>
 <p>* 新版本到達生效時間後，一般使用者看到新版本。</p>
 <p>* 資料夾管理員在新版本生效前即可查閱與下載該版本。</p>
-<p>* 系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，文件清單必須同時分列顯示預約版本與目前有效版本，不得以預約版本取代目前有效版本的清單列。</p>
+<ul>
+  <li>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，文件清單必須同時分列顯示預約版本與目前有效版本，不得以預約版本取代目前有效版本的清單列。</li>
+</ul>
+<h4>4.9.1. 主文件與相關文件</h4>
+<p>文件可建立 2 層關係：「主文件 → 相關文件」。相關文件是完整文件，不是附加檔案，具有自己的文件編號、版本號、修訂日期、生效期間、正式發佈檔案、預約版本、撤回、廢止、預覽、下載與稽核紀錄。</p>
+<ul>
+  <li><code>dms_doc.dd_parent_id</code> 空白代表第一階主文件；有值時代表相關文件，並邏輯指向同一資料夾內的主文件 <code>dd_id</code>。</li>
+  <li>系統不建立實體 <code>FOREIGN KEY</code> 或額外 <code>CONSTRAINT</code>；父子關係完整性由後端交易檢核維護。</li>
+  <li>文件只允許 2 層。相關文件不得再建立相關文件，也不得掛到不同資料夾或同時隸屬多份主文件。</li>
+  <li>主文件操作選單提供「新增相關文件」。建立流程沿用新建文件的檔案格式、欄位、日期、文件編號唯一性及 PDF 原始編修檔規則。</li>
+  <li>相關文件沿用主文件所在資料夾的 ACL 與管理權。根目錄主文件只有 <code>ADMIN</code> 可新增相關文件。</li>
+  <li>相關文件獨立版控。相關文件改版不自動建立主文件新版；若異動影響主文件內容、流程、引用編號或適用性，由文件管理者另行版更主文件。</li>
+  <li>一般文件清單固定顯示全部相關文件。相關文件緊接於主文件下方，以縮排及關聯圖示表示第二階關係，不增加文件類型欄位。</li>
+  <li>搜尋命中相關文件時直接顯示該文件，並顯示「隸屬於：主文件編號 主文件名稱」；搜尋 ACL、版本可見性、排名與分頁規則不變。</li>
+  <li>單獨修改、版更、撤回、刪除或廢止相關文件時，沿用一般文件生命週期規則。</li>
+  <li>主文件廢止時，系統在同一交易內使用相同原因及同一份核准文件，一併廢止全部尚未廢止的相關文件，並逐份寫入 <code>DOCUMENT_OBSOLETED</code>。</li>
+  <li>有相關文件的主文件執行「刪除文件」時，屬於第一版刪除規則的限定例外。系統需先顯示相關文件數與總版本數，再於同一交易內強制刪除主文件、全部相關文件、全部版本及修訂資料；每份文件刪除前均需寫入 <code>DOCUMENT_DELETED</code> 稽核快照。</li>
+  <li>沒有相關文件的一般文件，以及單獨刪除相關文件時，仍只允許刪除目前有效版本為第一版的文件。</li>
+</ul>
 <p>* 預約版本的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。目前有效版本仍顯示其版本號。</p>
 <p>* 管理員可從預約版本的操作選單執行「修改文件」，但只允許修改新版本號、修訂日期、發行日期與異動說明，不得藉此修改文件編號、文件名稱或替換版本檔案。</p>
 <p>* 管理員可刪除尚未生效的最新預約版本。刪除後，該版本、修訂對照資料與檔案有效狀態必須於同一筆交易處理，並將前一個未撤回版本的 <code>effective_until</code> 清空，使目前有效版本繼續生效。</p>
@@ -797,7 +815,7 @@ DMS_NEXT_PORT=3000</code></pre>
     <tr><td><code>GET /api/employee?uid=...</code></td><td><code>app/api/employee/route.ts</code></td><td>透過 <code>employeeService.ts</code> 以 UID 精準檢索員工資料</td></tr>
     <tr><td><code>GET /api/departments</code></td><td><code>app/api/departments/route.ts</code></td><td>透過 <code>employeeService.ts</code> 查詢所有部門</td></tr>
     <tr><td><code>GET /api/documents?folder_id=...</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 查詢指定資料夾下之有效文件</td></tr>
-    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件、上傳新版本或修訂</td></tr>
+    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件或相關文件、上傳新版本、修訂、廢止或刪除</td></tr>
     <tr><td><code>GET /api/search?keyword=...&amp;scope=...&amp;folder_id=...&amp;page=...</code></td><td><code>app/api/search/route.ts</code></td><td>透過 <code>searchService.ts</code> 依 ACL、管理範圍及版本可見性執行跨資料夾文件關鍵字搜尋</td></tr>
     <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 讀取實體檔案並傳送下載串流</td></tr>
     <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得預覽串流，PDF 檔案則動態加入浮水印</td></tr>

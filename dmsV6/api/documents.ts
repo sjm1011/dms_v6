@@ -421,7 +421,8 @@ export const DocumentsAPI = {
     revisionDate: string,
     effectiveAt: string,
     file: File,
-    sourceFile?: File | null
+    sourceFile?: File | null,
+    parentDocumentId?: string | null
   ): Promise<ApiResponse<Document>> => {
     const body: Record<string, unknown> = {
       action: 'create',
@@ -434,6 +435,10 @@ export const DocumentsAPI = {
       effective_at: effectiveAt,
       file: await fileToPayload(file)
     };
+
+    if (parentDocumentId) {
+      body.parent_document_id = parentDocumentId;
+    }
 
     if (sourceFile) {
       body.source_file = await fileToPayload(sourceFile);

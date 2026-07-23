@@ -20,6 +20,7 @@
 | :--- | :--- | :--- | :--- |
 | `dd_id` | SERIAL (INT) | Primary Key | 文件主檔唯一識別碼。 |
 | `df_fid` | INTEGER | Not Null | 所屬資料夾 ID，邏輯對應 `dms_folders.df_fid`。 |
+| `dd_parent_id` | INTEGER | Nullable | 主文件 ID，邏輯對應 `dms_doc.dd_id`；空白代表第一階文件。 |
 | `dd_code` | VARCHAR(50) | Nullable | 文件編號，可留空。非空白時由前端轉為大寫。 |
 | `dd_title` | VARCHAR(255) | Not Null | 文件名稱。 |
 | `dd_status` | SMALLINT | Not Null | 文件狀態。1：有效，2：廢止。 |
@@ -41,6 +42,7 @@
 CREATE TABLE dms_doc (
     dd_id SERIAL PRIMARY KEY,
     df_fid INTEGER NOT NULL,
+    dd_parent_id INTEGER,
     dd_code VARCHAR(50),
     dd_title VARCHAR(255) NOT NULL,
     dd_status SMALLINT NOT NULL DEFAULT 1,
@@ -62,6 +64,9 @@ WHERE dd_code IS NOT NULL;
 CREATE INDEX idx_dms_doc_folder
 ON dms_doc(df_fid, dd_status);
 
+CREATE INDEX idx_dms_doc_parent
+ON dms_doc(dd_parent_id);
+
 CREATE INDEX idx_dms_doc_obs
 ON dms_doc(dd_obs_at)
 WHERE dd_status = 2;
@@ -73,6 +78,9 @@ WHERE dd_status = 2;
 ALTER TABLE dms_doc
 ALTER COLUMN dd_code DROP NOT NULL;
 
+ALTER TABLE dms_doc
+ADD COLUMN IF NOT EXISTS dd_parent_id INTEGER;
+
 UPDATE dms_doc
    SET dd_code = NULLIF(UPPER(BTRIM(dd_code)), '');
 
@@ -81,6 +89,9 @@ DROP INDEX IF EXISTS uq_dms_doc_code;
 CREATE UNIQUE INDEX uq_dms_doc_code
 ON dms_doc(dd_code)
 WHERE dd_code IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_dms_doc_parent
+ON dms_doc(dd_parent_id);
 ```
 
 ---
@@ -91,6 +102,7 @@ WHERE dd_code IS NOT NULL;
 COMMENT ON TABLE dms_doc IS '文件主檔';
 COMMENT ON COLUMN dms_doc.dd_id IS '文件主檔唯一識別碼';
 COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
+COMMENT ON COLUMN dms_doc.dd_parent_id IS '主文件識別碼；空白代表第一階文件';
 COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
 COMMENT ON COLUMN dms_doc.dd_title IS '文件名稱';
 COMMENT ON COLUMN dms_doc.dd_status IS '文件狀態。1：有效，2：廢止';
@@ -114,6 +126,7 @@ COMMENT ON COLUMN dms_doc.dd_updat IS '最後異動時間';
 ```sql
 SELECT dd_id,
        df_fid,
+       dd_parent_id,
        dd_code,
        dd_title,
        dd_crtby,
@@ -129,6 +142,7 @@ SELECT dd_id,
 ```sql
 SELECT dd_id,
        df_fid,
+       dd_parent_id,
        dd_code,
        dd_title,
        dd_status,
@@ -147,6 +161,10 @@ SELECT dd_id,
 * 文件編號非空白時採全系統唯一。唯一索引直接使用 `dd_code`，不得在索引定義使用 `UPPER()`、型別轉換或其他函數。
 * 未編號文件可補填文件編號；已編號文件亦可修改或清空，但修改後的非空白編號不得與其他文件重複。
 * `df_fid` 必須存在於有效的 `dms_folders.df_fid`。
+* `dd_parent_id` 若有值，必須指向同一資料夾內、有效且本身沒有 `dd_parent_id` 的第一階文件。
+* 文件階層只允許「主文件 → 相關文件」2 層；相關文件不得再建立相關文件。
+* 主文件廢止時，全部尚未廢止的相關文件必須使用相同原因與核准文件一併廢止。
+* 有相關文件的主文件執行刪除時，主文件、全部相關文件及所有版本一併刪除；刪除前需逐份保留稽核紀錄。
 * 文件主檔為 `dd_status = 2` 時，不得再建立新版、預約版或執行撤回版本。
 * 手動廢止時，`dfi_id` 必填，且必須存在於 `dms_file.dfi_id`，並符合 `dfi_role = 4`。
 * 資料夾封存造成文件廢止時，需於同一交易內更新資料夾樹與底下文件主檔。

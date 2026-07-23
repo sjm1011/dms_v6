@@ -11,6 +11,11 @@ interface SearchRow {
   folder_id: number;
   folder_name: string;
   folder_path: string;
+  parent_document_id: number | null;
+  parent_code: string | null;
+  parent_title: string | null;
+  related_document_count: string | number;
+  related_version_count: string | number;
   can_manage: boolean;
   manager_role: FolderManagerRole;
   ver_id: number;
@@ -63,6 +68,11 @@ const toDocument = (rows: SearchRow[]): Document => {
     folder_id: String(first.folder_id),
     folder_name: first.folder_name,
     folder_path: first.folder_path,
+    parent_document_id: first.parent_document_id ? String(first.parent_document_id) : null,
+    parent_code: first.parent_code,
+    parent_title: first.parent_title,
+    related_document_count: Number(first.related_document_count || 0),
+    related_version_count: Number(first.related_version_count || 0),
     manager_role: first.manager_role,
     versions,
     ver_id: current?.ver_id,
@@ -193,6 +203,20 @@ export const searchDocuments = async (
                d.df_fid,
                d.dd_code,
                d.dd_title,
+               d.dd_parent_id,
+               parent.dd_code AS parent_code,
+               parent.dd_title AS parent_title,
+               (
+                 SELECT COUNT(*)
+                   FROM dms_doc child
+                  WHERE child.dd_parent_id = d.dd_id
+               ) AS related_document_count,
+               (
+                 SELECT COUNT(*)
+                   FROM dms_doc child
+                   JOIN dms_doc_ver child_version ON child_version.dd_id = child.dd_id
+                  WHERE child.dd_parent_id = d.dd_id
+               ) AS related_version_count,
                CASE
                  WHEN d.df_fid = 0 THEN $3 = 'ADMIN'
                  ELSE EXISTS (
@@ -226,6 +250,7 @@ export const searchDocuments = async (
                COALESCE(folder.df_name, '文件庫') AS folder_name,
                COALESCE(fp.folder_path, '文件庫') AS folder_path
           FROM dms_doc d
+          LEFT JOIN dms_doc parent ON parent.dd_id = d.dd_parent_id
           LEFT JOIN dms_folders folder ON folder.df_fid = d.df_fid
           LEFT JOIN folder_paths fp ON fp.df_fid = d.df_fid
          WHERE d.dd_status = 1
@@ -324,6 +349,11 @@ export const searchDocuments = async (
              pd.df_fid AS folder_id,
              pd.folder_name,
              pd.folder_path,
+             pd.dd_parent_id AS parent_document_id,
+             pd.parent_code,
+             pd.parent_title,
+             pd.related_document_count,
+             pd.related_version_count,
              pd.can_manage,
              pd.manager_role,
              sv.ddv_id AS ver_id,

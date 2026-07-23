@@ -31,6 +31,13 @@ const CoManagerIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+const RelatedDocumentIcon = ({ size = 18 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 3v7a4 4 0 0 0 4 4h8" />
+    <path d="m15 11 3 3-3 3" />
+  </svg>
+);
+
 
 
 interface FileTableProps {
@@ -43,6 +50,7 @@ interface FileTableProps {
   onPreviewDocument?: (item: DMSItem) => void;
   onDownloadDocument?: (item: DMSItem) => void;
   onUploadVersion?: (item: DMSItem) => void;
+  onCreateRelatedDocument?: (item: DMSItem) => void;
   onEditDocument?: (item: DMSItem) => void;
   onDeleteScheduledVersion?: (item: DMSItem) => void;
   onCancelVersion?: (item: DMSItem) => void;
@@ -65,6 +73,7 @@ export const FileTable = React.memo<FileTableProps>(({
   onPreviewDocument,
   onDownloadDocument,
   onUploadVersion,
+  onCreateRelatedDocument,
   onEditDocument,
   onDeleteScheduledVersion,
   onCancelVersion,
@@ -238,6 +247,15 @@ export const FileTable = React.memo<FileTableProps>(({
       }
 
       if (item.can_manage) {
+        if (!item.parent_document_id && item.status !== 'Obsolete') {
+          actions.push({
+            key: 'create-related-document',
+            label: '新增相關文件',
+            icon: <RelatedDocumentIcon size={18} />,
+            onClick: () => onCreateRelatedDocument?.(item)
+          });
+        }
+
         actions.push({
           key: 'edit-document',
           label: '修改文件',
@@ -282,7 +300,15 @@ export const FileTable = React.memo<FileTableProps>(({
           return actions;
         }
 
-        if (activeVersionCount === 1) {
+        if (!item.parent_document_id && (item.related_document_count || 0) > 0) {
+          actions.push({
+            key: 'delete-document-group',
+            label: '刪除文件',
+            icon: <DeleteIcon size={18} />,
+            className: 'menu-item-warning',
+            onClick: () => onDeleteDocument?.(item)
+          });
+        } else if (activeVersionCount === 1) {
           actions.push({
             key: 'delete-document',
             label: '刪除文件',
@@ -469,11 +495,11 @@ export const FileTable = React.memo<FileTableProps>(({
       <table id="files-table">
         <thead>
           <tr>
-            <th style={{ width: '36%' }}>名稱</th>
-            <th style={{ width: '24%' }}>文件編號</th>
+            <th style={{ width: '52%' }}>名稱</th>
+            <th style={{ width: '16%' }}>文件編號</th>
             <th style={{ width: '10%' }}>屬性 / 版本</th>
-            <th style={{ width: '14%' }}>修訂日期</th>
-            <th style={{ width: '16%', textAlign: 'right' }}>操作</th>
+            <th style={{ width: '12%' }}>修訂日期</th>
+            <th style={{ width: '10%', textAlign: 'right' }}>操作</th>
           </tr>
         </thead>
         <tbody id="files-list">
@@ -481,11 +507,16 @@ export const FileTable = React.memo<FileTableProps>(({
             return (
               <tr
                 key={`${item.type}-${item.id}-${item.ver_id || ''}`}
-                className="table-row"
+                className={`table-row${item.parent_document_id ? ' related-document-row' : ''}`}
                 onClick={() => handleRowClick(item)}
               >
                 <td>
                   <div className="name-cell">
+                    {item.parent_document_id && (
+                      <span className="related-document-branch" title="相關文件">
+                        <RelatedDocumentIcon size={18} />
+                      </span>
+                    )}
                     {renderItemIcon(item)}
                     <span className="name-text">
                       {showFolderPath && item.folder_path && (
@@ -503,7 +534,12 @@ export const FileTable = React.memo<FileTableProps>(({
                           {item.folder_path}
                         </button>
                       )}
-                      <span>{item.name}</span>
+                      {showFolderPath && item.parent_document_id && item.parent_title && (
+                        <span className="related-document-context">
+                          隸屬於：{[item.parent_code, item.parent_title].filter(Boolean).join(' ')}
+                        </span>
+                      )}
+                      <span className="item-name">{item.name}</span>
                     </span>
                   </div>
                 </td>

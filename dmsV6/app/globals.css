@@ -1356,6 +1356,45 @@ tr.table-row:hover {
   min-width: 0;
 }
 
+.related-document-row .name-cell {
+  padding-left: 28px;
+}
+
+.related-document-branch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--accent-cyan);
+}
+
+.related-document-context {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related-document-parent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+}
+
+.related-document-parent span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.related-document-parent strong {
+  color: var(--text-primary);
+}
+
 .name-cell span.icon {
   font-size: 1.5rem;
 }
@@ -1372,10 +1411,10 @@ tr.table-row:hover {
   overflow: hidden;
 }
 
-.name-text > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.name-text > .item-name {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .folder-path-link {

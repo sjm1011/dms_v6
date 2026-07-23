@@ -110,9 +110,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [isCancelVersionOpen, setIsCancelVersionOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState<Document | null>(null);
+  const [relatedParentDoc, setRelatedParentDoc] = useState<Document | null>(null);
   const [newDocFile, setNewDocFile] = useState<File | null>(null);
   const [uploadVerFile, setUploadVerFile] = useState<File | null>(null);
   const newDocFileInputRef = useRef<HTMLInputElement>(null);
+  const relatedDocFileInputRef = useRef<HTMLInputElement>(null);
   const uploadVerFileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user.role === 'ADMIN';
@@ -418,6 +420,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           mime: displayVersion.mime,
           ver_id: displayVersion.ver_id,
           file_name: displayVersion.file_name,
+          parent_document_id: doc.parent_document_id || null,
+          parent_code: doc.parent_code || null,
+          parent_title: doc.parent_title || null,
+          related_document_count: doc.related_document_count || 0,
+          related_version_count: doc.related_version_count || 0,
           can_manage: !!doc.can_manage,
           manager_role: currentFolder?.manager_role || null,
           is_pdf: currentExtension ? currentExtension === 'pdf' : false,
@@ -469,6 +476,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           file_name: displayVersion.file_name,
           folder_id: doc.folder_id,
           folder_path: doc.folder_path || doc.folder_name || '文件庫',
+          parent_document_id: doc.parent_document_id || null,
+          parent_code: doc.parent_code || null,
+          parent_title: doc.parent_title || null,
+          related_document_count: doc.related_document_count || 0,
+          related_version_count: doc.related_version_count || 0,
           can_manage: Boolean(doc.can_manage),
           manager_role: doc.manager_role || null,
           is_pdf: extension === 'pdf',
@@ -545,6 +557,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           const selectedFile = event.target.files?.[0] || null;
           event.target.value = '';
           if (!selectedFile) return;
+          setNewDocFile(selectedFile);
+          setIsNewDocOpen(true);
+        }}
+      />
+      <input
+        ref={relatedDocFileInputRef}
+        type="file"
+        accept={ACCEPTED_DOCUMENT_FILE_TYPES}
+        style={{ display: 'none' }}
+        onChange={(event) => {
+          const selectedFile = event.target.files?.[0] || null;
+          event.target.value = '';
+          if (!selectedFile || !relatedParentDoc) return;
           setNewDocFile(selectedFile);
           setIsNewDocOpen(true);
         }}
@@ -730,7 +755,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               </button>
             )}
             {!isSearchMode && canCreateDocument && (
-              <button className="btn btn-primary" onClick={() => newDocFileInputRef.current?.click()}>
+              <button className="btn btn-primary" onClick={() => {
+                setRelatedParentDoc(null);
+                newDocFileInputRef.current?.click();
+              }}>
                 <CloudUploadIcon size={18} />
                 <span>新建文件</span>
               </button>
@@ -783,6 +811,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 onUploadVersion={(item) => {
                   const doc = openDocument(item);
                   if (doc) uploadVerFileInputRef.current?.click();
+                }}
+                onCreateRelatedDocument={(item) => {
+                  const doc = openDocument(item);
+                  if (!doc) return;
+                  setRelatedParentDoc(doc);
+                  relatedDocFileInputRef.current?.click();
                 }}
                 onEditDocument={(item) => {
                   const doc = openDocument(item);
@@ -897,14 +931,22 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       <NewDocModal
         isOpen={isNewDocOpen}
         initialFile={newDocFile}
+        parentDocument={relatedParentDoc}
         onClose={() => {
           setIsNewDocOpen(false);
           setNewDocFile(null);
+          setRelatedParentDoc(null);
         }}
         onCreate={async (...args) => {
-          const success = await documentsHook.handleCreateDocument(...args);
+          const success = await documentsHook.handleCreateDocument(
+            ...args,
+            relatedParentDoc?.id || null
+          );
           if (success) {
             await fetchFolders();
+            if (isSearchMode) {
+              await executeSearch(searchPage);
+            }
           }
           return success;
         }}
@@ -994,6 +1036,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         isOpen={isObsoleteDocOpen}
         onClose={() => setIsObsoleteDocOpen(false)}
         targetName={activeDoc?.title || ''}
+        relatedDocumentCount={activeDoc?.related_document_count || 0}
         onObsolete={async (reason, file) => {
           if (!activeDoc) return false;
           const success = await documentsHook.handleObsoleteDocument(activeDoc.id, activeDoc.title, reason, file);
@@ -1009,6 +1052,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         isOpen={isDeleteDocOpen}
         onClose={() => setIsDeleteDocOpen(false)}
         targetName={activeDoc?.title || ''}
+        relatedDocumentCount={activeDoc?.related_document_count || 0}
+        totalVersionCount={
+          (activeDoc?.versions.length || 0)
+          + (activeDoc?.related_version_count || 0)
+        }
         onDelete={async () => {
           if (!activeDoc) return false;
           const success = await documentsHook.handleDeleteDocument(activeDoc.id, activeDoc.title);

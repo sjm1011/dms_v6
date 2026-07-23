@@ -41,6 +41,11 @@ interface DocumentRow extends VersionRow {
   title: string;
   doc_status: number;
   folder_id: number;
+  parent_document_id: number | null;
+  parent_code: string | null;
+  parent_title: string | null;
+  related_document_count: string | number;
+  related_version_count: string | number;
   obsolete_at: string | null;
   obsolete_reason: string | null;
   can_manage: boolean;
@@ -144,6 +149,11 @@ const toDocument = (rows: DocumentRow[]): Document => {
     title: first.title,
     status: first.doc_status === 2 ? 'Obsolete' : 'Effective',
     folder_id: String(first.folder_id),
+    parent_document_id: first.parent_document_id ? String(first.parent_document_id) : null,
+    parent_code: first.parent_code,
+    parent_title: first.parent_title,
+    related_document_count: Number(first.related_document_count || 0),
+    related_version_count: Number(first.related_version_count || 0),
     versions,
     ver_id: current?.ver_id,
     version: current?.ver_number,
@@ -182,12 +192,26 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
                     )
                 )
            )
+      ),
+      related_counts AS (
+        SELECT child.dd_parent_id AS dd_id,
+               COUNT(DISTINCT child.dd_id) AS related_document_count,
+               COUNT(version.ddv_id) AS related_version_count
+          FROM dms_doc child
+          LEFT JOIN dms_doc_ver version ON version.dd_id = child.dd_id
+         WHERE child.dd_parent_id IS NOT NULL
+         GROUP BY child.dd_parent_id
       )
       SELECT d.dd_id AS id,
              d.dd_code AS code,
              d.dd_title AS title,
              d.dd_status AS doc_status,
              d.df_fid AS folder_id,
+             d.dd_parent_id AS parent_document_id,
+             parent.dd_code AS parent_code,
+             parent.dd_title AS parent_title,
+             COALESCE(rc.related_document_count, 0) AS related_document_count,
+             COALESCE(rc.related_version_count, 0) AS related_version_count,
              d.dd_obs_at AS obsolete_at,
              d.dd_obs_reason AS obsolete_reason,
              $2 AS can_manage,
@@ -217,6 +241,8 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
         JOIN visible_doc vd ON vd.dd_id = d.dd_id
         JOIN dms_doc_ver v ON v.dd_id = d.dd_id
         JOIN dms_file f ON f.dfi_id = v.ddv_pub_dfi_id
+        LEFT JOIN dms_doc parent ON parent.dd_id = d.dd_parent_id
+        LEFT JOIN related_counts rc ON rc.dd_id = d.dd_id
        WHERE $2 = true
           OR (
               d.dd_status = 1
@@ -224,7 +250,11 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
               AND v.ddv_eff_at <= CURRENT_TIMESTAMP
               AND (v.ddv_eff_to IS NULL OR CURRENT_TIMESTAMP < v.ddv_eff_to)
           )
-       ORDER BY d.dd_code NULLS LAST,
+       ORDER BY COALESCE(parent.dd_code, d.dd_code) NULLS LAST,
+                COALESCE(parent.dd_title, d.dd_title),
+                CASE WHEN d.dd_parent_id IS NULL THEN 0 ELSE 1 END,
+                d.dd_code NULLS LAST,
+                d.dd_title,
                 d.dd_id,
                 v.ddv_seq DESC`,
     [folderId, canManage, canAccess]
@@ -302,9 +332,41 @@ export const createDocument = async (
     effective_at: string;
     file: UploadPayload;
     source_file?: UploadPayload | null;
+    parent_document_id?: string | number | null;
   }
 ) => {
-  const folderId = Number(payload.folder_id || 0);
+  const parentDocumentId = payload.parent_document_id === null
+    || payload.parent_document_id === undefined
+    || payload.parent_document_id === ''
+    ? null
+    : Number(payload.parent_document_id);
+  if (parentDocumentId !== null && (!Number.isInteger(parentDocumentId) || parentDocumentId <= 0)) {
+    throw new Error('主文件識別碼格式錯誤。');
+  }
+
+  let folderId = Number(payload.folder_id || 0);
+  if (parentDocumentId !== null) {
+    const parent = await query<{
+      df_fid: number;
+      dd_parent_id: number | null;
+      dd_status: number;
+    }>(
+      `SELECT df_fid,
+              dd_parent_id,
+              dd_status
+         FROM dms_doc
+        WHERE dd_id = $1`,
+      [parentDocumentId]
+    );
+    const parentRow = parent.rows[0];
+    if (!parentRow || parentRow.dd_status !== 1) {
+      throw new Error('主文件不存在或已廢止。');
+    }
+    if (parentRow.dd_parent_id !== null) {
+      throw new Error('相關文件底下不可再建立第 3 層文件。');
+    }
+    folderId = parentRow.df_fid;
+  }
   const code = normalizeDocumentCode(payload.code);
   validateDocumentCode(code);
   const canManage = folderId > 0 ? await canManageFolder(user, folderId) : isAdmin(user);
@@ -314,6 +376,30 @@ export const createDocument = async (
   }
 
   return withTransaction(async (client) => {
+    if (parentDocumentId !== null) {
+      const parent = await client.query<{
+        df_fid: number;
+        dd_parent_id: number | null;
+        dd_status: number;
+      }>(
+        `SELECT df_fid,
+                dd_parent_id,
+                dd_status
+           FROM dms_doc
+          WHERE dd_id = $1
+          FOR UPDATE`,
+        [parentDocumentId]
+      );
+      const parentRow = parent.rows[0];
+      if (
+        !parentRow
+        || parentRow.dd_status !== 1
+        || parentRow.dd_parent_id !== null
+        || parentRow.df_fid !== folderId
+      ) {
+        throw new Error('主文件狀態或所在資料夾已變更，請重新整理後再試。');
+      }
+    }
     await ensureDocumentCodeAvailable(client, code);
     const published = await insertFile(client, payload.file, 1, user);
     const source =
@@ -323,6 +409,7 @@ export const createDocument = async (
     const doc = await client.query<{ id: number }>(
       `INSERT INTO dms_doc (
              df_fid,
+             dd_parent_id,
              dd_code,
              dd_title,
              dd_status,
@@ -332,12 +419,13 @@ export const createDocument = async (
              $1,
              $2,
              $3,
-             1,
              $4,
+             1,
+             $5,
              CURRENT_TIMESTAMP
        )
        RETURNING dd_id AS id`,
-      [folderId, code, payload.title, user.id]
+      [folderId, parentDocumentId, code, payload.title, user.id]
     );
     const docId = doc.rows[0].id;
     const version = await client.query<{ id: number }>(
@@ -385,7 +473,12 @@ export const createDocument = async (
         folderId,
         documentId: docId,
         versionId: version.rows[0].id,
-        metadata: { code, title: payload.title, file_name: payload.file.name }
+        metadata: {
+          code,
+          title: payload.title,
+          file_name: payload.file.name,
+          parent_document_id: parentDocumentId
+        }
       },
       client
     );
@@ -904,8 +997,9 @@ export const obsoleteDocument = async (
   reason: string,
   file: UploadPayload
 ) => {
-  const doc = await query<{ df_fid: number }>(
-    `SELECT df_fid
+  const doc = await query<{ df_fid: number; dd_parent_id: number | null }>(
+    `SELECT df_fid,
+            dd_parent_id
        FROM dms_doc
       WHERE dd_id = $1
         AND dd_status = 1`,
@@ -913,11 +1007,50 @@ export const obsoleteDocument = async (
   );
   const docRow = doc.rows[0];
 
-  if (!docRow || !(await canManageFolder(user, docRow.df_fid))) {
+  const canManage = docRow
+    && (docRow.df_fid > 0 ? await canManageFolder(user, docRow.df_fid) : isAdmin(user));
+  if (!docRow || !canManage) {
     throw new Error('沒有此文件的管理權限。');
   }
 
   await withTransaction(async (client) => {
+    const lockedDocument = await client.query<{
+      dd_status: number;
+      dd_parent_id: number | null;
+    }>(
+      `SELECT dd_status,
+              dd_parent_id
+         FROM dms_doc
+        WHERE dd_id = $1
+        FOR UPDATE`,
+      [docId]
+    );
+    const lockedDocumentRow = lockedDocument.rows[0];
+    if (!lockedDocumentRow || lockedDocumentRow.dd_status !== 1) {
+      throw new Error('文件狀態已變更，請重新整理後再試。');
+    }
+
+    const targets = await client.query<{ dd_id: number }>(
+      `SELECT dd_id
+         FROM dms_doc
+        WHERE dd_status = 1
+          AND (
+               dd_id = $1
+               OR (
+                    $2 = true
+                    AND dd_parent_id = $1
+               )
+          )
+        ORDER BY CASE WHEN dd_id = $1 THEN 0 ELSE 1 END,
+                 dd_id
+        FOR UPDATE`,
+      [docId, lockedDocumentRow.dd_parent_id === null]
+    );
+    if (!targets.rows.some((row) => row.dd_id === docId)) {
+      throw new Error('文件狀態已變更，請重新整理後再試。');
+    }
+
+    const targetIds = targets.rows.map((row) => row.dd_id);
     const obsoleteFile = await insertFile(client, file, 4, user);
 
     await client.query(
@@ -930,27 +1063,37 @@ export const obsoleteDocument = async (
               dd_obs_src = 1,
               dd_updby = $2,
               dd_updat = CURRENT_TIMESTAMP
-        WHERE dd_id = $1`,
-      [docId, user.id, reason, obsoleteFile.id]
+        WHERE dd_id = ANY($1::int[])`,
+      [targetIds, user.id, reason, obsoleteFile.id]
     );
-    await writeAudit(
-      {
+
+    for (const targetId of targetIds) {
+      await writeAudit({
         user,
         action: 'DOCUMENT_OBSOLETED',
         resourceType: 'DOCUMENT',
         folderId: docRow.df_fid,
-        documentId: docId,
-        metadata: { reason, file_name: file.name }
-      },
-      client
-    );
+        documentId: targetId,
+        metadata: {
+          reason,
+          file_name: file.name,
+          parent_document_id: docRow.dd_parent_id === null ? docId : docRow.dd_parent_id,
+          cascade_source: targetId === docId ? null : 'PARENT_DOCUMENT'
+        }
+      }, client);
+    }
   });
 };
 
 export const deleteFirstVersionDocument = async (user: SessionUser, docId: number) => {
-  const doc = await query<{ df_fid: number; dd_status: number }>(
+  const doc = await query<{
+    df_fid: number;
+    dd_status: number;
+    dd_parent_id: number | null;
+  }>(
     `SELECT df_fid,
-            dd_status
+            dd_status,
+            dd_parent_id
        FROM dms_doc
       WHERE dd_id = $1`,
     [docId]
@@ -961,55 +1104,128 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
     throw new Error('文件不存在或已廢止。');
   }
 
-  if (!(await canManageFolder(user, docRow.df_fid))) {
+  const canManage = docRow.df_fid > 0
+    ? await canManageFolder(user, docRow.df_fid)
+    : isAdmin(user);
+  if (!canManage) {
     throw new Error('沒有此文件的管理權限。');
   }
 
   await withTransaction(async (client) => {
-    const version = await client.query<{
-      active_version_count: string;
-      active_min_seq: number;
-      active_max_seq: number;
-      version_id: number;
-      file_ids: number[];
+    const lockedDocument = await client.query<{
+      dd_status: number;
+      dd_parent_id: number | null;
+      related_document_count: string | number;
     }>(
-      `SELECT COUNT(*) FILTER (WHERE ddv_cancel_at IS NULL) AS active_version_count,
-              MIN(ddv_seq) FILTER (WHERE ddv_cancel_at IS NULL) AS active_min_seq,
-              MAX(ddv_seq) FILTER (WHERE ddv_cancel_at IS NULL) AS active_max_seq,
-              MIN(ddv_id) FILTER (WHERE ddv_cancel_at IS NULL) AS version_id,
-              ARRAY_REMOVE(
-                ARRAY_AGG(ddv_pub_dfi_id) || ARRAY_AGG(ddv_src_dfi_id),
-                NULL
-              ) AS file_ids
-         FROM dms_doc_ver
-        WHERE dd_id = $1`,
+      `SELECT d.dd_status,
+              d.dd_parent_id,
+              (
+                SELECT COUNT(*)
+                  FROM dms_doc child
+                 WHERE child.dd_parent_id = d.dd_id
+              ) AS related_document_count
+         FROM dms_doc d
+        WHERE d.dd_id = $1
+        FOR UPDATE`,
       [docId]
     );
-    const versionRow = version.rows[0];
-
-    if (
-      Number(versionRow.active_version_count) !== 1 ||
-      Number(versionRow.active_min_seq) !== 1 ||
-      Number(versionRow.active_max_seq) !== 1
-    ) {
-      throw new Error('僅目前有效版本為第一版的文件可以刪除。');
+    const lockedDocumentRow = lockedDocument.rows[0];
+    if (!lockedDocumentRow || lockedDocumentRow.dd_status !== 1) {
+      throw new Error('文件狀態已變更，請重新整理後再試。');
+    }
+    const isRelatedGroupDelete = lockedDocumentRow.dd_parent_id === null
+      && Number(lockedDocumentRow.related_document_count) > 0;
+    const targets = await client.query<{
+      dd_id: number;
+      df_fid: number;
+      dd_status: number;
+      version_id: number | null;
+    }>(
+      `SELECT d.dd_id,
+              d.df_fid,
+              d.dd_status,
+              (
+                SELECT MAX(v.ddv_id)
+                  FROM dms_doc_ver v
+                 WHERE v.dd_id = d.dd_id
+              ) AS version_id
+         FROM dms_doc d
+        WHERE d.dd_id = $1
+           OR (
+                $2 = true
+                AND d.dd_parent_id = $1
+           )
+        ORDER BY CASE WHEN d.dd_id = $1 THEN 0 ELSE 1 END,
+                 d.dd_id
+        FOR UPDATE`,
+      [docId, isRelatedGroupDelete]
+    );
+    if (!targets.rows.some((row) => row.dd_id === docId && row.dd_status === 1)) {
+      throw new Error('文件狀態已變更，請重新整理後再試。');
     }
 
-    await writeAudit(
-      {
+    if (!isRelatedGroupDelete) {
+      const version = await client.query<{
+        active_version_count: string;
+        active_min_seq: number;
+        active_max_seq: number;
+      }>(
+        `SELECT COUNT(*) FILTER (WHERE ddv_cancel_at IS NULL) AS active_version_count,
+                MIN(ddv_seq) FILTER (WHERE ddv_cancel_at IS NULL) AS active_min_seq,
+                MAX(ddv_seq) FILTER (WHERE ddv_cancel_at IS NULL) AS active_max_seq
+           FROM dms_doc_ver
+          WHERE dd_id = $1`,
+        [docId]
+      );
+      const versionRow = version.rows[0];
+      if (
+        Number(versionRow.active_version_count) !== 1
+        || Number(versionRow.active_min_seq) !== 1
+        || Number(versionRow.active_max_seq) !== 1
+      ) {
+        throw new Error('僅目前有效版本為第一版的文件可以刪除。');
+      }
+    }
+
+    const targetIds = targets.rows.map((row) => row.dd_id);
+    for (const target of targets.rows) {
+      await writeAudit({
         user,
         action: 'DOCUMENT_DELETED',
         resourceType: 'DOCUMENT',
-        folderId: docRow.df_fid,
-        documentId: docId,
-        versionId: versionRow.version_id,
-        metadata: { reason: '第一版文件刪除' }
-      },
-      client
+        folderId: target.df_fid,
+        documentId: target.dd_id,
+        versionId: target.version_id || undefined,
+        metadata: {
+          reason: isRelatedGroupDelete ? '主文件連動強制刪除' : '第一版文件刪除',
+          parent_document_id: isRelatedGroupDelete ? docId : docRow.dd_parent_id,
+          cascade_source: target.dd_id === docId ? null : 'PARENT_DOCUMENT'
+        }
+      }, client);
+    }
+
+    const files = await client.query<{ file_id: number }>(
+      `SELECT d.dfi_id AS file_id
+         FROM dms_doc d
+        WHERE d.dd_id = ANY($1::int[])
+          AND d.dfi_id IS NOT NULL
+       UNION
+       SELECT v.ddv_pub_dfi_id
+         FROM dms_doc_ver v
+        WHERE v.dd_id = ANY($1::int[])
+       UNION
+       SELECT v.ddv_src_dfi_id
+         FROM dms_doc_ver v
+        WHERE v.dd_id = ANY($1::int[])
+          AND v.ddv_src_dfi_id IS NOT NULL
+       UNION
+       SELECT r.dfi_id
+         FROM dms_ver_rev r
+         JOIN dms_doc_ver v ON v.ddv_id = r.ddv_id
+        WHERE v.dd_id = ANY($1::int[])`,
+      [targetIds]
     );
-
-    const fileIds = versionRow.file_ids || [];
-
+    const fileIds = files.rows.map((row) => row.file_id);
     if (fileIds.length > 0) {
       await client.query(
         `UPDATE dms_file
@@ -1024,21 +1240,21 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
         WHERE ddv_id IN (
               SELECT ddv_id
                 FROM dms_doc_ver
-               WHERE dd_id = $1
+               WHERE dd_id = ANY($1::int[])
         )`,
-      [docId]
+      [targetIds]
     );
 
     await client.query(
       `DELETE FROM dms_doc_ver
-        WHERE dd_id = $1`,
-      [docId]
+        WHERE dd_id = ANY($1::int[])`,
+      [targetIds]
     );
 
     await client.query(
       `DELETE FROM dms_doc
-        WHERE dd_id = $1`,
-      [docId]
+        WHERE dd_id = ANY($1::int[])`,
+      [targetIds]
     );
   });
 };

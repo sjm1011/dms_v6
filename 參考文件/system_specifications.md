@@ -73,7 +73,7 @@
 
 | 資料表 | 欄位方向 |
 | --- | --- |
-| `dms_doc` | `dd_id`、`df_fid`、`dd_code`、`dd_title`、`dd_status`、`dd_obs_at`、`dd_obs_by`、`dd_obs_reason`、`dfi_id`、`dd_obs_src`、`dd_crtby`、`dd_crtat`、`dd_updby`、`dd_updat` |
+| `dms_doc` | `dd_id`、`df_fid`、`dd_parent_id`、`dd_code`、`dd_title`、`dd_status`、`dd_obs_at`、`dd_obs_by`、`dd_obs_reason`、`dfi_id`、`dd_obs_src`、`dd_crtby`、`dd_crtat`、`dd_updby`、`dd_updat` |
 | `dms_doc_ver` | `ddv_id`、`dd_id`、`ddv_seq`、`ddv_no`、`ddv_rev_date`、`ddv_eff_at`、`ddv_eff_to`、`ddv_chg_note`、`ddv_pub_dfi_id`、`ddv_src_dfi_id`、`ddv_cancel_at`、`ddv_cancel_by`、`ddv_cancel_reason`、`ddv_crtby`、`ddv_crtat`、`ddv_updby`、`ddv_updat` |
 | `dms_file` | `dfi_id`、`dfi_role`、`dfi_name`、`dfi_path`、`dfi_ext`、`dfi_mime`、`dfi_size`、`dfi_sha256`、`dfi_status`、`dfi_crtby`、`dfi_crtat` |
 | `dms_ver_rev` | `dvr_id`、`ddv_id`、`dvr_base_ddv_id`、`dfi_id`、`dvr_note`、`dvr_dc`、`dvr_crtby`、`dvr_crtat`、`dvr_dcby`、`dvr_dcat` |
@@ -398,6 +398,23 @@ Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由
 * 新版本到達生效時間後，一般使用者看到新版本。
 * 資料夾管理員在新版本生效前即可查閱與下載該版本。
 * 系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，文件清單必須同時分列顯示預約版本與目前有效版本，不得以預約版本取代目前有效版本的清單列。
+
+#### 4.9.1. 主文件與相關文件
+
+文件可建立 2 層關係：「主文件 → 相關文件」。相關文件是完整文件，不是附加檔案，具有自己的文件編號、版本號、修訂日期、生效期間、正式發佈檔案、預約版本、撤回、廢止、預覽、下載與稽核紀錄。
+
+* `dms_doc.dd_parent_id` 空白代表第一階主文件；有值時代表相關文件，並邏輯指向同一資料夾內的主文件 `dd_id`。
+* 系統不建立實體 `FOREIGN KEY` 或額外 `CONSTRAINT`；父子關係完整性由後端交易檢核維護。
+* 文件只允許 2 層。相關文件不得再建立相關文件，也不得掛到不同資料夾或同時隸屬多份主文件。
+* 主文件操作選單提供「新增相關文件」。建立流程沿用新建文件的檔案格式、欄位、日期、文件編號唯一性及 PDF 原始編修檔規則。
+* 相關文件沿用主文件所在資料夾的 ACL 與管理權。根目錄主文件只有 `ADMIN` 可新增相關文件。
+* 相關文件獨立版控。相關文件改版不自動建立主文件新版；若異動影響主文件內容、流程、引用編號或適用性，由文件管理者另行版更主文件。
+* 一般文件清單固定顯示全部相關文件。相關文件緊接於主文件下方，以縮排及關聯圖示表示第二階關係，不增加文件類型欄位。
+* 搜尋命中相關文件時直接顯示該文件，並顯示「隸屬於：主文件編號 主文件名稱」；搜尋 ACL、版本可見性、排名與分頁規則不變。
+* 單獨修改、版更、撤回、刪除或廢止相關文件時，沿用一般文件生命週期規則。
+* 主文件廢止時，系統在同一交易內使用相同原因及同一份核准文件，一併廢止全部尚未廢止的相關文件，並逐份寫入 `DOCUMENT_OBSOLETED`。
+* 有相關文件的主文件執行「刪除文件」時，屬於第一版刪除規則的限定例外。系統需先顯示相關文件數與總版本數，再於同一交易內強制刪除主文件、全部相關文件、全部版本及修訂資料；每份文件刪除前均需寫入 `DOCUMENT_DELETED` 稽核快照。
+* 沒有相關文件的一般文件，以及單獨刪除相關文件時，仍只允許刪除目前有效版本為第一版的文件。
 * 預約版本的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。目前有效版本仍顯示其版本號。
 * 管理員可從預約版本的操作選單執行「修改文件」，但只允許修改新版本號、修訂日期、發行日期與異動說明，不得藉此修改文件編號、文件名稱或替換版本檔案。
 * 管理員可刪除尚未生效的最新預約版本。刪除後，該版本、修訂對照資料與檔案有效狀態必須於同一筆交易處理，並將前一個未撤回版本的 `effective_until` 清空，使目前有效版本繼續生效。
@@ -754,7 +771,7 @@ DMS_NEXT_PORT=3000
 | `GET /api/employee?uid=...` | `app/api/employee/route.ts` | 透過 `employeeService.ts` 以 UID 精準檢索員工資料 |
 | `GET /api/departments` | `app/api/departments/route.ts` | 透過 `employeeService.ts` 查詢所有部門 |
 | `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | 透過 `documentService.ts` 查詢指定資料夾下之有效文件 |
-| `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件、上傳新版本或修訂 |
+| `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件或相關文件、上傳新版本、修訂、廢止或刪除 |
 | `GET /api/search?keyword=...&scope=...&folder_id=...&page=...` | `app/api/search/route.ts` | 透過 `searchService.ts` 依 ACL、管理範圍及版本可見性執行跨資料夾文件關鍵字搜尋 |
 | `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
 | `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
