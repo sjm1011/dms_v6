@@ -8,6 +8,7 @@ import {
 import type { AppTheme } from '../App';
 import { showRequiredFieldMessage } from '../lib/clientValidation';
 import { Modal } from '../components/Modal';
+import { APP_VERSION_LABEL } from '../lib/appVersion';
 
 interface LoginLayoutProps {
   loginError: string;
@@ -60,8 +61,14 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       <Modal
         isOpen
         onClose={() => undefined}
-        title="文件管理系統"
+        title={
+          <span className="login-title-row">
+            <span>文件管理系統</span>
+            <span className="login-title-version">{APP_VERSION_LABEL}</span>
+          </span>
+        }
         closeOnOverlayClick={false}
+        contentClassName="login-modal"
         showCloseButton={false}
         footer={
           <button

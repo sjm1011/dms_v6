@@ -36,6 +36,13 @@ function isPdfFile(file: File | null) {
   return !!file && file.name.toLowerCase().endsWith('.pdf');
 }
 
+function getDocumentTitleFromFile(file: File | null) {
+  if (!file) return '';
+
+  const extensionIndex = file.name.lastIndexOf('.');
+  return extensionIndex > 0 ? file.name.slice(0, extensionIndex) : file.name;
+}
+
 function toUpperValue(value: string) {
   return value.toUpperCase();
 }
@@ -167,6 +174,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
 
+  const automaticTitleRef = useRef('');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const revisionDateInputRef = useRef<HTMLInputElement>(null);
   const effAtInputRef = useRef<HTMLInputElement>(null);
@@ -177,14 +185,16 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      const automaticTitle = getDocumentTitleFromFile(initialFile);
       setCode('');
-      setTitle('');
+      setTitle(automaticTitle);
       setVersion('');
       setChangeNote('初版發行');
       setRevisionDate(getTodayString());
       setEffAt(getTodayString());
       setFile(initialFile);
       setSourceFile(null);
+      automaticTitleRef.current = automaticTitle;
     }
   }, [isOpen, initialFile]);
 
@@ -226,7 +236,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={parentDocument ? '新增相關文件' : '新建文件'}
+      title={parentDocument ? '新增相關文件' : '新增文件'}
       useNativeDialog
       closeOnOverlayClick={false}
       footer={
@@ -271,7 +281,13 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
           </button>
           <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
             const selected = e.target.files?.[0] || null;
+            const previousAutomaticTitle = automaticTitleRef.current;
+            const nextAutomaticTitle = getDocumentTitleFromFile(selected);
             setFile(selected);
+            setTitle(currentTitle => (
+              currentTitle === previousAutomaticTitle ? nextAutomaticTitle : currentTitle
+            ));
+            automaticTitleRef.current = nextAutomaticTitle;
             if (!isPdfFile(selected)) setSourceFile(null);
           }} />
         </div>

@@ -430,6 +430,25 @@ select {
   font-size: 1rem;
 }
 
+.login-title-row {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  gap: 16px;
+}
+
+.login-modal .modal-header h3 {
+  flex: 1;
+}
+
+.login-title-version {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
 .theme-selector {
   border: 0;
   margin-bottom: 24px;
@@ -590,7 +609,20 @@ select {
   gap: 12px;
 }
 
-.logo span {
+.sidebar-brand-text {
+  min-width: 0;
+}
+
+.sidebar-version {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.logo > span {
   color: var(--accent-blue);
   font-size: 2rem;
 }

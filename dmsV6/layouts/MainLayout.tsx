@@ -751,7 +751,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             {!isSearchMode && canCreateFolder && (
               <button className="btn btn-secondary" onClick={() => setIsNewFolderOpen(true)}>
                 <CreateNewFolderIcon size={18} />
-                <span>新建資料夾</span>
+                <span>新增資料夾</span>
               </button>
             )}
             {!isSearchMode && canCreateDocument && (
@@ -760,7 +760,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 newDocFileInputRef.current?.click();
               }}>
                 <CloudUploadIcon size={18} />
-                <span>新建文件</span>
+                <span>新增文件</span>
               </button>
             )}
           </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_VERSION_LABEL } from '../lib/appVersion';
 import { Folder, SystemPage, User } from '../types';
 import { 
   ServerIcon, 
@@ -125,7 +126,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-header">
         <div className="logo">
           <img src="/logo.png" alt="Logo" className="logo-img" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain' }} />
-          <h2>文件管理系統</h2>
+          <div className="sidebar-brand-text">
+            <h2>文件管理系統</h2>
+            <span className="sidebar-version">{APP_VERSION_LABEL}</span>
+          </div>
         </div>
       </div>
 

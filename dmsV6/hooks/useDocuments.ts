@@ -78,7 +78,7 @@ export const useDocuments = (
     };
   }, [currentFolderId, user, enabled]);
 
-  // 新建文件與上傳第一版
+  // 新增文件與上傳第一版
   const handleCreateDocument = async (
     code: string,
     title: string,
