@@ -588,8 +588,7 @@ export const FileTable = React.memo<FileTableProps>(({
       <table id="files-table">
         <thead>
           <tr>
-            <th style={{ width: '60%' }}>名稱</th>
-            <th style={{ width: '18%' }}>文件編號</th>
+            <th style={{ width: '78%' }}>名稱</th>
             <th style={{ width: '10%' }}>屬性 / 版本</th>
             <th style={{ width: '12%' }}>修訂日期</th>
           </tr>
@@ -710,16 +709,13 @@ export const FileTable = React.memo<FileTableProps>(({
                           隸屬於：{[item.parent_code, item.parent_title].filter(Boolean).join(' ')}
                         </span>
                       )}
-                      <span className="item-name">{item.name}</span>
+                      <span className="item-name">
+                        {item.type === 'document' && item.code
+                          ? `${item.code} ${item.name}`
+                          : item.name}
+                      </span>
                     </span>
-                  </div>
-                </td>
-                <td>
-                  <div className="document-code-cell">
                     {renderManagerRoleIcon(item)}
-                    <span>
-                      {item.type === 'document' ? (item.code || '') : ''}
-                    </span>
                   </div>
                 </td>
                 <td>

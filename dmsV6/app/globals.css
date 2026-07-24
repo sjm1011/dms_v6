@@ -1584,21 +1584,6 @@ tr.table-row.context-menu-active {
   color: var(--accent-blue);
 }
 
-.document-code-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.document-code-cell > span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .manager-role-icon {
   display: inline-flex;
   flex: 0 0 auto;
