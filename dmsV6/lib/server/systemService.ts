@@ -1,7 +1,7 @@
 import { constants as fsConstants } from 'node:fs';
 import { access, mkdir, realpath, rename, rm, statfs } from 'node:fs/promises';
 import path from 'node:path';
-import packageInfo from '../../package.json';
+import { APP_VERSION_DATE } from '../appVersion';
 import type { SessionUser } from '../session';
 import { formatAuditActor, getAuditActionLabel, getAuditResourceLabel, getAuditResultLabel, getAuditRoleLabel } from '../auditLabels';
 import { writeAudit } from './auditService';
@@ -426,7 +426,7 @@ export const getSystemStatus = async () => {
   );
   const numericCounts = Object.fromEntries(Object.entries(counts.rows[0] || {}).map(([key, value]) => [key, Number(value || 0)]));
   return {
-    application: { version: packageInfo.version, environment: process.env.NODE_ENV || 'development', server_time: new Date().toISOString(), uptime_seconds: Math.floor(process.uptime()) },
+    application: { version_date: APP_VERSION_DATE, environment: process.env.NODE_ENV || 'development', server_time: new Date().toISOString(), uptime_seconds: Math.floor(process.uptime()) },
     database: { connected: true, version: db.rows[0]?.version || '', database_time: db.rows[0]?.database_time || '', latency_ms: latency, pool_total: pool.totalCount, pool_idle: pool.idleCount, pool_waiting: pool.waitingCount },
     storage: await getStorageStatus(),
     configuration: {

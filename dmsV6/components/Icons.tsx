@@ -105,6 +105,14 @@ export const ChevronRightIcon: React.FC<IconProps> = ({ size = 24, className = '
   </svg>
 );
 
+export const MenuIcon: React.FC<IconProps> = ({ size = 24, className = '', ...props }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+    <line x1="4" y1="6" x2="20" y2="6"></line>
+    <line x1="4" y1="12" x2="20" y2="12"></line>
+    <line x1="4" y1="18" x2="20" y2="18"></line>
+  </svg>
+);
+
 export const ErrorOutlineIcon: React.FC<IconProps> = ({ size = 24, className = '', ...props }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
     <circle cx="12" cy="12" r="10"></circle>

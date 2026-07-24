@@ -24,7 +24,8 @@ export const GET = async (request: NextRequest) => {
       const watermarkedPdf = await applyPdfWatermark(Buffer.concat(chunks), {
         userText: `${session.user.name || ''} ${session.user.id || ''}`.trim(),
         clientIp: getClientIp(request),
-        documentCode: file.row.dd_code
+        documentCode: file.row.dd_code,
+        documentName: file.row.dd_title
       });
       const headers = new Headers(file.headers);
       headers.set('content-length', String(watermarkedPdf.byteLength));

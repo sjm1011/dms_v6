@@ -20,6 +20,7 @@ export interface PdfWatermarkOptions {
   userText: string;
   clientIp: string;
   documentCode: string | null;
+  documentName: string;
   previewedAt?: Date;
 }
 
@@ -61,6 +62,7 @@ const getWatermarkLines = (options: PdfWatermarkOptions) => [
   `預覽時間：${formatPreviewTime(options.previewedAt || new Date())}`,
   `IP：${options.clientIp || '無法判定'}`,
   `文件編號：${options.documentCode || '未編號'}`,
+  options.documentName,
   '內部文件，禁止外流'
 ];
 

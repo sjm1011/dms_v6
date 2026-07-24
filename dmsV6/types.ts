@@ -244,7 +244,7 @@ export interface PurgeJobItem {
 }
 
 export interface SystemStatusData {
-  application: { version: string; environment: string; server_time: string; uptime_seconds: number };
+  application: { version_date: string; environment: string; server_time: string; uptime_seconds: number };
   database: { connected: boolean; version: string; database_time: string; latency_ms: number; pool_total: number; pool_idle: number; pool_waiting: number };
   storage: { root: string; readable: boolean; writable: boolean; total_bytes: number; free_bytes: number; error?: string };
   configuration: { session_secret_secure: boolean; storage_root_configured: boolean; secure_cookie: boolean; database_configured: boolean };

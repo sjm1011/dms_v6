@@ -45,14 +45,16 @@ export const useFolders = (
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // 載入資料夾結構
-  const fetchFolders = async () => {
+  const fetchFolders = async (background = false) => {
     const requestSeq = requestSeqRef.current + 1;
     requestSeqRef.current = requestSeq;
     requestAbortRef.current?.abort();
 
     const controller = new AbortController();
     requestAbortRef.current = controller;
-    setIsLoadingFolders(true);
+    if (!background) {
+      setIsLoadingFolders(true);
+    }
 
     try {
       const res = await FoldersAPI.getFolders(controller.signal);

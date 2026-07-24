@@ -14,7 +14,7 @@ export const useDocuments = (
   const requestAbortRef = useRef<AbortController | null>(null);
 
   // 載入文件清單
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (background = false) => {
     const requestSeq = requestSeqRef.current + 1;
     requestSeqRef.current = requestSeq;
     requestAbortRef.current?.abort();
@@ -28,8 +28,10 @@ export const useDocuments = (
 
     const controller = new AbortController();
     requestAbortRef.current = controller;
-    setDocuments([]);
-    setIsLoadingDocuments(true);
+    if (!background) {
+      setDocuments([]);
+      setIsLoadingDocuments(true);
+    }
 
     try {
       const res = await DocumentsAPI.getDocuments(currentFolderId || '0', controller.signal);
@@ -106,7 +108,7 @@ export const useDocuments = (
       );
       if (res.success) {
         showToast(`${parentDocumentId ? '相關文件' : '文件'}「${title}」建立並上傳成功。`, 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       } else {
         showToast(res.error, 'error');
@@ -142,7 +144,7 @@ export const useDocuments = (
       );
       if (res.success) {
         showToast(`新版本 ${version || ''} 已建立，系統會依生效日期切換版本。`, 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       } else {
         showToast(res.error, 'error');
@@ -161,7 +163,7 @@ export const useDocuments = (
       const res = await DocumentsAPI.cancelLatestVersion(docId, reason);
       if (res.success) {
         showToast('最新版本已撤回，前一版已回復為延續版本。', 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       } else {
         showToast(res.error, 'error');
@@ -199,7 +201,7 @@ export const useDocuments = (
       );
       if (res.success) {
         showToast(`文件「${title}」已更新。`, 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       }
       showToast(res.error, 'error');
@@ -217,7 +219,7 @@ export const useDocuments = (
       const res = await DocumentsAPI.obsoleteDocument(docId, reason, file);
       if (res.success) {
         showToast(`文件「${docName}」已成功設為廢止狀態，公文已存檔。`, 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       } else {
         showToast(res.error, 'error');
@@ -236,7 +238,7 @@ export const useDocuments = (
       const res = await DocumentsAPI.deleteDocument(docId);
       if (res.success) {
         showToast(`文件「${docName}」已刪除，稽核紀錄已保存。`, 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       } else {
         showToast(res.error, 'error');
@@ -258,7 +260,7 @@ export const useDocuments = (
       const res = await DocumentsAPI.deleteScheduledVersion(docId, versionId);
       if (res.success) {
         showToast(`文件「${docName}」的預約版本已刪除。`, 'success');
-        fetchDocuments();
+        void fetchDocuments(true);
         return true;
       }
       showToast(res.error, 'error');

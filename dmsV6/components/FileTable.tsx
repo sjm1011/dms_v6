@@ -4,14 +4,11 @@ import { DMSItem } from '../types';
 import {
   FolderIcon,
   FolderOpenIcon,
-  FileIcon,
-  PdfIcon,
   CloudDownloadIcon,
   CloudUploadIcon,
   EditIcon,
   DeleteIcon,
   HistoryIcon,
-  CloseIcon,
   CheckCircleIcon,
   ErrorOutlineIcon
 } from './Icons';
@@ -38,7 +35,57 @@ const RelatedDocumentIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+type DocumentIconKind = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'image' | 'document';
+type DocumentIconSize = 18 | 24;
 
+const DOCUMENT_ICON_KIND_BY_EXTENSION: Record<string, DocumentIconKind> = {
+  pdf: 'pdf',
+  doc: 'word',
+  docx: 'word',
+  xls: 'excel',
+  xlsx: 'excel',
+  ppt: 'powerpoint',
+  pptx: 'powerpoint',
+  jpg: 'image',
+  jpeg: 'image',
+  png: 'image',
+  gif: 'image',
+  tif: 'image',
+  tiff: 'image',
+  webp: 'image'
+};
+
+const getDocumentIconKind = (item: DMSItem): DocumentIconKind => {
+  const extension = item.file_name?.match(/\.([^.]+)$/)?.[1]?.toLowerCase();
+  if (extension && DOCUMENT_ICON_KIND_BY_EXTENSION[extension]) {
+    return DOCUMENT_ICON_KIND_BY_EXTENSION[extension];
+  }
+
+  const mime = item.mime?.split(';', 1)[0].trim().toLowerCase() || '';
+  if (mime === 'application/pdf' || item.is_pdf) return 'pdf';
+  if (mime === 'application/msword' || mime.includes('wordprocessingml')) return 'word';
+  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml')) return 'excel';
+  if (mime === 'application/vnd.ms-powerpoint' || mime.includes('presentationml')) return 'powerpoint';
+  if (mime.startsWith('image/')) return 'image';
+
+  return 'document';
+};
+
+const DocumentTypeIcon = ({ item, size }: { item: DMSItem; size: DocumentIconSize }) => {
+  const iconKind = getDocumentIconKind(item);
+
+  return (
+    <img
+      className="document-type-icon"
+      src={`/icons/document-icons/generated/${iconKind}-${size}.png`}
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+    />
+  );
+};
 
 interface FileTableProps {
   items: DMSItem[];
@@ -87,21 +134,31 @@ export const FileTable = React.memo<FileTableProps>(({
 }) => {
   const [openActionId, setOpenActionId] = React.useState<string | null>(null);
   const [actionMenuPlacement, setActionMenuPlacement] = React.useState<React.CSSProperties | null>(null);
+  const actionMenuRef = React.useRef<HTMLDivElement | null>(null);
+  const actionMenuSourceRef = React.useRef<HTMLTableRowElement | null>(null);
+
+  const closeActionMenu = React.useCallback((restoreFocus = false) => {
+    setOpenActionId(null);
+    setActionMenuPlacement(null);
+
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => actionMenuSourceRef.current?.focus());
+    }
+  }, []);
 
   React.useEffect(() => {
-    const closeActionMenu = (e?: Event) => {
+    const handleDocumentClick = (e: MouseEvent) => {
       if (e && e.type === 'click') {
         const target = e.target as HTMLElement;
-        if (target?.closest && (target.closest('.action-menu-trigger') || target.closest('.action-menu-list'))) {
+        if (target?.closest && target.closest('.action-menu-list')) {
           return;
         }
       }
-      setOpenActionId(null);
-      setActionMenuPlacement(null);
+      closeActionMenu();
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeActionMenu();
+      if (event.key === 'Escape' && actionMenuRef.current) {
+        closeActionMenu(true);
       }
     };
     const handleScroll = (e: Event) => {
@@ -111,19 +168,34 @@ export const FileTable = React.memo<FileTableProps>(({
       }
       closeActionMenu();
     };
+    const handleResize = () => closeActionMenu();
 
-    document.addEventListener('click', closeActionMenu);
+    document.addEventListener('click', handleDocumentClick);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', closeActionMenu);
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      document.removeEventListener('click', closeActionMenu);
+      document.removeEventListener('click', handleDocumentClick);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', closeActionMenu);
+      window.removeEventListener('resize', handleResize);
     };
-  }, []);
+  }, [closeActionMenu]);
+
+  React.useEffect(() => {
+    if (!openActionId) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      actionMenuRef.current
+        ?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+        ?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [openActionId]);
 
   type ActionMenuItem = {
     key: string;
@@ -133,12 +205,10 @@ export const FileTable = React.memo<FileTableProps>(({
     onClick: () => void;
   };
 
-  // 動態渲染資料夾圖示
+  // 動態渲染項目圖示
   const renderItemIcon = (item: DMSItem) => {
     if (item.type === 'document') {
-      return item.is_pdf || item.mime?.toLowerCase().includes('pdf')
-        ? <PdfIcon className="icon" size={24} style={{ color: 'var(--color-danger)' }} />
-        : <FileIcon className="icon" size={24} style={{ color: 'var(--accent-cyan)' }} />;
+      return <DocumentTypeIcon item={item} size={24} />;
     }
 
     return item.status === 'Archived'
@@ -217,7 +287,7 @@ export const FileTable = React.memo<FileTableProps>(({
           ? {
               key: 'preview',
               label: item.is_pdf ? '線上預覽 PDF' : '開新視窗預覽',
-              icon: item.is_pdf ? <PdfIcon size={18} /> : <FileIcon size={18} />,
+              icon: <DocumentTypeIcon item={item} size={18} />,
               onClick: () => onPreviewDocument?.(item)
             }
           : {
@@ -374,96 +444,119 @@ export const FileTable = React.memo<FileTableProps>(({
     return actions;
   };
 
-  const renderActionMenu = (item: DMSItem) => {
-    const actionId = `${item.type}-${item.id}-${item.ver_id || ''}`;
-    const actions = getActionItems(item);
-    const isOpen = openActionId === actionId;
+  const getActionId = (item: DMSItem) => `${item.type}-${item.id}-${item.ver_id || ''}`;
 
+  const openActionMenu = (
+    item: DMSItem,
+    sourceRow: HTMLTableRowElement,
+    requestedLeft: number,
+    requestedTop: number
+  ) => {
+    const actions = getActionItems(item);
+    if (actions.length === 0) {
+      return false;
+    }
+
+    const viewportMargin = 8;
+    const estimatedMenuWidth = 220;
+    const estimatedMenuHeight = Math.min(
+      actions.length * 36 + 12,
+      window.innerHeight - viewportMargin * 2
+    );
+    const left = Math.min(
+      Math.max(requestedLeft, viewportMargin),
+      Math.max(window.innerWidth - estimatedMenuWidth - viewportMargin, viewportMargin)
+    );
+    const top = requestedTop + estimatedMenuHeight > window.innerHeight - viewportMargin
+      ? Math.max(requestedTop - estimatedMenuHeight, viewportMargin)
+      : Math.max(requestedTop, viewportMargin);
+
+    actionMenuSourceRef.current = sourceRow;
+    setActionMenuPlacement({
+      top,
+      left,
+      maxHeight: window.innerHeight - viewportMargin * 2,
+      overflowY: 'auto'
+    });
+    setOpenActionId(getActionId(item));
+    return true;
+  };
+
+  const handleActionMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const menuItems = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')
+    );
+    const currentIndex = menuItems.indexOf(document.activeElement as HTMLButtonElement);
+    let nextIndex: number | null = null;
+
+    if (event.key === 'ArrowDown') {
+      nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % menuItems.length;
+    } else if (event.key === 'ArrowUp') {
+      nextIndex = currentIndex < 0
+        ? menuItems.length - 1
+        : (currentIndex - 1 + menuItems.length) % menuItems.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = menuItems.length - 1;
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeActionMenu(true);
+      return;
+    }
+
+    if (nextIndex !== null && menuItems[nextIndex]) {
+      event.preventDefault();
+      menuItems[nextIndex].focus();
+    }
+  };
+
+  const renderActionMenu = () => {
+    if (!openActionId || !actionMenuPlacement || typeof document === 'undefined') {
+      return null;
+    }
+
+    const item = items.find(candidate => getActionId(candidate) === openActionId);
+    if (!item) {
+      return null;
+    }
+
+    const actions = getActionItems(item);
     if (actions.length === 0) {
       return null;
     }
 
-    const actionMenuList = isOpen && actionMenuPlacement && typeof document !== 'undefined'
-      ? createPortal(
-          <div
-            className="action-menu-list action-menu-list-floating"
-            role="menu"
-            style={actionMenuPlacement}
-            onClick={(e) => e.stopPropagation()}
+    return createPortal(
+      <div
+        ref={actionMenuRef}
+        className="action-menu-list action-menu-list-floating"
+        role="menu"
+        aria-label={`「${item.name}」的操作選單`}
+        style={actionMenuPlacement}
+        onClick={(event) => event.stopPropagation()}
+        onContextMenu={(event) => event.preventDefault()}
+        onKeyDown={handleActionMenuKeyDown}
+      >
+        {actions.map(action => (
+          <button
+            key={action.key}
+            type="button"
+            className={`action-menu-item ${action.className || ''}`}
+            role="menuitem"
+            tabIndex={-1}
+            onClick={(event) => {
+              event.stopPropagation();
+              closeActionMenu();
+              action.onClick();
+            }}
           >
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px' }}>
-              <button
-                type="button"
-                className="btn-icon"
-                title="關閉選單"
-                style={{ padding: '4px', margin: 0, minHeight: 'auto', background: 'transparent' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionId(null);
-                  setActionMenuPlacement(null);
-                }}
-              >
-                <CloseIcon size={16} />
-              </button>
-            </div>
-            {actions.map(action => (
-              <button
-                key={action.key}
-                type="button"
-                className={`action-menu-item ${action.className || ''}`}
-                role="menuitem"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpenActionId(null);
-                  setActionMenuPlacement(null);
-                  action.onClick();
-                }}
-              >
-                <span className="action-menu-icon">{action.icon}</span>
-                <span className="action-menu-label">{action.label}</span>
-              </button>
-            ))}
-          </div>,
-          document.body
-        )
-      : null;
-
-    return (
-      <div className="action-menu" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          className="btn-icon action-menu-trigger"
-          title="開啟操作選單"
-          aria-haspopup="menu"
-          aria-expanded={isOpen}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isOpen) {
-              setOpenActionId(null);
-              setActionMenuPlacement(null);
-              return;
-            }
-
-            const rect = e.currentTarget.getBoundingClientRect();
-            const estimatedMenuHeight = Math.min(actions.length * 40 + 12, window.innerHeight - 16);
-            const top = rect.bottom + 6 + estimatedMenuHeight > window.innerHeight
-              ? Math.max(rect.top - estimatedMenuHeight - 6, 8)
-              : rect.bottom + 6;
-
-            setActionMenuPlacement({
-              top,
-              right: Math.max(window.innerWidth - rect.right, 8),
-              maxHeight: window.innerHeight - 16,
-              overflowY: 'auto'
-            });
-            setOpenActionId(actionId);
-          }}
-        >
-          <span aria-hidden="true">...</span>
-        </button>
-
-        {actionMenuList}
-      </div>
+            <span className="action-menu-icon">{action.icon}</span>
+            <span className="action-menu-label">{action.label}</span>
+          </button>
+        ))}
+      </div>,
+      document.body
     );
   };
 
@@ -495,26 +588,104 @@ export const FileTable = React.memo<FileTableProps>(({
       <table id="files-table">
         <thead>
           <tr>
-            <th style={{ width: '52%' }}>名稱</th>
-            <th style={{ width: '16%' }}>文件編號</th>
+            <th style={{ width: '60%' }}>名稱</th>
+            <th style={{ width: '18%' }}>文件編號</th>
             <th style={{ width: '10%' }}>屬性 / 版本</th>
             <th style={{ width: '12%' }}>修訂日期</th>
-            <th style={{ width: '10%', textAlign: 'right' }}>操作</th>
           </tr>
         </thead>
         <tbody id="files-list">
-          {items.map(item => {
+          {items.map((item, index) => {
+            const previousItem = items[index - 1];
+            const nextItem = items[index + 1];
+            const isRelatedDocument = Boolean(item.parent_document_id);
+            const isGroupedRelatedDocument = !showFolderPath && isRelatedDocument;
+            const isFirstGroupedRelatedDocument = isGroupedRelatedDocument
+              && previousItem?.parent_document_id !== item.parent_document_id;
+            const isLastGroupedRelatedDocument = isGroupedRelatedDocument
+              && nextItem?.parent_document_id !== item.parent_document_id;
+            const isRelatedDocumentParentRow = !showFolderPath
+              && !isRelatedDocument
+              && Boolean(nextItem?.parent_document_id)
+              && String(nextItem?.parent_document_id) === String(item.id);
+            const rowClassNames = ['table-row'];
+            const hasActions = getActionItems(item).length > 0;
+            const isActionMenuOpen = openActionId === getActionId(item);
+
+            if (isRelatedDocument) {
+              rowClassNames.push('related-document-row');
+            }
+            if (isGroupedRelatedDocument) {
+              rowClassNames.push('grouped-related-document-row');
+            }
+            if (isFirstGroupedRelatedDocument) {
+              rowClassNames.push('related-document-row-first');
+            }
+            if (isLastGroupedRelatedDocument) {
+              rowClassNames.push('related-document-row-last');
+            }
+            if (isRelatedDocumentParentRow) {
+              rowClassNames.push('related-document-parent-row');
+            }
+            if (isActionMenuOpen) {
+              rowClassNames.push('context-menu-active');
+            }
+
             return (
               <tr
                 key={`${item.type}-${item.id}-${item.ver_id || ''}`}
-                className={`table-row${item.parent_document_id ? ' related-document-row' : ''}`}
+                className={rowClassNames.join(' ')}
                 onClick={() => handleRowClick(item)}
+                onContextMenu={(event) => {
+                  if (!hasActions) {
+                    closeActionMenu();
+                    return;
+                  }
+
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openActionMenu(
+                    item,
+                    event.currentTarget,
+                    event.clientX,
+                    event.clientY
+                  );
+                }}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) {
+                    return;
+                  }
+
+                  if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') {
+                    if (!hasActions) {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    openActionMenu(
+                      item,
+                      event.currentTarget,
+                      rect.left + Math.min(rect.width, 32),
+                      rect.top + Math.min(rect.height, 32)
+                    );
+                    return;
+                  }
+
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleRowClick(item);
+                  }
+                }}
+                tabIndex={0}
+                aria-haspopup={hasActions ? 'menu' : undefined}
+                aria-expanded={hasActions ? isActionMenuOpen : undefined}
               >
                 <td>
                   <div className="name-cell">
                     {item.parent_document_id && (
                       <span className="related-document-branch" title="相關文件">
-                        <RelatedDocumentIcon size={18} />
+                        {!isGroupedRelatedDocument && <RelatedDocumentIcon size={18} />}
                       </span>
                     )}
                     {renderItemIcon(item)}
@@ -555,14 +726,12 @@ export const FileTable = React.memo<FileTableProps>(({
                   {renderAccessBadge(item)}
                 </td>
                 <td>{item.type === 'document' ? (item.revision_date || '-') : ''}</td>
-                <td className="action-cell">
-                  {renderActionMenu(item)}
-                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      {renderActionMenu()}
     </>
   );
 });

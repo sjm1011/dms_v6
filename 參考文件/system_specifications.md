@@ -377,6 +377,8 @@ Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由
 
 文件編號留空時，後端必須將 `dd_code` 儲存為 `NULL`，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 `dd_code`，不得在索引定義內使用 `UPPER()`、型別轉換或其他函數。
 
+文件編號、文件名稱及版本號會組成下載檔名，因此新增文件、建立相關文件、修改文件及上傳新版時，前端與後端均須套用 Windows 檔名字元限制。不得使用 `< > : " / \ | ? *`、`U+0000` 至 `U+001F` 及 `U+007F` 控制字元，欄位結尾不得為空白或句點；內容中間仍可使用一般空白與句點。使用者輸入或貼上被阻擋字元時，前端不得寫入該次內容，並須於欄位下方以 `aria-live` 顯示：「不得使用下列特殊字元：< > : " / \ | ? *；不得輸入控制字元，結尾也不得使用空白或句點。」後端須以相同規則及訊息拒絕繞過前端的 API 請求。
+
 ### 4.9. 文件版更與預約生效
 
 系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，必須可從文件操作選單的「修改文件」進入點修改文件編號、目前顯示版本的文件名稱、版本號、修訂日期、生效日期及異動說明。未編號文件可補填文件編號，已編號文件亦可修改或清空；修改後的非空白文件編號不得與其他文件重複。「修改文件」只更新文件主檔與既有版本資料，不得建立新版本，並需於同一筆交易完成及於稽核紀錄保存異動前後資料。
@@ -805,7 +807,15 @@ DMS_NEXT_PORT=3000
 * **非 PDF 文件下載**：
     * 瀏覽器呼叫 `GET /api/documents/download?version_id=...`。
     * Route Handler 呼叫 `documentService.downloadDocument` 取得磁碟實體檔案與元資料。
-    * Next.js 必須保留並設定 `content-type`、`content-disposition`（含原始檔名）、`content-length`、`cache-control` 等檔案回應 header。
+    * Next.js 必須保留並設定 `content-type`、`content-disposition`、`content-length`、`cache-control` 等檔案回應 header。
+* **下載預設檔名**：
+    * 正式檔案下載、PDF 預覽視窗的下載及圖檔預覽視窗的下載，均使用「文件編號_文件名稱_版本編號_下載日期.原始副檔名」。
+    * 例如：`DOC-001_感染管制作業規範_V2_20260724.pdf`。
+    * 文件編號空白時省略該段及其分隔底線。
+    * 資料庫版本號 `ddv_no` 空白時，依版本序號 `ddv_seq` 產生不含空白的 `第N版`，例如 `DOC-001_感染管制作業規範_第1版_20260724.pdf`。
+    * 下載日期固定使用 `Asia/Taipei` 時區及 `YYYYMMDD` 格式。
+    * `content-disposition` 必須同時提供 ASCII 備援 `filename` 及 UTF-8 `filename*`，確保中文檔名完整。
+    * 實體儲存檔名不得因下載命名規則而變更；後端仍須防禦性替換既有資料中的 Windows 非法字元。
 * **PDF 文件預覽**：
     * 瀏覽器呼叫 `GET /api/documents/preview?version_id=...`。
     * Route Handler 透過 `documentService.ts` 與 `fileStorage.ts` 取得 PDF 原始檔，並呼叫 `pdfWatermark.ts`，使用 `pdf-lib` 與 `@pdf-lib/fontkit` 在伺服器端逐頁套用浮水印。

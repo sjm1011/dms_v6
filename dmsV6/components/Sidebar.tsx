@@ -5,7 +5,8 @@ import {
   ServerIcon, 
   ChevronRightIcon, 
   AccountCircleIcon, 
-  LogoutIcon 
+  LogoutIcon,
+  CloseIcon
 } from './Icons';
 import { DeleteIcon, InfoIcon, LockIcon, PersonIcon, SearchIcon } from './Icons';
 
@@ -19,6 +20,9 @@ interface SidebarProps {
   activeSystemPage: SystemPage | null;
   onSelectSystemPage: (page: SystemPage) => void;
   onLogout: () => void;
+  isDrawerMode: boolean;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,9 +34,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleExpand,
   activeSystemPage,
   onSelectSystemPage,
-  onLogout
+  onLogout,
+  isDrawerMode,
+  isOpen,
+  onClose
 }) => {
   const [isSystemExpanded, setIsSystemExpanded] = React.useState(false);
+  const sidebarRef = React.useRef<HTMLElement>(null);
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const allSystemItems: Array<{ page: SystemPage; label: string; icon: React.ReactNode }> = [
     { page: 'audit', label: '系統稽核紀錄', icon: <SearchIcon size={18} /> },
     { page: 'settings', label: '系統設定', icon: <PersonIcon size={18} /> },
@@ -44,6 +53,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const systemItems = user?.role === 'ADMIN'
     ? allSystemItems
     : allSystemItems.filter(item => item.page === 'audit');
+
+  React.useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+
+    if (isDrawerMode && !isOpen) {
+      sidebar.setAttribute('inert', '');
+    } else {
+      sidebar.removeAttribute('inert');
+    }
+  }, [isDrawerMode, isOpen]);
+
+  React.useEffect(() => {
+    if (!isDrawerMode || !isOpen) return;
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+  }, [isDrawerMode, isOpen]);
   
   // 建立以 parent_id 為 Key 的資料夾 Map，將搜尋時間複雜度優化為 O(N)
   const foldersByParentId = React.useMemo(() => {
@@ -122,7 +147,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const rootFolders = foldersByParentId.get(null) || [];
 
   return (
-    <aside className="sidebar">
+    <aside
+      ref={sidebarRef}
+      id="sidebar-navigation"
+      className={`sidebar ${isDrawerMode && isOpen ? 'sidebar-open' : ''}`}
+      aria-hidden={isDrawerMode && !isOpen ? true : undefined}
+    >
       <div className="sidebar-header">
         <div className="logo">
           <img src="/logo.png" alt="Logo" className="logo-img" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain' }} />
@@ -131,6 +161,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="sidebar-version">{APP_VERSION_LABEL}</span>
           </div>
         </div>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="sidebar-close-button"
+          aria-label="關閉功能選單"
+          onClick={onClose}
+        >
+          <CloseIcon size={20} aria-hidden="true" />
+          <span>關閉</span>
+        </button>
       </div>
 
       <div className="sidebar-menu">

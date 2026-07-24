@@ -11,7 +11,8 @@ import {
   CreateNewFolderIcon,
   CloudUploadIcon,
   CheckCircleIcon,
-  ErrorOutlineIcon
+  ErrorOutlineIcon,
+  MenuIcon
 } from '../components/Icons';
 
 // 匯入分流後的 Modals 
@@ -39,7 +40,7 @@ interface MainLayoutProps {
   handleRenameFolder: (id: string, newName: string, managers?: string[]) => Promise<boolean>;
   handleArchiveFolder: (id: string, name: string) => Promise<boolean>;
   handleDeleteFolder: (id: string, name: string) => Promise<boolean>;
-  fetchFolders: () => Promise<void>;
+  fetchFolders: (background?: boolean) => Promise<void>;
   // Feedback / Debug
   testResult: { success: boolean; data?: any; error?: string } | null;
   setTestResult: (res: any) => void;
@@ -74,6 +75,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   // --- UI 本地控制狀態 ---
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
   const [activeSystemPage, setActiveSystemPage] = useState<SystemPage | null>(null);
+  const [isSidebarDrawer, setIsSidebarDrawer] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const sidebarOpenButtonRef = useRef<HTMLButtonElement>(null);
   const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
   const [searchDocuments, setSearchDocuments] = useState<Document[]>([]);
   const [searchTotal, setSearchTotal] = useState(0);
@@ -119,6 +123,64 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
   const isAdmin = user.role === 'ADMIN';
 
+  const closeSidebar = useCallback((restoreFocus = true) => {
+    setIsSidebarOpen(false);
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => sidebarOpenButtonRef.current?.focus());
+    }
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1180px)');
+    const updateSidebarMode = () => {
+      setIsSidebarDrawer(mediaQuery.matches);
+      if (!mediaQuery.matches) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    updateSidebarMode();
+    mediaQuery.addEventListener('change', updateSidebarMode);
+    return () => mediaQuery.removeEventListener('change', updateSidebarMode);
+  }, []);
+
+  useEffect(() => {
+    if (!isSidebarDrawer || !isSidebarOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSidebar();
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        const sidebar = document.getElementById('sidebar-navigation');
+        if (!sidebar) return;
+
+        const focusableElements = Array.from(
+          sidebar.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter(element => element.offsetParent !== null);
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (!firstElement || !lastElement) return;
+        if (event.shiftKey && document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [closeSidebar, isSidebarDrawer, isSidebarOpen]);
+
   // 預先建立資料夾的 Dictionary 結構，將陣列搜尋的時間複雜度從 O(M) 降為 O(1)
   const foldersById = useMemo(() => {
     const map = new Map<string, Folder>();
@@ -151,7 +213,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     setIsSearching(false);
   }, [setSearchQuery]);
 
-  const executeSearch = useCallback(async (page = 1) => {
+  const executeSearch = useCallback(async (page = 1, background = false) => {
     const keyword = searchQuery.trim();
     if (!keyword) {
       clearSearch();
@@ -163,7 +225,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
-    setIsSearching(true);
+    if (!background) {
+      setIsSearching(true);
+    }
 
     try {
       const response = await SearchAPI.searchDocuments(
@@ -596,6 +660,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           setActiveSystemPage(null);
           clearSearch();
           setCurrentFolderId(id);
+          if (isSidebarDrawer) closeSidebar();
         }}
         expandedFolders={expandedFolders}
         onToggleExpand={handleToggleExpand}
@@ -603,12 +668,39 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         onSelectSystemPage={(page) => {
           clearSearch();
           setActiveSystemPage(page);
+          if (isSidebarDrawer) closeSidebar();
         }}
         onLogout={onLogout}
+        isDrawerMode={isSidebarDrawer}
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
       />
+      {isSidebarDrawer && (
+        <button
+          type="button"
+          className={`sidebar-backdrop ${isSidebarOpen ? 'is-visible' : ''}`}
+          aria-label="關閉功能選單"
+          tabIndex={-1}
+          onClick={() => closeSidebar()}
+        />
+      )}
 
       {/* 主內容區 */}
       <main className="main-content">
+        {isSidebarDrawer && (
+          <button
+            ref={sidebarOpenButtonRef}
+            type="button"
+            className="sidebar-open-button"
+            aria-label="開啟功能選單"
+            aria-controls="sidebar-navigation"
+            aria-expanded={isSidebarOpen}
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <MenuIcon size={20} aria-hidden="true" />
+            <span>功能選單</span>
+          </button>
+        )}
         {activeSystemPage ? (
           <SystemManagement
             page={activeSystemPage}
@@ -943,9 +1035,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             relatedParentDoc?.id || null
           );
           if (success) {
-            await fetchFolders();
+            await fetchFolders(true);
             if (isSearchMode) {
-              await executeSearch(searchPage);
+              await executeSearch(searchPage, true);
             }
           }
           return success;
@@ -998,7 +1090,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         targetDoc={activeDoc}
         onUpload={async (...args) => {
           const success = await documentsHook.handleUploadVersion(...args);
-          if (success && isSearchMode) await executeSearch(searchPage);
+          if (success && isSearchMode) await executeSearch(searchPage, true);
           return success;
         }}
       />
@@ -1009,7 +1101,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         targetDoc={activeDoc}
         onSave={async (...args) => {
           const success = await documentsHook.handleEditDocument(...args);
-          if (success && isSearchMode) await executeSearch(searchPage);
+          if (success && isSearchMode) await executeSearch(searchPage, true);
           return success;
         }}
       />

@@ -379,13 +379,13 @@ const downloadBlob = async (
   }
 
   const objectBlob = inline && isPdf
-    ? new File([blob], fallbackFileName, { type: 'application/pdf' })
+    ? new File([blob], fileName, { type: 'application/pdf' })
     : blob;
   const objectUrl = URL.createObjectURL(objectBlob);
 
   if (inline) {
     if (isPdf) {
-      const openedPreviewWindow = openPdfPreview(objectUrl, fallbackFileName, previewWindow);
+      const openedPreviewWindow = openPdfPreview(objectUrl, fileName, previewWindow);
       openedPreviewWindow?.addEventListener('beforeunload', () => URL.revokeObjectURL(objectUrl), { once: true });
     } else if (isImage) {
       const openedPreviewWindow = openImagePreview(objectUrl, fileName, contentType, previewWindow);

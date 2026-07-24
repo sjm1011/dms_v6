@@ -6,6 +6,11 @@ import {
   ChevronRightIcon
 } from '../Icons';
 import { showRequiredFieldMessage } from '../../lib/clientValidation';
+import {
+  getWindowsFileNameValidationError,
+  hasWindowsBlockedFileNameCharacter,
+  WINDOWS_FILE_NAME_VALIDATION_MESSAGE
+} from '../../lib/documentFileName';
 
 const CHANGE_NOTE_OPTIONS = [
   '初版發行',
@@ -45,6 +50,74 @@ function getDocumentTitleFromFile(file: File | null) {
 
 function toUpperValue(value: string) {
   return value.toUpperCase();
+}
+
+type DocumentFileNameField = 'code' | 'title' | 'version';
+type DocumentFileNameErrors = Record<DocumentFileNameField, string | null>;
+
+const EMPTY_FILE_NAME_ERRORS: DocumentFileNameErrors = {
+  code: null,
+  title: null,
+  version: null
+};
+
+function useDocumentFileNameValidation() {
+  const [errors, setErrors] = useState<DocumentFileNameErrors>(EMPTY_FILE_NAME_ERRORS);
+
+  const setFieldError = (field: DocumentFileNameField, error: string | null) => {
+    setErrors(current => ({ ...current, [field]: error }));
+  };
+
+  const acceptChange = (
+    field: DocumentFileNameField,
+    value: string,
+    setValue: React.Dispatch<React.SetStateAction<string>>,
+    transform: (nextValue: string) => string = nextValue => nextValue
+  ) => {
+    if (hasWindowsBlockedFileNameCharacter(value)) {
+      setFieldError(field, WINDOWS_FILE_NAME_VALIDATION_MESSAGE);
+      return;
+    }
+
+    setValue(transform(value));
+    setFieldError(field, null);
+  };
+
+  const validateField = (field: DocumentFileNameField, value: string) => {
+    const error = getWindowsFileNameValidationError(value);
+    setFieldError(field, error);
+    return !error;
+  };
+
+  const resetErrors = (values?: Partial<Record<DocumentFileNameField, string>>) => {
+    setErrors({
+      code: values?.code ? getWindowsFileNameValidationError(values.code) : null,
+      title: values?.title ? getWindowsFileNameValidationError(values.title) : null,
+      version: values?.version ? getWindowsFileNameValidationError(values.version) : null
+    });
+  };
+
+  return {
+    errors,
+    acceptChange,
+    validateField,
+    setFieldError,
+    resetErrors
+  };
+}
+
+function FileNameValidationMessage({ id, message }: { id: string; message: string | null }) {
+  if (!message) return null;
+
+  return (
+    <div
+      id={id}
+      aria-live="polite"
+      style={{ marginTop: 6, color: '#dc2626', fontSize: '0.82rem', lineHeight: 1.45 }}
+    >
+      {message}
+    </div>
+  );
 }
 
 interface ChangeNoteInputProps {
@@ -173,9 +246,12 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
   const [effAt, setEffAt] = useState(getTodayString());
   const [file, setFile] = useState<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const fileNameValidation = useDocumentFileNameValidation();
 
   const automaticTitleRef = useRef('');
+  const codeInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const versionInputRef = useRef<HTMLInputElement>(null);
   const revisionDateInputRef = useRef<HTMLInputElement>(null);
   const effAtInputRef = useRef<HTMLInputElement>(null);
   const changeNoteInputRef = useRef<HTMLInputElement>(null);
@@ -195,12 +271,25 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
       setFile(initialFile);
       setSourceFile(null);
       automaticTitleRef.current = automaticTitle;
+      fileNameValidation.resetErrors({ title: automaticTitle });
     }
   }, [isOpen, initialFile]);
 
   const handleConfirm = async () => {
+    if (!fileNameValidation.validateField('code', code)) {
+      codeInputRef.current?.focus();
+      return;
+    }
     if (!title.trim()) {
       showRequiredFieldMessage('請輸入文件名稱。', titleInputRef.current);
+      return;
+    }
+    if (!fileNameValidation.validateField('title', title)) {
+      titleInputRef.current?.focus();
+      return;
+    }
+    if (!fileNameValidation.validateField('version', version)) {
+      versionInputRef.current?.focus();
       return;
     }
     if (!file) {
@@ -257,21 +346,44 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
             <label>文件編號（選填）</label>
             <input
+              ref={codeInputRef}
               value={code}
               maxLength={50}
-              onChange={(e) => setCode(toUpperValue(e.target.value))}
+              aria-invalid={Boolean(fileNameValidation.errors.code)}
+              aria-describedby={fileNameValidation.errors.code ? 'new-document-code-error' : undefined}
+              onChange={(e) => fileNameValidation.acceptChange('code', e.target.value, setCode, toUpperValue)}
+              onBlur={() => fileNameValidation.validateField('code', code)}
               placeholder="可留空"
             />
+            <FileNameValidationMessage id="new-document-code-error" message={fileNameValidation.errors.code} />
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
             <label>版本號</label>
-            <input value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+            <input
+              ref={versionInputRef}
+              value={version}
+              aria-invalid={Boolean(fileNameValidation.errors.version)}
+              aria-describedby={fileNameValidation.errors.version ? 'new-document-version-error' : undefined}
+              onChange={(e) => fileNameValidation.acceptChange('version', e.target.value, setVersion, toUpperValue)}
+              onBlur={() => fileNameValidation.validateField('version', version)}
+              placeholder="可留空"
+            />
+            <FileNameValidationMessage id="new-document-version-error" message={fileNameValidation.errors.version} />
           </div>
         </div>
 
         <div className="input-group" style={{ marginBottom: 0 }}>
           <label>文件名稱</label>
-          <input ref={titleInputRef} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="研發部作業規範" />
+          <input
+            ref={titleInputRef}
+            value={title}
+            aria-invalid={Boolean(fileNameValidation.errors.title)}
+            aria-describedby={fileNameValidation.errors.title ? 'new-document-title-error' : undefined}
+            onChange={(e) => fileNameValidation.acceptChange('title', e.target.value, setTitle)}
+            onBlur={() => fileNameValidation.validateField('title', title)}
+            placeholder="研發部作業規範"
+          />
+          <FileNameValidationMessage id="new-document-title-error" message={fileNameValidation.errors.title} />
         </div>
 
         <div className="input-group" style={{ marginBottom: 0 }}>
@@ -287,6 +399,9 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
             setTitle(currentTitle => (
               currentTitle === previousAutomaticTitle ? nextAutomaticTitle : currentTitle
             ));
+            if (title === previousAutomaticTitle) {
+              fileNameValidation.setFieldError('title', getWindowsFileNameValidationError(nextAutomaticTitle));
+            }
             automaticTitleRef.current = nextAutomaticTitle;
             if (!isPdfFile(selected)) setSourceFile(null);
           }} />
@@ -369,6 +484,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
   const [revisionDate, setRevisionDate] = useState('');
   const [effAt, setEffAt] = useState('');
   const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const fileNameValidation = useDocumentFileNameValidation();
 
   const versionInputRef = useRef<HTMLInputElement>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -389,12 +505,31 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
     setRevisionDate(targetDoc?.revision_date || '');
     setEffAt(targetDoc?.effective_at?.split(' ')[0] || '');
     setSourceFile(null);
+    fileNameValidation.resetErrors(isScheduledVersion
+      ? { version: targetDoc?.version || '' }
+      : {
+          code: targetDoc?.code || '',
+          title: targetDoc?.title || '',
+          version: targetDoc?.version || ''
+        });
   }, [isOpen, targetDoc]);
 
   const handleConfirm = async () => {
     if (!targetDoc?.ver_id) return;
-    if (!title.trim()) {
+    if (!isScheduledVersion && !fileNameValidation.validateField('code', code)) {
+      codeInputRef.current?.focus();
+      return;
+    }
+    if (!isScheduledVersion && !title.trim()) {
       showRequiredFieldMessage('請輸入文件名稱。', titleInputRef.current);
+      return;
+    }
+    if (!isScheduledVersion && !fileNameValidation.validateField('title', title)) {
+      titleInputRef.current?.focus();
+      return;
+    }
+    if (!fileNameValidation.validateField('version', version)) {
+      versionInputRef.current?.focus();
       return;
     }
     if (!revisionDate) {
@@ -445,7 +580,16 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
         {isScheduledVersion ? (
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label>新版本號</label>
-            <input ref={versionInputRef} value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+            <input
+              ref={versionInputRef}
+              value={version}
+              aria-invalid={Boolean(fileNameValidation.errors.version)}
+              aria-describedby={fileNameValidation.errors.version ? 'edit-scheduled-version-error' : undefined}
+              onChange={(e) => fileNameValidation.acceptChange('version', e.target.value, setVersion, toUpperValue)}
+              onBlur={() => fileNameValidation.validateField('version', version)}
+              placeholder="可留空"
+            />
+            <FileNameValidationMessage id="edit-scheduled-version-error" message={fileNameValidation.errors.version} />
           </div>
         ) : (
           <>
@@ -456,19 +600,40 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
                   ref={codeInputRef}
                   value={code}
                   maxLength={50}
-                  onChange={(e) => setCode(toUpperValue(e.target.value))}
+                  aria-invalid={Boolean(fileNameValidation.errors.code)}
+                  aria-describedby={fileNameValidation.errors.code ? 'edit-document-code-error' : undefined}
+                  onChange={(e) => fileNameValidation.acceptChange('code', e.target.value, setCode, toUpperValue)}
+                  onBlur={() => fileNameValidation.validateField('code', code)}
                   placeholder="可留空"
                 />
+                <FileNameValidationMessage id="edit-document-code-error" message={fileNameValidation.errors.code} />
               </div>
               <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label>版本號</label>
-                <input ref={versionInputRef} value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+                <input
+                  ref={versionInputRef}
+                  value={version}
+                  aria-invalid={Boolean(fileNameValidation.errors.version)}
+                  aria-describedby={fileNameValidation.errors.version ? 'edit-document-version-error' : undefined}
+                  onChange={(e) => fileNameValidation.acceptChange('version', e.target.value, setVersion, toUpperValue)}
+                  onBlur={() => fileNameValidation.validateField('version', version)}
+                  placeholder="可留空"
+                />
+                <FileNameValidationMessage id="edit-document-version-error" message={fileNameValidation.errors.version} />
               </div>
             </div>
 
             <div className="input-group" style={{ marginBottom: 0 }}>
               <label>文件名稱</label>
-              <input ref={titleInputRef} value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input
+                ref={titleInputRef}
+                value={title}
+                aria-invalid={Boolean(fileNameValidation.errors.title)}
+                aria-describedby={fileNameValidation.errors.title ? 'edit-document-title-error' : undefined}
+                onChange={(e) => fileNameValidation.acceptChange('title', e.target.value, setTitle)}
+                onBlur={() => fileNameValidation.validateField('title', title)}
+              />
+              <FileNameValidationMessage id="edit-document-title-error" message={fileNameValidation.errors.title} />
             </div>
           </>
         )}
@@ -521,6 +686,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
   const [effAt, setEffAt] = useState(getTodayString());
   const [file, setFile] = useState<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const fileNameValidation = useDocumentFileNameValidation();
 
   const versionInputRef = useRef<HTMLInputElement>(null);
   const revisionDateInputRef = useRef<HTMLInputElement>(null);
@@ -538,11 +704,16 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
       setEffAt(getTodayString());
       setFile(initialFile);
       setSourceFile(null);
+      fileNameValidation.resetErrors({ version: initialVersion ? toUpperValue(initialVersion) : '' });
     }
   }, [isOpen, initialFile, initialVersion]);
 
   const handleConfirm = async () => {
     if (!targetDoc) return;
+    if (!fileNameValidation.validateField('version', version)) {
+      versionInputRef.current?.focus();
+      return;
+    }
     if (!file) {
       showRequiredFieldMessage('請選擇文件檔案。', fileButtonRef.current);
       return;
@@ -585,7 +756,16 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
             <label>新版本號</label>
-            <input ref={versionInputRef} value={version} onChange={(e) => setVersion(toUpperValue(e.target.value))} placeholder="可留空" />
+            <input
+              ref={versionInputRef}
+              value={version}
+              aria-invalid={Boolean(fileNameValidation.errors.version)}
+              aria-describedby={fileNameValidation.errors.version ? 'upload-version-error' : undefined}
+              onChange={(e) => fileNameValidation.acceptChange('version', e.target.value, setVersion, toUpperValue)}
+              onBlur={() => fileNameValidation.validateField('version', version)}
+              placeholder="可留空"
+            />
+            <FileNameValidationMessage id="upload-version-error" message={fileNameValidation.errors.version} />
           </div>
         </div>
 

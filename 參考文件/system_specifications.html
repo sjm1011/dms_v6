@@ -507,6 +507,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li>管理員查看尚未生效文件時，文件清單的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。第一版尚未生效時，清單只顯示該預約版本。</li>
 </ol>
 <p>文件編號留空時，後端必須將 <code>dd_code</code> 儲存為 <code>NULL</code>，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 <code>dd_code</code>，不得在索引定義內使用 <code>UPPER()</code>、型別轉換或其他函數。</p>
+<p>文件編號、文件名稱及版本號會組成下載檔名，因此新增文件、建立相關文件、修改文件及上傳新版時，前端與後端均須套用 Windows 檔名字元限制。不得使用 <code>&lt; &gt; : " / \ | ? *</code>、<code>U+0000</code> 至 <code>U+001F</code> 及 <code>U+007F</code> 控制字元，欄位結尾不得為空白或句點；內容中間仍可使用一般空白與句點。使用者輸入或貼上被阻擋字元時，前端不得寫入該次內容，並須於欄位下方以 <code>aria-live</code> 顯示：「不得使用下列特殊字元：&lt; &gt; : " / \ | ? *；不得輸入控制字元，結尾也不得使用空白或句點。」後端須以相同規則及訊息拒絕繞過前端的 API 請求。</p>
 <h3>4.9. 文件版更與預約生效</h3>
 <p>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，必須可從文件操作選單的「修改文件」進入點修改文件編號、目前顯示版本的文件名稱、版本號、修訂日期、生效日期及異動說明。未編號文件可補填文件編號，已編號文件亦可修改或清空；修改後的非空白文件編號不得與其他文件重複。「修改文件」只更新文件主檔與既有版本資料，不得建立新版本，並需於同一筆交易完成及於稽核紀錄保存異動前後資料。</p>
 <p>目前顯示版本的正式發佈檔案為 PDF，且尚未保存 PDF 原始編修檔案時，「修改文件」可顯示原始檔案選擇欄位並接受新增檔案。該版本已有 PDF 原始編修檔案時，不得顯示可提交的檔案欄位，也不得接受前端或直接 API 請求覆蓋既有檔案；後端必須以版本資料重新驗證，不得只依賴前端狀態。</p>
@@ -851,11 +852,27 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 第一層資料夾管理員指派、更換或撤銷，以及協同管理員指派或撤銷請求，只能提交該次操作必要的目標員工編號。後端必須同時驗證操作者身分、目標資料夾層級及授權類型；協同管理員提出任何管理員授權異動請求時一律拒絕。資料異動完成後，回應僅包含成功狀態、錯誤代碼及不含個人資料的訊息；前端需另依本節受限查詢規則重新取得目前資料夾的權限設定資料。</p>
 <h3>6.6. 檔案下載與 PDF 預覽處理規格</h3>
 <p>檔案下載與 PDF 預覽由 Next.js Route Handler 直接讀取磁碟實體檔案並處理，向瀏覽器輸出 binary stream 與必要 response header。</p>
-<p>* <strong>非 PDF 文件下載</strong>：</p>
-<p>* 瀏覽器呼叫 <code>GET /api/documents/download?version_id=...</code>。</p>
-<p>* Route Handler 呼叫 <code>documentService.downloadDocument</code> 取得磁碟實體檔案與元資料。</p>
-<p>* Next.js 必須保留並設定 <code>content-type</code>、<code>content-disposition</code>（含原始檔名）、<code>content-length</code>、<code>cache-control</code> 等檔案回應 header。</p>
-<p>* <strong>PDF 文件預覽</strong>：</p>
+<ul>
+  <li><strong>非 PDF 文件下載</strong>：
+<ul>
+  <li>瀏覽器呼叫 <code>GET /api/documents/download?version_id=...</code>。</li>
+  <li>Route Handler 呼叫 <code>documentService.downloadDocument</code> 取得磁碟實體檔案與元資料。</li>
+  <li>Next.js 必須保留並設定 <code>content-type</code>、<code>content-disposition</code>、<code>content-length</code>、<code>cache-control</code> 等檔案回應 header。</li>
+</ul>
+</li>
+  <li><strong>下載預設檔名</strong>：
+<ul>
+  <li>正式檔案下載、PDF 預覽視窗的下載及圖檔預覽視窗的下載，均使用「文件編號_文件名稱_版本編號_下載日期.原始副檔名」。</li>
+  <li>例如：<code>DOC-001_感染管制作業規範_V2_20260724.pdf</code>。</li>
+  <li>文件編號空白時省略該段及其分隔底線。</li>
+  <li>資料庫版本號 <code>ddv_no</code> 空白時，依版本序號 <code>ddv_seq</code> 產生不含空白的 <code>第N版</code>，例如 <code>DOC-001_感染管制作業規範_第1版_20260724.pdf</code>。</li>
+  <li>下載日期固定使用 <code>Asia/Taipei</code> 時區及 <code>YYYYMMDD</code> 格式。</li>
+  <li><code>content-disposition</code> 必須同時提供 ASCII 備援 <code>filename</code> 及 UTF-8 <code>filename*</code>，確保中文檔名完整。</li>
+  <li>實體儲存檔名不得因下載命名規則而變更；後端仍須防禦性替換既有資料中的 Windows 非法字元。</li>
+</ul>
+</li>
+  <li><strong>PDF 文件預覽</strong>：</li>
+</ul>
 <p>* 瀏覽器呼叫 <code>GET /api/documents/preview?version_id=...</code>。</p>
 <p>* Route Handler 透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得 PDF 原始檔，並呼叫 <code>pdfWatermark.ts</code>，使用 <code>pdf-lib</code> 與 <code>@pdf-lib/fontkit</code> 在伺服器端逐頁套用浮水印。</p>
 <p>* 加入浮水印後，Route Handler 必須重新設定正確的 <code>content-length</code> 與 <code>content-type: application/pdf</code>，再將處理後內容回傳瀏覽器。</p>

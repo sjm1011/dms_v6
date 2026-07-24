@@ -1,6 +1,10 @@
 import type { PoolClient } from 'pg';
 import type { Document, DocumentVersion } from '../../types';
 import type { SessionUser } from '../session';
+import {
+  getWindowsFileNameValidationError,
+  sanitizeWindowsFileNamePart
+} from '../documentFileName';
 import { isAdmin } from './auth';
 import { canManageFolder, getFolderAccessStatus } from './folderService';
 import { query, withTransaction } from './db';
@@ -58,6 +62,7 @@ interface FileRow {
   dd_title: string;
   dd_status: number;
   ddv_id: number;
+  ddv_seq: number;
   ddv_no: string | null;
   dfi_id: number;
   dfi_name: string;
@@ -72,10 +77,42 @@ const normalizeDocumentCode = (value: unknown): string | null => {
   return value.trim().toUpperCase() || null;
 };
 
+const validateDocumentFileNamePart = (value: unknown) => {
+  if (typeof value !== 'string') return;
+  const error = getWindowsFileNameValidationError(value);
+  if (error) throw new Error(error);
+};
+
 const validateDocumentCode = (code: string | null) => {
   if (code && code.length > 50) {
     throw new Error('文件編號不可超過 50 個字元。');
   }
+};
+
+const formatTaipeiDownloadDate = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(value);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}${values.month}${values.day}`;
+};
+
+const buildDocumentDownloadFileName = (row: FileRow) => {
+  const extension = sanitizeWindowsFileNamePart(row.dfi_ext.replace(/^\.+/, ''));
+  const version = row.ddv_no?.trim() || `第${row.ddv_seq}版`;
+  const segments = [
+    row.dd_code?.trim() || '',
+    row.dd_title.trim() || '文件',
+    version,
+    formatTaipeiDownloadDate()
+  ]
+    .filter(Boolean)
+    .map((segment) => sanitizeWindowsFileNamePart(segment) || '文件');
+
+  return `${segments.join('_')}${extension ? `.${extension}` : ''}`;
 };
 
 const ensureDocumentCodeAvailable = async (
@@ -367,8 +404,14 @@ export const createDocument = async (
     }
     folderId = parentRow.df_fid;
   }
+  validateDocumentFileNamePart(payload.code);
+  validateDocumentFileNamePart(payload.title);
+  validateDocumentFileNamePart(payload.version);
   const code = normalizeDocumentCode(payload.code);
+  const title = payload.title?.trim();
+  const versionNumber = payload.version?.trim() || null;
   validateDocumentCode(code);
+  if (!title) throw new Error('文件名稱不可空白。');
   const canManage = folderId > 0 ? await canManageFolder(user, folderId) : isAdmin(user);
 
   if (!canManage) {
@@ -425,7 +468,7 @@ export const createDocument = async (
              CURRENT_TIMESTAMP
        )
        RETURNING dd_id AS id`,
-      [folderId, parentDocumentId, code, payload.title, user.id]
+      [folderId, parentDocumentId, code, title, user.id]
     );
     const docId = doc.rows[0].id;
     const version = await client.query<{ id: number }>(
@@ -455,7 +498,7 @@ export const createDocument = async (
        RETURNING ddv_id AS id`,
       [
         docId,
-        payload.version || null,
+        versionNumber,
         payload.revision_date,
         payload.effective_at,
         payload.change_note,
@@ -475,7 +518,7 @@ export const createDocument = async (
         versionId: version.rows[0].id,
         metadata: {
           code,
-          title: payload.title,
+          title,
           file_name: payload.file.name,
           parent_document_id: parentDocumentId
         }
@@ -500,6 +543,8 @@ export const uploadVersion = async (
   }
 ) => {
   const docId = Number(payload.doc_id);
+  validateDocumentFileNamePart(payload.version);
+  const versionNumber = payload.version?.trim() || null;
   const doc = await query<{ df_fid: number; dd_status: number }>(
     `SELECT df_fid,
             dd_status
@@ -575,7 +620,7 @@ export const uploadVersion = async (
       [
         docId,
         nextSeq,
-        payload.version || null,
+        versionNumber,
         payload.revision_date,
         payload.effective_at,
         payload.change_note,
@@ -620,10 +665,10 @@ export const editDocument = async (
     ? undefined
     : normalizeDocumentCode(payload.code);
   const title = payload.title?.trim();
+  const versionNumber = payload.version?.trim() || null;
   const changeNote = payload.change_note?.trim();
 
-  if (requestedCode !== undefined) validateDocumentCode(requestedCode);
-  if (!title) throw new Error('文件名稱不可空白。');
+  validateDocumentFileNamePart(payload.version);
   if (!payload.revision_date) throw new Error('修訂日期不可空白。');
   if (!payload.effective_at) throw new Error('生效日期不可空白。');
   if (!changeNote) throw new Error('異動說明不可空白。');
@@ -683,6 +728,13 @@ export const editDocument = async (
       throw new Error('指定的文件版本不存在或已撤回。');
     }
 
+    if (!currentRow.is_scheduled) {
+      validateDocumentFileNamePart(payload.code);
+      validateDocumentFileNamePart(payload.title);
+      if (requestedCode !== undefined) validateDocumentCode(requestedCode);
+      if (!title) throw new Error('文件名稱不可空白。');
+    }
+
     const updatedCode = currentRow.is_scheduled
       ? currentRow.code
       : requestedCode === undefined
@@ -731,7 +783,7 @@ export const editDocument = async (
         WHERE ddv_id = $1`,
       [
         versionId,
-        payload.version || null,
+        versionNumber,
         payload.revision_date,
         payload.effective_at,
         changeNote,
@@ -772,7 +824,7 @@ export const editDocument = async (
           after_data: {
             code: updatedCode,
             title: updatedTitle,
-            version: payload.version || null,
+            version: versionNumber,
             revision_date: payload.revision_date,
             effective_at: payload.effective_at,
             change_note: changeNote,
@@ -1288,6 +1340,7 @@ export const getFileForAccess = async (
             d.dd_title,
             d.dd_status,
             v.ddv_id,
+            v.ddv_seq,
             v.ddv_no,
             f.dfi_id,
             f.dfi_name,
@@ -1415,7 +1468,10 @@ export const getFileForAccess = async (
       'content-type': row.dfi_mime || 'application/octet-stream',
       'content-length': String(size),
       'cache-control': 'no-store',
-      'content-disposition': buildContentDisposition(mode === 'preview' ? 'inline' : 'attachment', row.dfi_name)
+      'content-disposition': buildContentDisposition(
+        mode === 'preview' ? 'inline' : 'attachment',
+        buildDocumentDownloadFileName(row)
+      )
     }
   };
 };
