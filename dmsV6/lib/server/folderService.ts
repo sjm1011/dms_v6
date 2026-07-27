@@ -69,6 +69,40 @@ export const canManageFolder = async (user: SessionUser, folderId: number) => {
   return Boolean(result.rows[0]?.allowed);
 };
 
+export const hasAssignedFolderManagerRole = async (
+  user: SessionUser,
+  folderId: number
+) => {
+  if (!Number.isInteger(folderId) || folderId <= 0) {
+    return false;
+  }
+
+  const result = await query<{ allowed: boolean }>(
+    `WITH RECURSIVE ancestors AS (
+        SELECT df_fid,
+               df_pid
+          FROM dms_folders
+         WHERE df_fid = $1
+        UNION ALL
+        SELECT parent.df_fid,
+               parent.df_pid
+          FROM dms_folders parent
+          JOIN ancestors child ON child.df_pid = parent.df_fid
+      )
+      SELECT EXISTS (
+        SELECT 1
+          FROM dms_folder_managers manager
+          JOIN ancestors ON ancestors.df_fid = manager.df_fid
+         WHERE manager.usr_uid = $2
+           AND manager.dfm_type IN (1, 2)
+           AND manager.dfm_dc = 'N'
+      ) AS allowed`,
+    [folderId, user.id.toUpperCase()]
+  );
+
+  return Boolean(result.rows[0]?.allowed);
+};
+
 export const canAssignFolderManagers = async (user: SessionUser, folderId: number) => {
   if (isAdmin(user)) {
     return true;

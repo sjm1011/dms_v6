@@ -142,6 +142,7 @@ CREATE TABLE dms_doc (
     dd_parent_id INTEGER,
     dd_code VARCHAR(50),
     dd_title VARCHAR(255) NOT NULL,
+    dd_security_level SMALLINT NOT NULL DEFAULT 1,
     dd_status SMALLINT NOT NULL DEFAULT 1,
     dd_obs_at TIMESTAMP,
     dd_obs_by VARCHAR(50),
@@ -174,6 +175,7 @@ COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
 COMMENT ON COLUMN dms_doc.dd_parent_id IS '主文件識別碼；空白代表第一階文件';
 COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
 COMMENT ON COLUMN dms_doc.dd_title IS '文件名稱';
+COMMENT ON COLUMN dms_doc.dd_security_level IS '文件機敏等級。1：一般，2：敏感，3：機密；相關文件繼承主文件';
 COMMENT ON COLUMN dms_doc.dd_status IS '文件狀態。1：有效，2：廢止';
 COMMENT ON COLUMN dms_doc.dd_obs_at IS '廢止時間';
 COMMENT ON COLUMN dms_doc.dd_obs_by IS '廢止人員帳號';

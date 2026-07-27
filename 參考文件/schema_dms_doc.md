@@ -12,7 +12,7 @@
 
 * **表名稱**：`dms_doc`
 * **schema 檔名**：`schema_dms_doc.md`、`schema_dms_doc.html`
-* **用途**：代表一份文件本身，保存文件編號、文件名稱、所屬資料夾、文件狀態與廢止資訊。
+* **用途**：代表一份文件本身，保存文件編號、文件名稱、機敏等級、所屬資料夾、文件狀態與廢止資訊。
 
 ### 欄位規劃
 
@@ -23,6 +23,7 @@
 | `dd_parent_id` | INTEGER | Nullable | 主文件 ID，邏輯對應 `dms_doc.dd_id`；空白代表第一階文件。 |
 | `dd_code` | VARCHAR(50) | Nullable | 文件編號，可留空。非空白時由前端轉為大寫。 |
 | `dd_title` | VARCHAR(255) | Not Null | 文件名稱。 |
+| `dd_security_level` | SMALLINT | Not Null, Default | 文件機敏等級。1：一般，2：敏感，3：機密；預設為 1。相關文件繼承主文件。 |
 | `dd_status` | SMALLINT | Not Null | 文件狀態。1：有效，2：廢止。 |
 | `dd_obs_at` | TIMESTAMP | Nullable | 廢止時間。 |
 | `dd_obs_by` | VARCHAR(50) | Nullable | 廢止人員帳號。 |
@@ -45,6 +46,7 @@ CREATE TABLE dms_doc (
     dd_parent_id INTEGER,
     dd_code VARCHAR(50),
     dd_title VARCHAR(255) NOT NULL,
+    dd_security_level SMALLINT NOT NULL DEFAULT 1,
     dd_status SMALLINT NOT NULL DEFAULT 1,
     dd_obs_at TIMESTAMP,
     dd_obs_by VARCHAR(50),
@@ -81,6 +83,16 @@ ALTER COLUMN dd_code DROP NOT NULL;
 ALTER TABLE dms_doc
 ADD COLUMN IF NOT EXISTS dd_parent_id INTEGER;
 
+ALTER TABLE dms_doc
+ADD COLUMN IF NOT EXISTS dd_security_level SMALLINT NOT NULL DEFAULT 1;
+
+UPDATE dms_doc child
+   SET dd_security_level = parent.dd_security_level,
+       dd_updat = CURRENT_TIMESTAMP
+  FROM dms_doc parent
+ WHERE child.dd_parent_id = parent.dd_id
+   AND child.dd_security_level <> parent.dd_security_level;
+
 UPDATE dms_doc
    SET dd_code = NULLIF(UPPER(BTRIM(dd_code)), '');
 
@@ -105,6 +117,7 @@ COMMENT ON COLUMN dms_doc.df_fid IS '所屬資料夾 ID';
 COMMENT ON COLUMN dms_doc.dd_parent_id IS '主文件識別碼；空白代表第一階文件';
 COMMENT ON COLUMN dms_doc.dd_code IS '文件編號';
 COMMENT ON COLUMN dms_doc.dd_title IS '文件名稱';
+COMMENT ON COLUMN dms_doc.dd_security_level IS '文件機敏等級。1：一般，2：敏感，3：機密；相關文件繼承主文件';
 COMMENT ON COLUMN dms_doc.dd_status IS '文件狀態。1：有效，2：廢止';
 COMMENT ON COLUMN dms_doc.dd_obs_at IS '廢止時間';
 COMMENT ON COLUMN dms_doc.dd_obs_by IS '廢止人員帳號';
@@ -129,6 +142,7 @@ SELECT dd_id,
        dd_parent_id,
        dd_code,
        dd_title,
+       dd_security_level,
        dd_crtby,
        dd_crtat
   FROM dms_doc
@@ -145,6 +159,7 @@ SELECT dd_id,
        dd_parent_id,
        dd_code,
        dd_title,
+       dd_security_level,
        dd_status,
        dd_crtby,
        dd_crtat
@@ -163,6 +178,10 @@ SELECT dd_id,
 * `df_fid` 必須存在於有效的 `dms_folders.df_fid`。
 * `dd_parent_id` 若有值，必須指向同一資料夾內、有效且本身沒有 `dd_parent_id` 的第一階文件。
 * 文件階層只允許「主文件 → 相關文件」2 層；相關文件不得再建立相關文件。
+* 第一階主文件可設定 `dd_security_level`；相關文件不得獨立設定，並須與主文件保持相同值。
+* `dd_security_level = 2` 僅作敏感分類標示，存取規則與一般文件相同。
+* `dd_security_level = 3` 時，只允許目前有效的資料夾管理員或協同管理員存取；未被指派的 ADMIN 不得存取或管理。
+* 根目錄文件不得使用 `dd_security_level = 3`。
 * 主文件廢止時，全部尚未廢止的相關文件必須使用相同原因與核准文件一併廢止。
 * 有相關文件的主文件執行刪除時，主文件、全部相關文件及所有版本一併刪除；刪除前需逐份保留稽核紀錄。
 * 文件主檔為 `dd_status = 2` 時，不得再建立新版、預約版或執行撤回版本。

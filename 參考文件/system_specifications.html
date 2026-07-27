@@ -279,7 +279,7 @@
     <tr><th>資料表</th><th>欄位方向</th></tr>
   </thead>
   <tbody>
-    <tr><td><code>dms_doc</code></td><td><code>dd_id</code>、<code>df_fid</code>、<code>dd_parent_id</code>、<code>dd_code</code>、<code>dd_title</code>、<code>dd_status</code>、<code>dd_obs_at</code>、<code>dd_obs_by</code>、<code>dd_obs_reason</code>、<code>dfi_id</code>、<code>dd_obs_src</code>、<code>dd_crtby</code>、<code>dd_crtat</code>、<code>dd_updby</code>、<code>dd_updat</code></td></tr>
+    <tr><td><code>dms_doc</code></td><td><code>dd_id</code>、<code>df_fid</code>、<code>dd_parent_id</code>、<code>dd_code</code>、<code>dd_title</code>、<code>dd_security_level</code>、<code>dd_status</code>、<code>dd_obs_at</code>、<code>dd_obs_by</code>、<code>dd_obs_reason</code>、<code>dfi_id</code>、<code>dd_obs_src</code>、<code>dd_crtby</code>、<code>dd_crtat</code>、<code>dd_updby</code>、<code>dd_updat</code></td></tr>
     <tr><td><code>dms_doc_ver</code></td><td><code>ddv_id</code>、<code>dd_id</code>、<code>ddv_seq</code>、<code>ddv_no</code>、<code>ddv_rev_date</code>、<code>ddv_eff_at</code>、<code>ddv_eff_to</code>、<code>ddv_chg_note</code>、<code>ddv_pub_dfi_id</code>、<code>ddv_src_dfi_id</code>、<code>ddv_cancel_at</code>、<code>ddv_cancel_by</code>、<code>ddv_cancel_reason</code>、<code>ddv_crtby</code>、<code>ddv_crtat</code>、<code>ddv_updby</code>、<code>ddv_updat</code></td></tr>
     <tr><td><code>dms_file</code></td><td><code>dfi_id</code>、<code>dfi_role</code>、<code>dfi_name</code>、<code>dfi_path</code>、<code>dfi_ext</code>、<code>dfi_mime</code>、<code>dfi_size</code>、<code>dfi_sha256</code>、<code>dfi_status</code>、<code>dfi_crtby</code>、<code>dfi_crtat</code></td></tr>
     <tr><td><code>dms_ver_rev</code></td><td><code>dvr_id</code>、<code>ddv_id</code>、<code>dvr_base_ddv_id</code>、<code>dfi_id</code>、<code>dvr_note</code>、<code>dvr_dc</code>、<code>dvr_crtby</code>、<code>dvr_crtat</code>、<code>dvr_dcby</code>、<code>dvr_dcat</code></td></tr>
@@ -294,13 +294,17 @@
 <h3>2.1. 系統管理員 (ADMIN)</h3>
 <p>* <strong>職責</strong>：全域系統管理、第一層資料夾建立、權限結構維護與例外處理。</p>
 <p>* <strong>根目錄管理權</strong>：根目錄與第一層資料夾的建立權固定僅屬於系統管理員 (ADMIN)。根目錄文件建立權也固定僅屬於 ADMIN，系統需以 <code>folder_id = 0</code> 表示根目錄文件歸屬。根目錄文件查閱權固定為公開，任何已登入使用者皆可看見符合一般使用者文件生效條件的根目錄文件。</p>
-<p>* <strong>全站強制管理權</strong>：ADMIN 對所有資料夾、ACL、文件與版本生命週期保有最高層級的管理與編輯權限。即使資料夾已指定資料夾管理員，或資料夾被設定為限閱，ADMIN 仍可執行建立子資料夾、修改資料夾屬性、封存資料夾、設定 ACL 與文件管理操作。</p>
+<ul>
+  <li><strong>全站強制管理權</strong>：ADMIN 對所有資料夾、ACL，以及「一般」與「敏感」文件的版本生命週期保有最高層級的管理與編輯權限。即使資料夾已指定資料夾管理員，或資料夾被設定為限閱，ADMIN 仍可執行建立子資料夾、修改資料夾屬性、封存資料夾、設定 ACL 與非機密文件管理操作。機密文件屬例外，未被有效指派為該資料夾管理員或協同管理員的 ADMIN，不得查看、搜尋、調閱、下載、修改或執行版本生命週期操作。</li>
+</ul>
 <p>* <strong>第一層資料夾建立規則</strong>：ADMIN 建立第一層資料夾時，只需輸入資料夾名稱，不在建立畫面指派資料夾管理員。建立完成時允許沒有有效資料夾管理員，該資料夾及其子資料夾的管理權仍由 ADMIN 保留。</p>
 <p>* <strong>第一層資料夾管理員指派規則</strong>：每一個第一層資料夾可不指派資料夾管理員；一旦指派，同一時間僅能有一名有效資料夾管理員。後續異動只能以指派、更換或撤銷方式處理，不得同時保留兩名以上的有效資料夾管理員。</p>
 <p>* <strong>未指派顯示與操作規則</strong>：ADMIN 進入尚未指派資料夾管理員的第一層資料夾或其子資料夾時，畫面上方必須顯示紅色可點擊文字框「管理員：未指派」。ADMIN 點擊該文字框後，開啟資料夾管理員指派 Modal；指派成功後，文字框改為顯示該資料夾管理員姓名與一般管理員顯示樣式。</p>
 <p>* <strong>協同管理員例外處理權</strong>：協同管理員原則上由該第一層資料夾的資料夾管理員指派或撤銷。ADMIN 保有全站例外處理權，可在必要時撤銷協同管理員、指派、更換或撤銷第一層資料夾管理員，但不得破壞「第一層資料夾最多一名有效資料夾管理員」的限制。</p>
 <p>* <strong>管理員姓名顯示規則</strong>：ADMIN 進入任一資料夾後，可於畫面上方查看該資料夾的有效管理員姓名。除該受限情境外，前端不得取得或顯示資料夾直接管理員、繼承管理員或有效管理員的身分資料。</p>
-<p>* <strong>存取限制豁免</strong>：ADMIN 不受一般使用者 ACL 限制，且不得因錯誤 ACL 設定被鎖出系統管理範圍之外。</p>
+<ul>
+  <li><strong>存取限制豁免</strong>：ADMIN 不受一般使用者資料夾 ACL 限制，且不得因錯誤 ACL 設定被鎖出系統管理範圍之外；此豁免不包含機密文件內容。ADMIN 必須同時存在目前有效的資料夾管理員或協同管理員指派，才能存取機密文件。</li>
+</ul>
 <h3>2.2. 資料夾管理員 (Folder Manager，計算型管理身分)</h3>
 <p>* <strong>身分定義</strong>：資料夾管理員不是帳戶角色。每一個第一層資料夾可直接指派零名或一名資料夾管理員；該身分自第一層資料夾向下涵蓋其全部子資料夾與文件。未指派時，只有 ADMIN 具備該資料夾樹的管理權。</p>
 <p>* <strong>資料模型</strong>：<code>dms_folder_managers.dfm_type = 1</code> 表示第一層資料夾管理員，<code>dfm_type = 2</code> 表示協同管理員。後端不得只依資料夾與員工編號判斷其授權能力，必須同時檢查 <code>dfm_type</code>、<code>dfm_dc</code> 與資料夾階層。</p>
@@ -344,7 +348,9 @@
 <p>* <strong>限閱屬性繼承規則</strong>：直接上層資料夾為限閱時，其子資料夾必須繼承上層資料夾的限閱屬性，不得再進行其他限閱的設定。</p>
 <p>* <strong>目前資料夾屬性顯示</strong>：進入實體資料夾後，畫面標題與項目數量之間必須顯示「公開」或「限閱」文字框。具備該資料夾管理權限的使用者可點擊非繼承屬性的文字框開啟資料夾屬性 Modal。繼承上層限閱屬性的文字框不得提供點擊功能，只能以提示文字顯示實際授權內容，且不得覆寫繼承設定。</p>
 <p>* <strong>限閱授權狀態辨識</strong>：目前資料夾標題列及清單「屬性／版本」欄位內的「限閱」文字框，都必須以圖示區分「未設定詳細授權」與「已授權」，不得只以顏色表達狀態。未設定詳細授權時顯示警示圖示；已有有效部門或特定使用者授權時顯示完成圖示，並以提示文字提供授權摘要。</p>
-<p>* 根目錄不是實體資料夾節點，不套用 <code>dms_folder_acl</code>。位於根目錄的文件固定公開查閱，但建立、版更、廢止與維護仍固定僅限 ADMIN。</p>
+<ul>
+  <li>根目錄不是實體資料夾節點，不套用 <code>dms_folder_acl</code>。位於根目錄的「一般」與「敏感」文件固定公開查閱，但建立、版更、廢止與維護仍固定僅限 ADMIN。根目錄不存在資料夾管理員指派範圍，因此不得建立或改為「機密」文件。</li>
+</ul>
 <p>---</p>
 <h2>3. 資料夾結構管理</h2>
 <h3>3.1. 基本狀態</h3>
@@ -485,8 +491,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* <strong>一般資料夾建立文件</strong>：有效資料夾管理員與 ADMIN 可在其管理範圍內建立文件。</p>
 <ul>
   <li><strong>根目錄建立文件</strong>：僅 ADMIN 可在根目錄建立文件。前端僅對 ADMIN 顯示根目錄「新增文件」入口；後端 API 必須再次驗證登入角色，不得只依賴前端防呆。</li>
+  <li><strong>根目錄文件公開規則</strong>：位於根目錄的「一般」與「敏感」文件固定公開查閱。任何已登入使用者進入文件庫根層時，皆可看見符合文件主檔狀態、版本生效期間與 PDF / 非 PDF 操作規則的根目錄文件。根目錄文件不得設定為「機密」。</li>
 </ul>
-<p>* <strong>根目錄文件公開規則</strong>：位於根目錄的文件固定公開查閱。任何已登入使用者進入文件庫根層時，皆可看見符合文件主檔狀態、版本生效期間與 PDF / 非 PDF 操作規則的根目錄文件。</p>
 <p>* <strong>根目錄識別規則</strong>：建立或查詢根目錄文件時，系統以 <code>folder_id = 0</code> 表示根目錄。一般資料夾文件則使用實際 <code>dms_folders.df_fid</code>。</p>
 <p>* <strong>拒絕規則</strong>：非 ADMIN 若直接呼叫 API 嘗試以 <code>folder_id = 0</code> 建立文件，後端必須拒絕並回傳權限不足訊息。</p>
 <p>管理員建立文件時：</p>
@@ -509,10 +515,21 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li>管理員查看尚未生效文件時，文件清單的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示生效日期。第一版尚未生效時，清單只顯示該預約版本。</li>
 </ol>
 <p>文件編號留空時，後端必須將 <code>dd_code</code> 儲存為 <code>NULL</code>，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 <code>dd_code</code>，不得在索引定義內使用 <code>UPPER()</code>、型別轉換或其他函數。</p>
-<p>文件清單隱藏獨立的「文件編號」欄位，並將文件編號作為文件名稱的顯示前綴，以「文件編號 + 半形空格 + 文件名稱」顯示。文件編號留空時只顯示文件名稱，不得加入替代文字或多餘空白；資料夾名稱維持原值。此規則只影響清單呈現，文件編號仍須以 <code>dms_doc.dd_code</code> 獨立實體欄位保存，不得併入 <code>dd_title</code>。一般清單、搜尋結果、主文件、相關文件及預約版本均採相同呈現方式。</p>
+<p>文件清單隱藏獨立的「文件編號」欄位，並將文件編號作為文件名稱的顯示前綴。前端必須將文件編號與文件名稱渲染為獨立元素，文件編號使用 Consolas、<code>Courier New</code> 或系統等寬字型，兩者之間以 <code>0.5rem</code> 的 CSS 固定間距分隔，不得依賴空白字元控制距離。文件編號留空時只顯示文件名稱，不得加入替代文字或多餘間距；資料夾名稱維持原值。此規則只影響清單呈現，文件編號仍須以 <code>dms_doc.dd_code</code> 獨立實體欄位保存，不得併入 <code>dd_title</code>。一般清單、搜尋結果、主文件、相關文件及預約版本均採相同呈現方式。</p>
 <p>文件編號、文件名稱及版本號會組成下載檔名，因此新增文件、建立相關文件、修改文件及上傳新版時，前端與後端均須套用 Windows 檔名字元限制。不得使用 <code>&lt; &gt; : " / \ | ? *</code>、<code>U+0000</code> 至 <code>U+001F</code> 及 <code>U+007F</code> 控制字元，欄位結尾不得為空白或句點；內容中間仍可使用一般空白與句點。使用者輸入或貼上被阻擋字元時，前端不得寫入該次內容，並須於欄位下方以 <code>aria-live</code> 顯示：「不得使用下列特殊字元：&lt; &gt; : " / \ | ? *；不得輸入控制字元，結尾也不得使用空白或句點。」後端須以相同規則及訊息拒絕繞過前端的 API 請求。</p>
+<h4>4.8.1. 文件機敏等級</h4>
+<ul>
+  <li>文件主檔以 <code>dms_doc.dd_security_level</code> 保存機敏等級：<code>1</code> 為「一般」、<code>2</code> 為「敏感」、<code>3</code> 為「機密」。既有文件及未傳入等級的新文件預設為「一般」。</li>
+  <li>「一般」與「敏感」套用相同權限規則。「敏感」僅作分類標示，不增加資料夾 ACL、預覽或下載限制。</li>
+  <li>第一階主文件可於新增或修改文件時設定機敏等級。一般資料夾內的機敏等級異動僅限目前有效的資料夾管理員或協同管理員執行；根目錄文件由 ADMIN 在「一般」與「敏感」之間調整。異動需以 <code>DOCUMENT_UPDATED</code> 保存變更前後等級。</li>
+  <li>相關文件繼承第一階主文件的機敏等級。新增相關文件畫面必須在隸屬資訊區顯示繼承結果；修改相關文件畫面及文件清單不得顯示機敏等級欄位或標章，也不得提供獨立設定。文件清單必須保留機敏等級標章的等寬佔位，使相關文件版本號與主文件版本號維持相同對齊位置。後端不得接受相關文件獨立變更等級；主文件等級變更後，全部相關文件必須於同一交易同步套用。</li>
+  <li>機密文件僅限目前有效的資料夾管理員或協同管理員查看、搜尋、調閱、預覽、下載、修改及執行版本生命週期操作。被資料夾 ACL 授權的部門或使用者仍不得存取。</li>
+  <li>未被有效指派的 ADMIN 不得因系統角色取得機密內容或管理權，也不得透過直接 API、版本識別碼、搜尋、歷史版本或附屬資料繞過限制。ADMIN 可依既有規則指派或更換資料夾管理員，但指派本身不直接授予未被指派者機密內容存取權。</li>
+  <li>機密權限必須由後端依目前登入者、<code>dms_folder_managers</code>、<code>dfm_type</code>、<code>dfm_dc</code> 與資料夾祖先階層即時計算，不得使用會直接豁免 ADMIN 的一般資料夾管理權判斷，也不得信任前端傳入的權限旗標。</li>
+  <li>未授權者的文件清單及搜尋結果不得包含機密文件。直接調閱或下載遭拒時，對外統一回覆無文件存取權限，並於 <code>dms_log</code> 記錄精確拒絕原因。</li>
+</ul>
 <h3>4.9. 文件版更與預約生效</h3>
-<p>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，必須可從文件操作選單的「修改文件」進入點修改文件編號、目前顯示版本的文件名稱、版本號、修訂日期、生效日期及異動說明。未編號文件可補填文件編號，已編號文件亦可修改或清空；修改後的非空白文件編號不得與其他文件重複。「修改文件」只更新文件主檔與既有版本資料，不得建立新版本，並需於同一筆交易完成及於稽核紀錄保存異動前後資料。</p>
+<p>系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員，必須可從文件操作選單的「修改文件」進入點修改文件編號、目前顯示版本的文件名稱、版本號、修訂日期、生效日期及異動說明；機敏等級異動另依第 4.8.1 節限制。未編號文件可補填文件編號，已編號文件亦可修改或清空；修改後的非空白文件編號不得與其他文件重複。「修改文件」只更新文件主檔與既有版本資料，不得建立新版本，並需於同一筆交易完成及於稽核紀錄保存異動前後資料。</p>
 <p>目前顯示版本的正式發佈檔案為 PDF，且尚未保存 PDF 原始編修檔案時，「修改文件」可顯示原始檔案選擇欄位並接受新增檔案。該版本已有 PDF 原始編修檔案時，不得顯示可提交的檔案欄位，也不得接受前端或直接 API 請求覆蓋既有檔案；後端必須以版本資料重新驗證，不得只依賴前端狀態。</p>
 <p>上傳新版文件時：</p>
 <p>1. 新增一筆文件版本。</p>
@@ -538,6 +555,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li>文件只允許 2 層。相關文件不得再建立相關文件，也不得掛到不同資料夾或同時隸屬多份主文件。</li>
   <li>主文件操作選單提供「新增相關文件」。建立流程沿用新增文件的檔案格式、欄位、日期、文件編號唯一性及 PDF 原始編修檔規則。</li>
   <li>相關文件沿用主文件所在資料夾的 ACL 與管理權。根目錄主文件只有 <code>ADMIN</code> 可新增相關文件。</li>
+  <li>相關文件繼承主文件的機敏等級。新增相關文件畫面只在隸屬資訊區顯示繼承結果；修改相關文件畫面及文件清單不顯示機敏等級，但文件清單的版本號必須與主文件版本號對齊。相關文件不得獨立設定機敏等級；主文件變更等級時，相關文件立即同步套用。主文件為機密時，相關文件的清單、搜尋、預覽、下載及生命週期操作均套用相同機密限制。</li>
   <li>相關文件獨立版控。相關文件改版不自動建立主文件新版；若異動影響主文件內容、流程、引用編號或適用性，由文件管理者另行版更主文件。</li>
   <li>一般文件清單固定顯示全部相關文件。相關文件緊接於主文件下方，以縮排及關聯圖示表示第二階關係，不增加文件類型欄位。</li>
   <li>搜尋命中相關文件時直接顯示該文件，並顯示「隸屬於：主文件編號 主文件名稱」；搜尋 ACL、版本可見性、排名與分頁規則不變。</li>
@@ -617,7 +635,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 搜尋結果只顯示文件，並顯示文件所在資料夾完整路徑。結果提供前往所在資料夾、預覽、下載及符合目前使用者權限的既有文件管理操作。</p>
 <p>* 搜尋結果採伺服器端分頁，每頁固定 50 份文件；關鍵字或搜尋範圍改變時從第 1 頁重新查詢。</p>
 <h3>4.14. 資料夾管理員權限</h3>
-<p>ADMIN 除具備所有資料夾管理員權限外，另可於根目錄建立文件。根目錄文件不屬於任何資料夾管理員繼承範圍，非 ADMIN 不得建立、版更、廢止或維護根目錄文件；非 ADMIN 僅可依一般使用者權限查閱符合生效條件的根目錄文件。</p>
+<p>ADMIN 除機密文件例外外，具備所有資料夾管理員權限，並可於根目錄建立文件。根目錄文件不屬於任何資料夾管理員繼承範圍，只能設定為「一般」或「敏感」；非 ADMIN 不得建立、版更、廢止或維護根目錄文件，並僅可依一般使用者權限查閱符合生效條件的根目錄文件。未被有效指派的 ADMIN 不得存取或管理機密文件。</p>
 <p>資料夾管理員可：</p>
 <p>* 新增子資料夾。</p>
 <p>* 在其可管理的資料夾指派或撤銷多位協同管理員。</p>
@@ -734,6 +752,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <ul>
   <li>登入失敗需記錄 <code>AUTH_LOGIN_FAILED</code> (登入失敗)，但不得記錄明文密碼。</li>
   <li>已登入使用者嘗試調閱無權限、已廢止或非目前有效的文件版本時，需記錄 <code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)，並保存文件、版本、資料夾、拒絕原因及請求來源資訊。</li>
+  <li>未被有效指派為資料夾管理員或協同管理員的使用者，包括 ADMIN，嘗試調閱或下載機密文件時，後端需分別記錄 <code>DOCUMENT_PREVIEW_DENIED</code> 或 <code>DOCUMENT_DOWNLOAD_DENIED</code>，並保存文件、版本、資料夾、機敏等級及精確拒絕原因。</li>
   <li>使用不存在或格式錯誤的版本識別碼調閱時，需保存嘗試值、操作者及請求來源資訊；因無法確認資料夾歸屬，只能由系統管理員查詢。</li>
   <li>不支援線上預覽的檔案格式、檔案讀取錯誤、網路中斷或使用者取消操作，不列為 <code>DOCUMENT_PREVIEW_DENIED</code>。</li>
   <li>一般使用者嘗試下載 PDF 正式原檔時，需記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)，並保存文件、版本與檔名資訊。</li>

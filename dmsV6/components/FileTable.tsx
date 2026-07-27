@@ -219,21 +219,36 @@ export const FileTable = React.memo<FileTableProps>(({
   // 渲染資料夾屬性 Badge
   const renderAccessBadge = (item: DMSItem) => {
     if (item.type === 'document') {
-      if (item.status === 'Scheduled') {
-        const effectiveDate = item.effective_at?.split(' ')[0] || '-';
-        return (
-          <span
-            className="badge-access scheduled"
-            title={`生效日期：${effectiveDate}`}
-          >
-            即將生效
-          </span>
-        );
-      }
-
+      const securityLevel = item.security_level || 1;
+      const securityLabel = securityLevel === 3
+        ? '機密'
+        : securityLevel === 2
+          ? '敏感'
+          : '一般';
+      const versionBadge = item.status === 'Scheduled'
+        ? (
+            <span
+              className="badge-access scheduled"
+              title={`生效日期：${item.effective_at?.split(' ')[0] || '-'}`}
+            >
+              即將生效
+            </span>
+          )
+        : (
+            <span className="badge-access public">
+              {item.version || '-'}
+            </span>
+          );
       return (
-        <span className="badge-access public">
-          {item.version || '-'}
+        <span className="document-property-badges">
+          <span
+            className={`badge-security level-${securityLevel}${item.parent_document_id ? ' related-placeholder' : ''}`}
+            title={item.parent_document_id ? undefined : `文件機敏等級：${securityLabel}`}
+            aria-hidden={item.parent_document_id ? true : undefined}
+          >
+            {securityLabel}
+          </span>
+          {versionBadge}
         </span>
       );
     }
@@ -588,8 +603,8 @@ export const FileTable = React.memo<FileTableProps>(({
       <table id="files-table">
         <thead>
           <tr>
-            <th style={{ width: '78%' }}>名稱</th>
-            <th style={{ width: '10%' }}>屬性 / 版本</th>
+            <th style={{ width: '72%' }}>名稱</th>
+            <th className="property-version-column" style={{ width: '16%' }}>屬性 / 版本</th>
             <th style={{ width: '12%' }}>修訂日期</th>
           </tr>
         </thead>
@@ -710,15 +725,16 @@ export const FileTable = React.memo<FileTableProps>(({
                         </span>
                       )}
                       <span className="item-name">
-                        {item.type === 'document' && item.code
-                          ? `${item.code} ${item.name}`
-                          : item.name}
+                        {item.type === 'document' && item.code && (
+                          <span className="document-code">{item.code}</span>
+                        )}
+                        <span className="document-title">{item.name}</span>
                       </span>
                     </span>
                     {renderManagerRoleIcon(item)}
                   </div>
                 </td>
-                <td>
+                <td className="property-version-column">
                   {renderAccessBadge(item)}
                 </td>
                 <td>{item.type === 'document' ? (item.revision_date || '-') : ''}</td>

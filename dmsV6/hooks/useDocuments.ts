@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Document, User } from '../types';
+import { Document, DocumentSecurityLevel, User } from '../types';
 import { DocumentsAPI } from '../api/documents';
 
 export const useDocuments = (
@@ -90,6 +90,7 @@ export const useDocuments = (
     effAt: string,
     file: File,
     sourceFile?: File | null,
+    securityLevel?: DocumentSecurityLevel,
     parentDocumentId?: string | null
   ) => {
     showToast(parentDocumentId ? '正在建立相關文件與上傳檔案...' : '正在建立文件與上傳檔案...', 'info');
@@ -104,6 +105,7 @@ export const useDocuments = (
         effAt,
         file,
         sourceFile,
+        securityLevel,
         parentDocumentId
       );
       if (res.success) {
@@ -185,7 +187,8 @@ export const useDocuments = (
     changeNote: string,
     revisionDate: string,
     effAt: string,
-    sourceFile?: File | null
+    sourceFile?: File | null,
+    securityLevel?: DocumentSecurityLevel
   ) => {
     try {
       const res = await DocumentsAPI.editDocument(
@@ -197,7 +200,8 @@ export const useDocuments = (
         changeNote,
         revisionDate,
         effAt,
-        sourceFile
+        sourceFile,
+        securityLevel
       );
       if (res.success) {
         showToast(`文件「${title}」已更新。`, 'success');

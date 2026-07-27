@@ -484,6 +484,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           mime: displayVersion.mime,
           ver_id: displayVersion.ver_id,
           file_name: displayVersion.file_name,
+          security_level: doc.security_level,
           parent_document_id: doc.parent_document_id || null,
           parent_code: doc.parent_code || null,
           parent_title: doc.parent_title || null,
@@ -540,6 +541,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           file_name: displayVersion.file_name,
           folder_id: doc.folder_id,
           folder_path: doc.folder_path || doc.folder_name || '文件庫',
+          security_level: doc.security_level,
           parent_document_id: doc.parent_document_id || null,
           parent_code: doc.parent_code || null,
           parent_title: doc.parent_title || null,
@@ -1024,6 +1026,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         isOpen={isNewDocOpen}
         initialFile={newDocFile}
         parentDocument={relatedParentDoc}
+        allowConfidential={Boolean(currentFolderId && currentFolder?.manager_role)}
         onClose={() => {
           setIsNewDocOpen(false);
           setNewDocFile(null);
@@ -1099,6 +1102,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         isOpen={isEditDocumentOpen}
         onClose={() => setIsEditDocumentOpen(false)}
         targetDoc={activeDoc}
+        canChangeSecurityLevel={Boolean(
+          isSearchMode
+            ? activeDoc?.folder_id === '0'
+              ? user.role === 'ADMIN'
+              : activeDoc?.manager_role
+            : currentFolderId === ''
+              ? user.role === 'ADMIN'
+              : currentFolder?.manager_role
+        )}
         onSave={async (...args) => {
           const success = await documentsHook.handleEditDocument(...args);
           if (success && isSearchMode) await executeSearch(searchPage, true);

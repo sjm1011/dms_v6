@@ -1,12 +1,16 @@
 import type { PoolClient } from 'pg';
-import type { Document, DocumentVersion } from '../../types';
+import type { Document, DocumentSecurityLevel, DocumentVersion } from '../../types';
 import type { SessionUser } from '../session';
 import {
   getWindowsFileNameValidationError,
   sanitizeWindowsFileNamePart
 } from '../documentFileName';
 import { isAdmin } from './auth';
-import { canManageFolder, getFolderAccessStatus } from './folderService';
+import {
+  canManageFolder,
+  getFolderAccessStatus,
+  hasAssignedFolderManagerRole
+} from './folderService';
 import { query, withTransaction } from './db';
 import { writeAudit } from './auditService';
 import {
@@ -45,6 +49,7 @@ interface DocumentRow extends VersionRow {
   title: string;
   doc_status: number;
   folder_id: number;
+  security_level: number;
   parent_document_id: number | null;
   parent_code: string | null;
   parent_title: string | null;
@@ -61,6 +66,7 @@ interface FileRow {
   dd_code: string | null;
   dd_title: string;
   dd_status: number;
+  security_level: number;
   ddv_id: number;
   ddv_seq: number;
   ddv_no: string | null;
@@ -87,6 +93,25 @@ const validateDocumentCode = (code: string | null) => {
   if (code && code.length > 50) {
     throw new Error('文件編號不可超過 50 個字元。');
   }
+};
+
+const normalizeSecurityLevel = (value: unknown): DocumentSecurityLevel => {
+  const securityLevel = Number(value ?? 1);
+  if (securityLevel !== 1 && securityLevel !== 2 && securityLevel !== 3) {
+    throw new Error('文件機敏等級格式錯誤。');
+  }
+  return securityLevel;
+};
+
+const canManageDocumentBySecurity = async (
+  user: SessionUser,
+  folderId: number,
+  securityLevel: number
+) => {
+  if (securityLevel === 3) {
+    return hasAssignedFolderManagerRole(user, folderId);
+  }
+  return folderId > 0 ? canManageFolder(user, folderId) : isAdmin(user);
 };
 
 const formatTaipeiDownloadDate = (value = new Date()) => {
@@ -186,6 +211,7 @@ const toDocument = (rows: DocumentRow[]): Document => {
     title: first.title,
     status: first.doc_status === 2 ? 'Obsolete' : 'Effective',
     folder_id: String(first.folder_id),
+    security_level: normalizeSecurityLevel(first.security_level),
     parent_document_id: first.parent_document_id ? String(first.parent_document_id) : null,
     parent_code: first.parent_code,
     parent_title: first.parent_title,
@@ -210,6 +236,7 @@ const toDocument = (rows: DocumentRow[]): Document => {
 
 export const listDocuments = async (user: SessionUser, folderId: number) => {
   const canManage = folderId > 0 ? await canManageFolder(user, folderId) : isAdmin(user);
+  const hasAssignedManagerRole = await hasAssignedFolderManagerRole(user, folderId);
   const canAccess = folderId === 0
     || canManage
     || (await getFolderAccessStatus(user, folderId)) === 'allowed';
@@ -217,8 +244,13 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
     `WITH visible_doc AS (
         SELECT d.dd_id
           FROM dms_doc d
+          LEFT JOIN dms_doc parent ON parent.dd_id = d.dd_parent_id
           LEFT JOIN dms_folders f ON f.df_fid = d.df_fid
          WHERE d.df_fid = $1
+           AND (
+                COALESCE(parent.dd_security_level, d.dd_security_level) <> 3
+                OR $4 = true
+           )
            AND (
                 $2 = true
                 OR (
@@ -244,6 +276,7 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
              d.dd_title AS title,
              d.dd_status AS doc_status,
              d.df_fid AS folder_id,
+             COALESCE(parent.dd_security_level, d.dd_security_level) AS security_level,
              d.dd_parent_id AS parent_document_id,
              parent.dd_code AS parent_code,
              parent.dd_title AS parent_title,
@@ -294,7 +327,7 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
                 d.dd_title,
                 d.dd_id,
                 v.ddv_seq DESC`,
-    [folderId, canManage, canAccess]
+    [folderId, canManage, canAccess, hasAssignedManagerRole]
   );
   const grouped = new Map<number, DocumentRow[]>();
 
@@ -370,6 +403,7 @@ export const createDocument = async (
     file: UploadPayload;
     source_file?: UploadPayload | null;
     parent_document_id?: string | number | null;
+    security_level?: number;
   }
 ) => {
   const parentDocumentId = payload.parent_document_id === null
@@ -382,15 +416,21 @@ export const createDocument = async (
   }
 
   let folderId = Number(payload.folder_id || 0);
+  let securityLevel = normalizeSecurityLevel(payload.security_level);
   if (parentDocumentId !== null) {
+    if (payload.security_level !== undefined) {
+      throw new Error('相關文件的機敏等級由主文件繼承，不得獨立設定。');
+    }
     const parent = await query<{
       df_fid: number;
       dd_parent_id: number | null;
       dd_status: number;
+      dd_security_level: number;
     }>(
       `SELECT df_fid,
               dd_parent_id,
-              dd_status
+              dd_status,
+              dd_security_level
          FROM dms_doc
         WHERE dd_id = $1`,
       [parentDocumentId]
@@ -403,6 +443,10 @@ export const createDocument = async (
       throw new Error('相關文件底下不可再建立第 3 層文件。');
     }
     folderId = parentRow.df_fid;
+    securityLevel = normalizeSecurityLevel(parentRow.dd_security_level);
+  }
+  if (folderId === 0 && securityLevel === 3) {
+    throw new Error('根目錄文件不得設定為機密。');
   }
   validateDocumentFileNamePart(payload.code);
   validateDocumentFileNamePart(payload.title);
@@ -412,7 +456,7 @@ export const createDocument = async (
   const versionNumber = payload.version?.trim() || null;
   validateDocumentCode(code);
   if (!title) throw new Error('文件名稱不可空白。');
-  const canManage = folderId > 0 ? await canManageFolder(user, folderId) : isAdmin(user);
+  const canManage = await canManageDocumentBySecurity(user, folderId, securityLevel);
 
   if (!canManage) {
     throw new Error('沒有此資料夾的文件管理權限。');
@@ -424,10 +468,12 @@ export const createDocument = async (
         df_fid: number;
         dd_parent_id: number | null;
         dd_status: number;
+        dd_security_level: number;
       }>(
         `SELECT df_fid,
                 dd_parent_id,
-                dd_status
+                dd_status,
+                dd_security_level
            FROM dms_doc
           WHERE dd_id = $1
           FOR UPDATE`,
@@ -439,6 +485,7 @@ export const createDocument = async (
         || parentRow.dd_status !== 1
         || parentRow.dd_parent_id !== null
         || parentRow.df_fid !== folderId
+        || parentRow.dd_security_level !== securityLevel
       ) {
         throw new Error('主文件狀態或所在資料夾已變更，請重新整理後再試。');
       }
@@ -455,6 +502,7 @@ export const createDocument = async (
              dd_parent_id,
              dd_code,
              dd_title,
+             dd_security_level,
              dd_status,
              dd_crtby,
              dd_crtat
@@ -463,12 +511,13 @@ export const createDocument = async (
              $2,
              $3,
              $4,
-             1,
              $5,
+             1,
+             $6,
              CURRENT_TIMESTAMP
        )
        RETURNING dd_id AS id`,
-      [folderId, parentDocumentId, code, title, user.id]
+      [folderId, parentDocumentId, code, title, securityLevel, user.id]
     );
     const docId = doc.rows[0].id;
     const version = await client.query<{ id: number }>(
@@ -519,6 +568,7 @@ export const createDocument = async (
         metadata: {
           code,
           title,
+          security_level: securityLevel,
           file_name: payload.file.name,
           parent_document_id: parentDocumentId
         }
@@ -545,11 +595,13 @@ export const uploadVersion = async (
   const docId = Number(payload.doc_id);
   validateDocumentFileNamePart(payload.version);
   const versionNumber = payload.version?.trim() || null;
-  const doc = await query<{ df_fid: number; dd_status: number }>(
-    `SELECT df_fid,
-            dd_status
-       FROM dms_doc
-      WHERE dd_id = $1`,
+  const doc = await query<{ df_fid: number; dd_status: number; security_level: number }>(
+    `SELECT document.df_fid,
+            document.dd_status,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1`,
     [docId]
   );
   const docRow = doc.rows[0];
@@ -558,7 +610,7 @@ export const uploadVersion = async (
     throw new Error('文件不存在或已廢止。');
   }
 
-  if (!(await canManageFolder(user, docRow.df_fid))) {
+  if (!(await canManageDocumentBySecurity(user, docRow.df_fid, docRow.security_level))) {
     throw new Error('沒有此文件的管理權限。');
   }
 
@@ -657,6 +709,7 @@ export const editDocument = async (
     revision_date: string;
     effective_at: string;
     source_file?: UploadPayload | null;
+    security_level?: number;
   }
 ) => {
   const docId = Number(payload.doc_id);
@@ -667,17 +720,30 @@ export const editDocument = async (
   const title = payload.title?.trim();
   const versionNumber = payload.version?.trim() || null;
   const changeNote = payload.change_note?.trim();
+  const requestedSecurityLevel = payload.security_level === undefined
+    ? undefined
+    : normalizeSecurityLevel(payload.security_level);
 
   validateDocumentFileNamePart(payload.version);
   if (!payload.revision_date) throw new Error('修訂日期不可空白。');
   if (!payload.effective_at) throw new Error('生效日期不可空白。');
   if (!changeNote) throw new Error('異動說明不可空白。');
 
-  const doc = await query<{ df_fid: number; dd_status: number }>(
-    `SELECT df_fid,
-            dd_status
-       FROM dms_doc
-      WHERE dd_id = $1`,
+  const doc = await query<{
+    df_fid: number;
+    dd_status: number;
+    dd_parent_id: number | null;
+    own_security_level: number;
+    security_level: number;
+  }>(
+    `SELECT document.df_fid,
+            document.dd_status,
+            document.dd_parent_id,
+            document.dd_security_level AS own_security_level,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1`,
     [docId]
   );
   const docRow = doc.rows[0];
@@ -686,8 +752,25 @@ export const editDocument = async (
     throw new Error('文件不存在或已廢止。');
   }
 
-  if (!(await canManageFolder(user, docRow.df_fid))) {
+  if (!(await canManageDocumentBySecurity(user, docRow.df_fid, docRow.security_level))) {
     throw new Error('沒有此文件的管理權限。');
+  }
+  if (docRow.dd_parent_id !== null && requestedSecurityLevel !== undefined) {
+    throw new Error('相關文件的機敏等級由主文件繼承，不得獨立設定。');
+  }
+  if (
+    requestedSecurityLevel !== undefined
+    && requestedSecurityLevel !== docRow.own_security_level
+    && !(
+      docRow.df_fid === 0
+        ? isAdmin(user) && requestedSecurityLevel !== 3
+        : await hasAssignedFolderManagerRole(user, docRow.df_fid)
+    )
+  ) {
+    throw new Error('只有資料夾管理員或協同管理員可以變更文件機敏等級。');
+  }
+  if (docRow.df_fid === 0 && requestedSecurityLevel === 3) {
+    throw new Error('根目錄文件不得設定為機密。');
   }
 
   await withTransaction(async (client) => {
@@ -702,9 +785,13 @@ export const editDocument = async (
       source_file_id: number | null;
       published_ext: string;
       is_scheduled: boolean;
+      parent_document_id: number | null;
+      security_level: number;
     }>(
       `SELECT d.dd_code AS code,
               d.dd_title AS title,
+              d.dd_parent_id AS parent_document_id,
+              d.dd_security_level AS security_level,
               v.ddv_seq AS seq,
               v.ddv_no AS version,
               v.ddv_rev_date::text AS revision_date,
@@ -746,6 +833,12 @@ export const editDocument = async (
     if (currentRow.is_scheduled && payload.source_file) {
       throw new Error('預約版本只允許修改新版本號、修訂日期、發行日期與異動說明。');
     }
+    if (currentRow.is_scheduled && requestedSecurityLevel !== undefined) {
+      throw new Error('預約版本不可變更文件機敏等級。');
+    }
+    if (currentRow.parent_document_id !== null && requestedSecurityLevel !== undefined) {
+      throw new Error('相關文件的機敏等級由主文件繼承，不得獨立設定。');
+    }
 
     if (payload.source_file && currentRow.source_file_id) {
       throw new Error('PDF 原始編修檔案已存在，不允許覆蓋。');
@@ -759,15 +852,28 @@ export const editDocument = async (
       ? await insertFile(client, payload.source_file, 2, user)
       : null;
 
+    const updatedSecurityLevel = requestedSecurityLevel ?? normalizeSecurityLevel(
+      currentRow.security_level
+    );
+
     if (!currentRow.is_scheduled) {
       await client.query(
         `UPDATE dms_doc
             SET dd_code = $2,
                 dd_title = $3,
-                dd_updby = $4,
+                dd_security_level = $4,
+                dd_updby = $5,
                 dd_updat = CURRENT_TIMESTAMP
           WHERE dd_id = $1`,
-        [docId, updatedCode, updatedTitle, user.id]
+        [docId, updatedCode, updatedTitle, updatedSecurityLevel, user.id]
+      );
+      await client.query(
+        `UPDATE dms_doc
+            SET dd_security_level = $2,
+                dd_updby = $3,
+                dd_updat = CURRENT_TIMESTAMP
+          WHERE dd_parent_id = $1`,
+        [docId, updatedSecurityLevel, user.id]
       );
     }
 
@@ -815,6 +921,7 @@ export const editDocument = async (
           before_data: {
             code: currentRow.code,
             title: currentRow.title,
+            security_level: currentRow.security_level,
             version: currentRow.version,
             revision_date: currentRow.revision_date,
             effective_at: currentRow.effective_at,
@@ -824,6 +931,7 @@ export const editDocument = async (
           after_data: {
             code: updatedCode,
             title: updatedTitle,
+            security_level: updatedSecurityLevel,
             version: versionNumber,
             revision_date: payload.revision_date,
             effective_at: payload.effective_at,
@@ -838,16 +946,21 @@ export const editDocument = async (
 };
 
 export const cancelLatestVersion = async (user: SessionUser, docId: number, reason: string) => {
-  const doc = await query<{ df_fid: number }>(
-    `SELECT df_fid
-       FROM dms_doc
-      WHERE dd_id = $1
-        AND dd_status = 1`,
+  const doc = await query<{ df_fid: number; security_level: number }>(
+    `SELECT document.df_fid,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1
+        AND document.dd_status = 1`,
     [docId]
   );
   const docRow = doc.rows[0];
 
-  if (!docRow || !(await canManageFolder(user, docRow.df_fid))) {
+  if (
+    !docRow
+    || !(await canManageDocumentBySecurity(user, docRow.df_fid, docRow.security_level))
+  ) {
     throw new Error('沒有此文件的管理權限。');
   }
 
@@ -905,11 +1018,13 @@ export const deleteScheduledVersion = async (
   docId: number,
   versionId: number
 ) => {
-  const doc = await query<{ df_fid: number; dd_status: number }>(
-    `SELECT df_fid,
-            dd_status
-       FROM dms_doc
-      WHERE dd_id = $1`,
+  const doc = await query<{ df_fid: number; dd_status: number; security_level: number }>(
+    `SELECT document.df_fid,
+            document.dd_status,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1`,
     [docId]
   );
   const docRow = doc.rows[0];
@@ -918,9 +1033,11 @@ export const deleteScheduledVersion = async (
     throw new Error('文件不存在或已廢止。');
   }
 
-  const canManage = docRow.df_fid > 0
-    ? await canManageFolder(user, docRow.df_fid)
-    : isAdmin(user);
+  const canManage = await canManageDocumentBySecurity(
+    user,
+    docRow.df_fid,
+    docRow.security_level
+  );
   if (!canManage) {
     throw new Error('沒有此文件的管理權限。');
   }
@@ -1049,18 +1166,27 @@ export const obsoleteDocument = async (
   reason: string,
   file: UploadPayload
 ) => {
-  const doc = await query<{ df_fid: number; dd_parent_id: number | null }>(
-    `SELECT df_fid,
-            dd_parent_id
-       FROM dms_doc
-      WHERE dd_id = $1
-        AND dd_status = 1`,
+  const doc = await query<{
+    df_fid: number;
+    dd_parent_id: number | null;
+    security_level: number;
+  }>(
+    `SELECT document.df_fid,
+            document.dd_parent_id,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1
+        AND document.dd_status = 1`,
     [docId]
   );
   const docRow = doc.rows[0];
 
-  const canManage = docRow
-    && (docRow.df_fid > 0 ? await canManageFolder(user, docRow.df_fid) : isAdmin(user));
+  const canManage = docRow && await canManageDocumentBySecurity(
+    user,
+    docRow.df_fid,
+    docRow.security_level
+  );
   if (!docRow || !canManage) {
     throw new Error('沒有此文件的管理權限。');
   }
@@ -1142,12 +1268,15 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
     df_fid: number;
     dd_status: number;
     dd_parent_id: number | null;
+    security_level: number;
   }>(
-    `SELECT df_fid,
-            dd_status,
-            dd_parent_id
-       FROM dms_doc
-      WHERE dd_id = $1`,
+    `SELECT document.df_fid,
+            document.dd_status,
+            document.dd_parent_id,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1`,
     [docId]
   );
   const docRow = doc.rows[0];
@@ -1156,9 +1285,11 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
     throw new Error('文件不存在或已廢止。');
   }
 
-  const canManage = docRow.df_fid > 0
-    ? await canManageFolder(user, docRow.df_fid)
-    : isAdmin(user);
+  const canManage = await canManageDocumentBySecurity(
+    user,
+    docRow.df_fid,
+    docRow.security_level
+  );
   if (!canManage) {
     throw new Error('沒有此文件的管理權限。');
   }
@@ -1339,6 +1470,7 @@ export const getFileForAccess = async (
             d.dd_code,
             d.dd_title,
             d.dd_status,
+            COALESCE(parent.dd_security_level, d.dd_security_level) AS security_level,
             v.ddv_id,
             v.ddv_seq,
             v.ddv_no,
@@ -1350,6 +1482,7 @@ export const getFileForAccess = async (
             f.dfi_size
        FROM dms_doc_ver v
        JOIN dms_doc d ON d.dd_id = v.dd_id
+       LEFT JOIN dms_doc parent ON parent.dd_id = d.dd_parent_id
        JOIN dms_file f ON f.dfi_id = v.ddv_pub_dfi_id
       WHERE v.ddv_id = $1`,
     [versionId]
@@ -1372,14 +1505,19 @@ export const getFileForAccess = async (
     throw new Error('找不到文件版本。');
   }
 
-  const canManage = row.df_fid > 0 ? await canManageFolder(user, row.df_fid) : isAdmin(user);
+  const hasAssignedManagerRole = await hasAssignedFolderManagerRole(user, row.df_fid);
+  const canManage = await canManageDocumentBySecurity(
+    user,
+    row.df_fid,
+    row.security_level
+  );
   const isPdf = isPdfExt(row.dfi_ext);
   const isPreviewable = isPreviewableExt(row.dfi_ext);
 
-  const writePreviewDenied = async (reason: string) => {
+  const writeAccessDenied = async (reason: string) => {
     await writeAudit({
       user,
-      action: 'DOCUMENT_PREVIEW_DENIED',
+      action: mode === 'preview' ? 'DOCUMENT_PREVIEW_DENIED' : 'DOCUMENT_DOWNLOAD_DENIED',
       resourceType: 'DOCUMENT',
       resourceId: row.dd_id,
       result: 'DENIED',
@@ -1387,9 +1525,22 @@ export const getFileForAccess = async (
       documentId: row.dd_id,
       versionId: row.ddv_id,
       reason,
-      metadata: { file_name: row.dfi_name }
+      metadata: {
+        file_name: row.dfi_name,
+        security_level: row.security_level
+      }
     });
   };
+  const writePreviewDenied = async (reason: string) => {
+    if (mode === 'preview') {
+      await writeAccessDenied(reason);
+    }
+  };
+
+  if (row.security_level === 3 && !hasAssignedManagerRole) {
+    await writeAccessDenied('機密文件僅限資料夾管理員或協同管理員存取。');
+    throw new Error('沒有此文件的存取權限。');
+  }
 
   if (!canManage) {
     if (row.dd_status !== 1) {

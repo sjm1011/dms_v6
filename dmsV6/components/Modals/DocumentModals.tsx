@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Document } from '../../types';
+import { Document, DocumentSecurityLevel } from '../../types';
 import { Modal } from '../Modal';
 import {
   ErrorOutlineIcon,
@@ -27,6 +27,19 @@ const CHANGE_NOTE_OPTIONS = [
   '文件拆分',
   '替代舊版文件'
 ];
+
+const SECURITY_LEVEL_OPTIONS: Array<{
+  value: DocumentSecurityLevel;
+  label: string;
+}> = [
+  { value: 1, label: '一般' },
+  { value: 2, label: '敏感' },
+  { value: 3, label: '機密' }
+];
+
+const getSecurityLevelLabel = (level?: DocumentSecurityLevel) => (
+  SECURITY_LEVEL_OPTIONS.find(option => option.value === level)?.label || '一般'
+);
 
 export const ACCEPTED_DOCUMENT_FILE_TYPES = '.pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.jpg,.jpeg,.png,.gif,.tif,.tiff,.webp';
 
@@ -219,6 +232,7 @@ interface NewDocModalProps {
   onClose: () => void;
   initialFile: File | null;
   parentDocument?: Document | null;
+  allowConfidential?: boolean;
   onCreate: (
     code: string,
     title: string,
@@ -227,7 +241,8 @@ interface NewDocModalProps {
     revisionDate: string,
     effAt: string,
     file: File,
-    sourceFile?: File | null
+    sourceFile?: File | null,
+    securityLevel?: DocumentSecurityLevel
   ) => Promise<boolean>;
 }
 
@@ -236,6 +251,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
   onClose,
   initialFile,
   parentDocument = null,
+  allowConfidential = true,
   onCreate
 }) => {
   const [code, setCode] = useState('');
@@ -246,6 +262,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
   const [effAt, setEffAt] = useState(getTodayString());
   const [file, setFile] = useState<File | null>(null);
   const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [securityLevel, setSecurityLevel] = useState<DocumentSecurityLevel>(1);
   const fileNameValidation = useDocumentFileNameValidation();
 
   const automaticTitleRef = useRef('');
@@ -270,10 +287,11 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
       setEffAt(getTodayString());
       setFile(initialFile);
       setSourceFile(null);
+      setSecurityLevel(parentDocument?.security_level || 1);
       automaticTitleRef.current = automaticTitle;
       fileNameValidation.resetErrors({ title: automaticTitle });
     }
-  }, [isOpen, initialFile]);
+  }, [isOpen, initialFile, parentDocument]);
 
   const handleConfirm = async () => {
     if (!fileNameValidation.validateField('code', code)) {
@@ -316,7 +334,8 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
       revisionDate,
       effAt,
       file,
-      sourceFile
+      sourceFile,
+      parentDocument ? undefined : securityLevel
     );
     if (success) onClose();
   };
@@ -340,10 +359,14 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
           <div className="related-document-parent">
             <span>隸屬於</span>
             <strong>{[parentDocument.code, parentDocument.title].filter(Boolean).join(' ')}</strong>
+            <span>繼承主文件機敏等級：{getSecurityLevelLabel(parentDocument.security_level)}</span>
           </div>
         )}
         <div style={{ display: 'flex', gap: 12 }}>
-          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+          <div
+            className="input-group"
+            style={{ flex: parentDocument ? 1 : 2, minWidth: 0, marginBottom: 0 }}
+          >
             <label>文件編號（選填）</label>
             <input
               ref={codeInputRef}
@@ -357,7 +380,26 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
             />
             <FileNameValidationMessage id="new-document-code-error" message={fileNameValidation.errors.code} />
           </div>
-          <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+          {!parentDocument && (
+            <div className="input-group" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+              <label>機敏等級</label>
+              <select
+                value={securityLevel}
+                onChange={(event) => setSecurityLevel(Number(event.target.value) as DocumentSecurityLevel)}
+              >
+                {SECURITY_LEVEL_OPTIONS.map(option => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={option.value === 3 && !allowConfidential}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="input-group" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
             <label>版本號</label>
             <input
               ref={versionInputRef}
@@ -463,6 +505,7 @@ interface EditDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetDoc: Document | null;
+  canChangeSecurityLevel?: boolean;
   onSave: (
     docId: string,
     versionId: string,
@@ -472,11 +515,18 @@ interface EditDocumentModalProps {
     changeNote: string,
     revisionDate: string,
     effAt: string,
-    sourceFile?: File | null
+    sourceFile?: File | null,
+    securityLevel?: DocumentSecurityLevel
   ) => Promise<boolean>;
 }
 
-export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, onClose, targetDoc, onSave }) => {
+export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
+  isOpen,
+  onClose,
+  targetDoc,
+  canChangeSecurityLevel = false,
+  onSave
+}) => {
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
   const [version, setVersion] = useState('');
@@ -484,6 +534,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
   const [revisionDate, setRevisionDate] = useState('');
   const [effAt, setEffAt] = useState('');
   const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [securityLevel, setSecurityLevel] = useState<DocumentSecurityLevel>(1);
   const fileNameValidation = useDocumentFileNameValidation();
 
   const versionInputRef = useRef<HTMLInputElement>(null);
@@ -505,6 +556,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
     setRevisionDate(targetDoc?.revision_date || '');
     setEffAt(targetDoc?.effective_at?.split(' ')[0] || '');
     setSourceFile(null);
+    setSecurityLevel(targetDoc?.security_level || 1);
     fileNameValidation.resetErrors(isScheduledVersion
       ? { version: targetDoc?.version || '' }
       : {
@@ -557,7 +609,10 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
       changeNote.trim(),
       revisionDate,
       effAt,
-      sourceFile
+      sourceFile,
+      targetDoc.parent_document_id || isScheduledVersion || !canChangeSecurityLevel
+        ? undefined
+        : securityLevel
     );
     if (success) onClose();
   };
@@ -594,7 +649,10 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
         ) : (
           <>
             <div style={{ display: 'flex', gap: 12 }}>
-              <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+              <div
+                className="input-group"
+                style={{ flex: targetDoc?.parent_document_id ? 1 : 2, minWidth: 0, marginBottom: 0 }}
+              >
                 <label>文件編號（選填）</label>
                 <input
                   ref={codeInputRef}
@@ -608,7 +666,34 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({ isOpen, on
                 />
                 <FileNameValidationMessage id="edit-document-code-error" message={fileNameValidation.errors.code} />
               </div>
-              <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+              {!targetDoc?.parent_document_id && (canChangeSecurityLevel ? (
+                <div className="input-group" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+                  <label>機敏等級</label>
+                  <select
+                    value={securityLevel}
+                    onChange={(event) => setSecurityLevel(Number(event.target.value) as DocumentSecurityLevel)}
+                  >
+                    {SECURITY_LEVEL_OPTIONS.map(option => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                        disabled={option.value === 3 && targetDoc?.folder_id === '0'}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="input-group" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+                  <label>機敏等級</label>
+                  <input
+                    value={getSecurityLevelLabel(targetDoc?.security_level)}
+                    readOnly
+                  />
+                </div>
+              ))}
+              <div className="input-group" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
                 <label>版本號</label>
                 <input
                   ref={versionInputRef}

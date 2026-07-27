@@ -1355,6 +1355,10 @@ table {
   --related-document-line-color: color-mix(in srgb, var(--accent-cyan) 62%, var(--bg-primary));
 }
 
+#files-table .property-version-column {
+  white-space: nowrap;
+}
+
 th {
   position: sticky;
   top: 0;
@@ -1544,8 +1548,22 @@ tr.table-row.context-menu-active {
 }
 
 .name-text > .item-name {
-  overflow-wrap: anywhere;
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.5rem;
   white-space: normal;
+}
+
+.item-name > .document-code {
+  flex: 0 0 auto;
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.item-name > .document-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -1822,8 +1840,10 @@ tr.table-row.context-menu-active {
   font-size: 1rem;
 }
 
-.modal-body input {
+.modal-body input,
+.modal-body select {
   width: 100%;
+  min-height: 46px;
   padding: 10px 12px;
   background-color: var(--bg-primary);
   border: 1px solid var(--glass-border);
@@ -1840,7 +1860,8 @@ tr.table-row.context-menu-active {
   margin-top: 0;
 }
 
-.modal-body input:focus {
+.modal-body input:focus,
+.modal-body select:focus {
   border-color: var(--accent-blue);
   background-color: var(--bg-tertiary);
   box-shadow: 0 0 0 3px var(--focus-ring);
@@ -2036,6 +2057,42 @@ tr.table-row.context-menu-active {
   background-color: hsla(258, 75%, 62%, 0.16);
   color: hsl(258, 88%, 76%);
   border-color: hsla(258, 75%, 68%, 0.45);
+}
+.document-property-badges {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+}
+.badge-security {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.badge-security.level-1 {
+  border-color: hsla(210, 15%, 65%, 0.35);
+  background-color: hsla(210, 15%, 65%, 0.12);
+  color: var(--text-secondary);
+}
+.badge-security.level-2 {
+  border-color: hsla(38, 92%, 55%, 0.4);
+  background-color: hsla(38, 92%, 55%, 0.15);
+  color: var(--color-warning);
+}
+.badge-security.level-3 {
+  border-color: hsla(355, 85%, 55%, 0.4);
+  background-color: hsla(355, 85%, 55%, 0.16);
+  color: var(--color-danger);
+}
+.badge-security.related-placeholder {
+  visibility: hidden;
+  pointer-events: none;
 }
 .folder-header-access-badge {
   gap: 5px;

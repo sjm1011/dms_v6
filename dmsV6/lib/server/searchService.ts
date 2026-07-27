@@ -1,4 +1,10 @@
-import type { Document, DocumentSearchResult, DocumentVersion, FolderManagerRole } from '../../types';
+import type {
+  Document,
+  DocumentSearchResult,
+  DocumentSecurityLevel,
+  DocumentVersion,
+  FolderManagerRole
+} from '../../types';
 import type { SessionUser } from '../session';
 import { query } from './db';
 import { getFileExt, isPdfExt, isPreviewableExt } from './fileStorage';
@@ -9,6 +15,7 @@ interface SearchRow {
   code: string | null;
   title: string;
   folder_id: number;
+  security_level: DocumentSecurityLevel;
   folder_name: string;
   folder_path: string;
   parent_document_id: number | null;
@@ -66,6 +73,7 @@ const toDocument = (rows: SearchRow[]): Document => {
     title: first.title,
     status: 'Effective',
     folder_id: String(first.folder_id),
+    security_level: first.security_level,
     folder_name: first.folder_name,
     folder_path: first.folder_path,
     parent_document_id: first.parent_document_id ? String(first.parent_document_id) : null,
@@ -140,16 +148,21 @@ export const searchDocuments = async (
          ORDER BY fa.df_fid,
                   fa.depth DESC
       ),
+      assigned_manageable AS (
+        SELECT DISTINCT fa.df_fid
+          FROM folder_ancestors fa
+          JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
+         WHERE m.usr_uid = $1
+           AND m.dfm_type IN (1, 2)
+           AND m.dfm_dc = 'N'
+      ),
       manageable AS (
         SELECT f.df_fid
           FROM dms_folders f
          WHERE $3 = 'ADMIN'
         UNION
-        SELECT DISTINCT fa.df_fid
-          FROM folder_ancestors fa
-          JOIN dms_folder_managers m ON m.df_fid = fa.ancestor_fid
-         WHERE m.usr_uid = $1
-           AND m.dfm_dc = 'N'
+        SELECT df_fid
+          FROM assigned_manageable
       ),
       visible AS (
         SELECT f.df_fid
@@ -204,6 +217,7 @@ export const searchDocuments = async (
                d.dd_code,
                d.dd_title,
                d.dd_parent_id,
+               COALESCE(parent.dd_security_level, d.dd_security_level) AS security_level,
                parent.dd_code AS parent_code,
                parent.dd_title AS parent_title,
                (
@@ -254,6 +268,14 @@ export const searchDocuments = async (
           LEFT JOIN dms_folders folder ON folder.df_fid = d.df_fid
           LEFT JOIN folder_paths fp ON fp.df_fid = d.df_fid
          WHERE d.dd_status = 1
+           AND (
+                COALESCE(parent.dd_security_level, d.dd_security_level) <> 3
+                OR EXISTS (
+                    SELECT 1
+                      FROM assigned_manageable assigned
+                     WHERE assigned.df_fid = d.df_fid
+                )
+           )
            AND (
                 (
                   d.df_fid = 0
@@ -347,6 +369,7 @@ export const searchDocuments = async (
              pd.dd_code AS code,
              pd.dd_title AS title,
              pd.df_fid AS folder_id,
+             pd.security_level,
              pd.folder_name,
              pd.folder_path,
              pd.dd_parent_id AS parent_document_id,

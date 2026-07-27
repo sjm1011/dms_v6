@@ -57,6 +57,7 @@ export interface Document {
   title: string;
   status: 'Effective' | 'Obsolete';
   folder_id: string;
+  security_level: DocumentSecurityLevel;
   parent_document_id?: string | null;
   parent_code?: string | null;
   parent_title?: string | null;
@@ -108,6 +109,7 @@ export interface DMSItem {
   ver_id?: string;
   file_name?: string;
   folder_id?: string;
+  security_level?: DocumentSecurityLevel;
   folder_path?: string;
   parent_document_id?: string | null;
   parent_code?: string | null;
@@ -170,6 +172,7 @@ export type FolderAccessStatus = 'allowed' | 'denied';
 
 export type FolderManagerAssignmentType = 'PRIMARY' | 'CO_MANAGER';
 export type FolderManagerRole = FolderManagerAssignmentType | null;
+export type DocumentSecurityLevel = 1 | 2 | 3;
 
 export type SystemPage = 'audit' | 'settings' | 'permissions' | 'status' | 'recycle';
 

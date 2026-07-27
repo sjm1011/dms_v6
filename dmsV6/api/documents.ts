@@ -1,4 +1,4 @@
-import { Document, ApiResponse } from '../types';
+import { Document, ApiResponse, DocumentSecurityLevel } from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 interface UploadFilePayload {
@@ -422,6 +422,7 @@ export const DocumentsAPI = {
     effectiveAt: string,
     file: File,
     sourceFile?: File | null,
+    securityLevel?: DocumentSecurityLevel,
     parentDocumentId?: string | null
   ): Promise<ApiResponse<Document>> => {
     const body: Record<string, unknown> = {
@@ -438,6 +439,8 @@ export const DocumentsAPI = {
 
     if (parentDocumentId) {
       body.parent_document_id = parentDocumentId;
+    } else if (securityLevel !== undefined) {
+      body.security_level = securityLevel;
     }
 
     if (sourceFile) {
@@ -519,7 +522,8 @@ export const DocumentsAPI = {
     changeNote: string,
     revisionDate: string,
     effectiveAt: string,
-    sourceFile?: File | null
+    sourceFile?: File | null,
+    securityLevel?: DocumentSecurityLevel
   ): Promise<ApiResponse<null>> => {
     const body: Record<string, unknown> = {
       action: 'edit_document',
@@ -535,6 +539,9 @@ export const DocumentsAPI = {
 
     if (sourceFile) {
       body.source_file = await fileToPayload(sourceFile);
+    }
+    if (securityLevel !== undefined) {
+      body.security_level = securityLevel;
     }
 
     const response = await fetch(`${API_BASE}/documents`, {
