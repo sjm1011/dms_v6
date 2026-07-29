@@ -1360,6 +1360,11 @@ table {
   white-space: nowrap;
 }
 
+#files-table .access-count-column {
+  text-align: center;
+  white-space: nowrap;
+}
+
 th {
   position: sticky;
   top: 0;
@@ -1798,6 +1803,10 @@ tr.table-row.context-menu-active {
   white-space: nowrap;
 }
 
+.version-history-table .access-count-column {
+  text-align: center;
+}
+
 .modal.show .modal-content {
   transform: scale(1);
 }
@@ -1904,6 +1913,26 @@ tr.table-row.context-menu-active {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.dms-tooltip {
+  position: fixed;
+  z-index: 320;
+  visibility: hidden;
+  max-width: min(480px, calc(100vw - 16px));
+  padding: 8px 12px;
+  border: 1px solid var(--glass-border-hover);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-secondary);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  white-space: normal;
 }
 
 .toast {

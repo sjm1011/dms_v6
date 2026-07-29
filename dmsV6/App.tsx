@@ -6,6 +6,7 @@ import { useFolders } from './hooks/useFolders';
 import { LoginLayout } from './layouts/LoginLayout';
 import { MainLayout } from './layouts/MainLayout';
 import { CheckCircleIcon, ErrorOutlineIcon, InfoIcon } from './components/Icons';
+import { TooltipHost } from './components/TooltipHost';
 
 export type AppTheme = 'modern-dark' | 'modern-light';
 
@@ -118,6 +119,8 @@ export const App: React.FC = () => {
           showToast={showToast}
         />
       )}
+
+      <TooltipHost />
 
       {/* --- Toast 訊息通知 --- */}
       {toast && (

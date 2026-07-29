@@ -634,7 +634,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
                       type="button"
                       className="btn-remove-row"
                       onClick={() => removeUserRow(index)}
-                      title="移除此行"
+                      data-tooltip="移除此行"
                       disabled={loading || isInherited}
                     >
                       ✕

@@ -1161,18 +1161,20 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
         <div className="version-history-table-wrap">
           <table className="version-history-table">
             <colgroup>
-              <col style={{ width: '10%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '12%' }} />
               <col style={{ width: '13%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '32%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '28%' }} />
             </colgroup>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', backgroundColor: 'var(--bg-secondary)' }}>
                 <th>版本</th>
                 <th>狀態</th>
                 <th>修訂日期</th>
+                <th className="access-count-column">點閱次數</th>
                 <th>生效日期</th>
                 <th>結束日期</th>
                 <th>異動說明</th>
@@ -1183,18 +1185,19 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
                 const badge = getBadge(v.status);
                 return (
                   <tr key={v.ver_id} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                    <td style={{ fontWeight: 600 }} title={v.ver_number || `第 ${v.seq} 版`}>{v.ver_number || `第 ${v.seq} 版`}</td>
-                    <td title={badge.text}><span className="badge" style={{ color: badge.color }}>{badge.text}</span></td>
-                    <td title={v.revision_date || '-'}>{v.revision_date || '-'}</td>
-                    <td title={v.effective_at?.split(' ')[0] || '-'}>{v.effective_at?.split(' ')[0] || '-'}</td>
-                    <td title={v.effective_until ? v.effective_until.split(' ')[0] : '-'}>{v.effective_until ? v.effective_until.split(' ')[0] : '-'}</td>
-                    <td title={v.change_note || v.cancel_reason || '-'}>{v.change_note || v.cancel_reason || '-'}</td>
+                    <td style={{ fontWeight: 600 }} data-tooltip={v.ver_number || `第 ${v.seq} 版`}>{v.ver_number || `第 ${v.seq} 版`}</td>
+                    <td data-tooltip={badge.text}><span className="badge" style={{ color: badge.color }}>{badge.text}</span></td>
+                    <td data-tooltip={v.revision_date || '-'}>{v.revision_date || '-'}</td>
+                    <td className="access-count-column">{v.access_count.toLocaleString('zh-TW')}</td>
+                    <td data-tooltip={v.effective_at?.split(' ')[0] || '-'}>{v.effective_at?.split(' ')[0] || '-'}</td>
+                    <td data-tooltip={v.effective_until ? v.effective_until.split(' ')[0] : '-'}>{v.effective_until ? v.effective_until.split(' ')[0] : '-'}</td>
+                    <td data-tooltip={v.change_note || v.cancel_reason || '-'}>{v.change_note || v.cancel_reason || '-'}</td>
                   </tr>
                 );
               })}
               {(!historyDoc.versions || historyDoc.versions.length === 0) && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>此文件尚無版本歷史。</td>
+                  <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>此文件尚無版本歷史。</td>
                 </tr>
               )}
             </tbody>

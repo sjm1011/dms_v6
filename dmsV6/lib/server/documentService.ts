@@ -13,6 +13,7 @@ import {
 } from './folderService';
 import { query, withTransaction } from './db';
 import { writeAudit } from './auditService';
+import { getVersionAccessCounts } from './documentAccessService';
 import {
   buildContentDisposition,
   createFileStream,
@@ -181,7 +182,11 @@ const toVersionStatus = (row: VersionRow, docStatus: number): DocumentVersion['s
   return 'Effective';
 };
 
-const toVersion = (row: VersionRow, docStatus: number): DocumentVersion => ({
+const toVersion = (
+  row: VersionRow,
+  docStatus: number,
+  accessCounts: Map<number, number>
+): DocumentVersion => ({
   ver_id: String(row.ver_id),
   ver_number: row.ver_number || '',
   seq: Number(row.seq),
@@ -197,12 +202,16 @@ const toVersion = (row: VersionRow, docStatus: number): DocumentVersion => ({
   created_by: row.created_by,
   created_at: row.created_at,
   cancel_reason: row.cancel_reason || undefined,
-  has_source_file: row.has_source_file
+  has_source_file: row.has_source_file,
+  access_count: accessCounts.get(Number(row.ver_id)) || 0
 });
 
-const toDocument = (rows: DocumentRow[]): Document => {
+const toDocument = (
+  rows: DocumentRow[],
+  accessCounts: Map<number, number>
+): Document => {
   const first = rows[0];
-  const versions = rows.map((row) => toVersion(row, first.doc_status));
+  const versions = rows.map((row) => toVersion(row, first.doc_status, accessCounts));
   const current = versions.find((version) => version.status === 'Effective') || versions[0];
 
   return {
@@ -337,7 +346,11 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
     grouped.set(row.id, rows);
   });
 
-  return Array.from(grouped.values()).map(toDocument);
+  const accessCounts = await getVersionAccessCounts(
+    result.rows.map((row) => Number(row.ver_id))
+  );
+
+  return Array.from(grouped.values()).map((rows) => toDocument(rows, accessCounts));
 };
 
 const insertFile = async (
@@ -1609,7 +1622,12 @@ export const getFileForAccess = async (
     folderId: row.df_fid,
     documentId: row.dd_id,
     versionId: row.ddv_id,
-    metadata: { file_name: row.dfi_name, mime: row.dfi_mime, ext: row.dfi_ext }
+    metadata: {
+      file_name: row.dfi_name,
+      mime: row.dfi_mime,
+      ext: row.dfi_ext,
+      file_purpose: 'PUBLISHED_FILE'
+    }
   });
 
   return {

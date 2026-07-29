@@ -365,14 +365,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     const content = isRestricted ? '限閱' : isManagersOnly ? '僅限管理者' : '公開';
 
     if (isInherited || !isCurrentFolderManager()) {
-      return <span className={className} title={title}>{content}</span>;
+      return <span className={className} data-tooltip={title}>{content}</span>;
     }
 
     return (
       <button
         type="button"
         className={`${className} editable`}
-        title={`${title}；點擊開啟資料夾屬性`}
+        data-tooltip={`${title}；點擊開啟資料夾屬性`}
         aria-label={`${title}；點擊開啟資料夾屬性`}
         onClick={() => {
           setAclFolder({ id: currentFolder.id, name: currentFolder.name });
@@ -444,6 +444,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         child_folder_count: childFolderCount,
         document_count: documentCount,
         is_empty_folder: childFolderCount === 0 && documentCount === 0,
+        access_count: 0,
         can_manage: Boolean(f.can_manage) && f.status === 1,
         manager_role: f.manager_role || null
       });
@@ -494,7 +495,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             ? ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(currentExtension)
             : false,
           has_source_file: !!displayVersion.has_source_file,
-          has_scheduled_version: Boolean(scheduledVersion)
+          has_scheduled_version: Boolean(scheduledVersion),
+          access_count: displayVersion.access_count
         });
       });
     });
@@ -551,7 +553,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             ? ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)
             : false,
           has_source_file: Boolean(displayVersion.has_source_file),
-          has_scheduled_version: Boolean(scheduledVersion)
+          has_scheduled_version: Boolean(scheduledVersion),
+          access_count: displayVersion.access_count
         });
       });
     });
@@ -587,6 +590,54 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     return selectedDoc;
   };
 
+  const incrementVersionAccessCount = useCallback((versionId: string) => {
+    const incrementDocuments = (documents: Document[]) => documents.map((document) => {
+      let changed = false;
+      const versions = document.versions.map((version) => {
+        if (version.ver_id !== versionId) {
+          return version;
+        }
+
+        changed = true;
+        return {
+          ...version,
+          access_count: version.access_count + 1
+        };
+      });
+
+      return changed ? { ...document, versions } : document;
+    });
+
+    documentsHook.incrementVersionAccessCount(versionId);
+    setSearchDocuments(incrementDocuments);
+    setActiveDoc((document) => document
+      ? incrementDocuments([document])[0]
+      : document);
+  }, [documentsHook.incrementVersionAccessCount]);
+
+  useEffect(() => {
+    const handleAccessCountMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      const data = event.data as {
+        type?: string;
+        versionId?: string;
+      } | null;
+
+      if (
+        data?.type === 'dms-document-access-count-increment'
+        && typeof data.versionId === 'string'
+      ) {
+        incrementVersionAccessCount(data.versionId);
+      }
+    };
+
+    window.addEventListener('message', handleAccessCountMessage);
+    return () => window.removeEventListener('message', handleAccessCountMessage);
+  }, [incrementVersionAccessCount]);
+
   const handlePreviewDocument = async (item: DMSItem) => {
     if (!item.ver_id) return;
     try {
@@ -595,6 +646,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         item.name,
         item.revision_date
       );
+      incrementVersionAccessCount(item.ver_id);
     } catch (err: unknown) {
       showToast('預覽文件失敗：' + (err instanceof Error ? err.message : String(err)), 'error');
     }
@@ -604,6 +656,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     if (!item.ver_id) return;
     try {
       await DocumentsAPI.downloadVersion(item.ver_id, item.file_name || item.name);
+      if (!item.is_pdf) {
+        incrementVersionAccessCount(item.ver_id);
+      }
     } catch (err: unknown) {
       showToast('下載文件失敗：' + (err instanceof Error ? err.message : String(err)), 'error');
     }

@@ -237,12 +237,21 @@ const openImagePreview = (
   objectUrl: string,
   fileName: string,
   contentType: string,
+  versionId: string,
   targetWindow?: Window | null
 ) => {
   const previewWindow = targetWindow || window.open('', '_blank');
   const objectUrlScriptValue = toScriptString(objectUrl);
   const fileNameScriptValue = toScriptString(fileName);
   const contentTypeScriptValue = toScriptString(contentType);
+  const versionIdScriptValue = toScriptString(versionId);
+  const downloadUrlScriptValue = toScriptString(
+    new URL(
+      `${API_BASE}/documents/download?version_id=${encodeURIComponent(versionId)}`,
+      window.location.origin
+    ).toString()
+  );
+  const parentOriginScriptValue = toScriptString(window.location.origin);
 
   if (!previewWindow || previewWindow.closed) {
     window.open(objectUrl, '_blank');
@@ -307,12 +316,18 @@ const openImagePreview = (
             const objectUrl = ${objectUrlScriptValue};
             const fileName = ${fileNameScriptValue};
             const contentType = ${contentTypeScriptValue};
+            const versionId = ${versionIdScriptValue};
+            const downloadUrl = ${downloadUrlScriptValue};
+            const parentOrigin = ${parentOriginScriptValue};
             const downloadButton = document.getElementById('downloadImageButton');
 
             const saveImage = async () => {
               downloadButton.disabled = true;
               try {
-                const response = await fetch(objectUrl);
+                const response = await fetch(downloadUrl);
+                if (!response.ok) {
+                  throw new Error(await response.text() || '下載圖片失敗。');
+                }
                 const blob = await response.blob();
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(new Blob([blob], { type: contentType }));
@@ -321,6 +336,15 @@ const openImagePreview = (
                 link.click();
                 link.remove();
                 URL.revokeObjectURL(link.href);
+                if (window.opener && !window.opener.closed) {
+                  window.opener.postMessage(
+                    {
+                      type: 'dms-document-access-count-increment',
+                      versionId
+                    },
+                    parentOrigin
+                  );
+                }
               } finally {
                 downloadButton.disabled = false;
               }
@@ -340,7 +364,8 @@ const downloadBlob = async (
   url: string,
   fallbackFileName: string,
   inline: boolean,
-  previewWindow?: Window | null
+  previewWindow?: Window | null,
+  versionId?: string
 ) => {
   const response = await fetch(url, {
     headers: getAuthHeader()
@@ -388,7 +413,13 @@ const downloadBlob = async (
       const openedPreviewWindow = openPdfPreview(objectUrl, fileName, previewWindow);
       openedPreviewWindow?.addEventListener('beforeunload', () => URL.revokeObjectURL(objectUrl), { once: true });
     } else if (isImage) {
-      const openedPreviewWindow = openImagePreview(objectUrl, fileName, contentType, previewWindow);
+      const openedPreviewWindow = openImagePreview(
+        objectUrl,
+        fileName,
+        contentType,
+        versionId || '',
+        previewWindow
+      );
       openedPreviewWindow?.addEventListener('beforeunload', () => URL.revokeObjectURL(objectUrl), { once: true });
     }
     return;
@@ -594,7 +625,13 @@ export const DocumentsAPI = {
 
     try {
       const fileName = buildPreviewPdfFileName(documentName, revisionDate);
-      await downloadBlob(`${API_BASE}/documents/preview?version_id=${encodeURIComponent(versionId)}`, fileName, true, previewWindow);
+      await downloadBlob(
+        `${API_BASE}/documents/preview?version_id=${encodeURIComponent(versionId)}`,
+        fileName,
+        true,
+        previewWindow,
+        versionId
+      );
     } catch (err) {
       if (previewWindow && !previewWindow.closed) {
         previewWindow.close();

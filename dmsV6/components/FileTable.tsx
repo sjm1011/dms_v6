@@ -234,7 +234,7 @@ export const FileTable = React.memo<FileTableProps>(({
         ? (
             <span
               className="badge-access scheduled"
-              title={`生效日期：${item.effective_at?.split(' ')[0] || '-'}`}
+              data-tooltip={`生效日期：${item.effective_at?.split(' ')[0] || '-'}`}
             >
               即將生效
             </span>
@@ -248,7 +248,7 @@ export const FileTable = React.memo<FileTableProps>(({
         <span className="document-property-badges">
           <span
             className={`badge-security level-${securityLevel}${item.parent_document_id ? ' related-placeholder' : ''}`}
-            title={item.parent_document_id ? undefined : `文件機敏等級：${securityLabel}`}
+            data-tooltip={item.parent_document_id ? undefined : `文件機敏等級：${securityLabel}`}
             aria-hidden={item.parent_document_id ? true : undefined}
           >
             {securityLabel}
@@ -263,7 +263,7 @@ export const FileTable = React.memo<FileTableProps>(({
       return (
         <span
           className={`badge-access restricted${isInherited ? ' inherited' : ''}`}
-          title={isInherited
+          data-tooltip={isInherited
             ? `繼承上層限閱設定；授權對象：${item.acl_summary || '未設定'}`
             : `限閱；授權對象：${item.acl_summary || '未設定'}`}
         >
@@ -277,7 +277,7 @@ export const FileTable = React.memo<FileTableProps>(({
       return (
         <span
           className={`badge-access managers-only${isInherited ? ' inherited' : ''}`}
-          title={isInherited
+          data-tooltip={isInherited
             ? '繼承上層僅限管理者設定；只有 ADMIN 與有效資料夾管理員可進入'
             : '只有 ADMIN 與有效資料夾管理員可進入'}
         >
@@ -287,7 +287,7 @@ export const FileTable = React.memo<FileTableProps>(({
     }
 
     return (
-      <span className="badge-access public" title="此資料夾已公開，任何登入同仁皆可見並可進入">
+      <span className="badge-access public" data-tooltip="此資料夾已公開，任何登入同仁皆可見並可進入">
         公開
       </span>
     );
@@ -300,7 +300,7 @@ export const FileTable = React.memo<FileTableProps>(({
 
     if (item.manager_role === 'PRIMARY') {
       return (
-        <span className="manager-role-icon primary" title="您是此資料夾的管理員" aria-label="您是此資料夾的管理員">
+        <span className="manager-role-icon primary" data-tooltip="您是此資料夾的管理員" aria-label="您是此資料夾的管理員">
           <ManagerIcon />
         </span>
       );
@@ -308,7 +308,7 @@ export const FileTable = React.memo<FileTableProps>(({
 
     if (item.manager_role === 'CO_MANAGER') {
       return (
-        <span className="manager-role-icon co-manager" title="您是此資料夾的協同管理員" aria-label="您是此資料夾的協同管理員">
+        <span className="manager-role-icon co-manager" data-tooltip="您是此資料夾的協同管理員" aria-label="您是此資料夾的協同管理員">
           <CoManagerIcon />
         </span>
       );
@@ -628,9 +628,10 @@ export const FileTable = React.memo<FileTableProps>(({
       <table id="files-table">
         <thead>
           <tr>
-            <th style={{ width: '72%' }}>名稱</th>
+            <th style={{ width: '62%' }}>名稱</th>
             <th className="property-version-column" style={{ width: '16%' }}>屬性 / 版本</th>
             <th style={{ width: '12%' }}>修訂日期</th>
+            <th className="access-count-column" style={{ width: '10%' }}>點閱次數</th>
           </tr>
         </thead>
         <tbody id="files-list">
@@ -723,7 +724,7 @@ export const FileTable = React.memo<FileTableProps>(({
                 <td>
                   <div className="name-cell">
                     {item.parent_document_id && (
-                      <span className="related-document-branch" title="相關文件">
+                      <span className="related-document-branch" data-tooltip="相關文件">
                         {!isGroupedRelatedDocument && <RelatedDocumentIcon size={18} />}
                       </span>
                     )}
@@ -733,7 +734,7 @@ export const FileTable = React.memo<FileTableProps>(({
                         <button
                           type="button"
                           className="folder-path-link"
-                          title={`前往資料夾：${item.folder_path}`}
+                          data-tooltip={`前往資料夾：${item.folder_path}`}
                           onClick={(event) => {
                             event.stopPropagation();
                             if (item.folder_id) {
@@ -763,6 +764,9 @@ export const FileTable = React.memo<FileTableProps>(({
                   {renderAccessBadge(item)}
                 </td>
                 <td>{item.type === 'document' ? (item.revision_date || '-') : ''}</td>
+                <td className="access-count-column">
+                  {item.type === 'document' ? item.access_count.toLocaleString('zh-TW') : ''}
+                </td>
               </tr>
             );
           })}

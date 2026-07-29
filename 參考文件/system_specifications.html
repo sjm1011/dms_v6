@@ -520,6 +520,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 </ol>
 <p>文件編號留空時，後端必須將 <code>dd_code</code> 儲存為 <code>NULL</code>，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 <code>dd_code</code>，不得在索引定義內使用 <code>UPPER()</code>、型別轉換或其他函數。</p>
 <p>文件清單隱藏獨立的「文件編號」欄位，並將文件編號作為文件名稱的顯示前綴。前端必須將文件編號與文件名稱渲染為獨立元素，文件編號使用 Consolas、<code>Courier New</code> 或系統等寬字型，兩者之間以 <code>0.5rem</code> 的 CSS 固定間距分隔，不得依賴空白字元控制距離。文件編號留空時只顯示文件名稱，不得加入替代文字或多餘間距；資料夾名稱維持原值。此規則只影響清單呈現，文件編號仍須以 <code>dms_doc.dd_code</code> 獨立實體欄位保存，不得併入 <code>dd_title</code>。一般清單、搜尋結果、主文件、相關文件及預約版本均採相同呈現方式。</p>
+<p>文件清單與搜尋結果必須在「修訂日期」右側顯示「點閱次數」。點閱次數以文件版本為統計單位，所有具備該文件可見權限的使用者均可查看；資料夾列不顯示數值。版本歷史亦須在「修訂日期」右側顯示各版本的點閱次數，不得因顯示統計而擴大既有版本歷史檢視權限。</p>
 <p>文件編號、文件名稱及版本號會組成下載檔名，因此新增文件、建立相關文件、修改文件及上傳新版時，前端與後端均須套用 Windows 檔名字元限制。不得使用 <code>&lt; &gt; : " / \ | ? *</code>、<code>U+0000</code> 至 <code>U+001F</code> 及 <code>U+007F</code> 控制字元，欄位結尾不得為空白或句點；內容中間仍可使用一般空白與句點。使用者輸入或貼上被阻擋字元時，前端不得寫入該次內容，並須於欄位下方以 <code>aria-live</code> 顯示：「不得使用下列特殊字元：&lt; &gt; : " / \ | ? *；不得輸入控制字元，結尾也不得使用空白或句點。」後端須以相同規則及訊息拒絕繞過前端的 API 請求。</p>
 <h4>4.8.1. 文件機敏等級</h4>
 <ul>
@@ -732,6 +733,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li>圖檔預覽應記錄 <code>DOCUMENT_PREVIEWED</code> (調閱文件)，並保存檔名、副檔名、MIME Type (媒體類型) 與文件版本；圖檔預覽不記錄 PDF 浮水印資訊。</li>
   <li>非 PDF 文件下載應記錄 <code>DOCUMENT_DOWNLOADED</code> (下載文件)，並保存檔名、副檔名、MIME Type (媒體類型)、文件版本與下載結果。</li>
   <li>資料夾管理員下載 PDF 正式原檔、PDF 原始編修檔、歷史版本檔案或廢止公文時，均需記錄 <code>DOCUMENT_DOWNLOADED</code> (下載文件)，並於 <code>metadata</code> (額外資料) 中標示 <code>file_purpose</code> (檔案用途)，例如 <code>PUBLISHED_FILE</code> (正式發佈檔案)、<code>SOURCE_FILE</code> (原始編修檔)、<code>OBSOLETE_APPROVAL_FILE</code> (廢止公文)。</li>
+  <li>點閱次數以 <code>dms_log.ddv_id</code> 按文件版本累計，納入全部既有及後續 <code>dl_result = 'SUCCESS'</code> 的 <code>DOCUMENT_PREVIEWED</code>，以及非 PDF 正式發佈檔案的 <code>DOCUMENT_DOWNLOADED</code>。拒絕或失敗事件、PDF 正式原始檔下載，以及 <code>file_purpose = 'SOURCE_FILE'</code> 的原始編修檔下載均不得計入。</li>
+  <li>文件清單與搜尋 API 回傳的每個版本必須包含 <code>access_count</code>；無符合紀錄時回傳 <code>0</code>，不得回傳 <code>NULL</code> 或省略欄位。使用者成功完成可計次的預覽或下載後，前端立即將該版本加 1；重新載入時再以後端統計值校正，不使用定時輪詢。</li>
   <li>已登入使用者直接呼叫預覽 API，嘗試調閱無權限、已廢止、尚未生效、已撤回、已失效或不存在的文件版本時，後端應拒絕並記錄 <code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)。</li>
   <li>一般使用者嘗試直接呼叫 PDF 正式原檔下載 API (應用程式介面) 時，後端應拒絕並記錄 <code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)。</li>
 </ul>

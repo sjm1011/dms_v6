@@ -417,7 +417,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                           type="button"
                           className="btn-remove-row"
                           onClick={() => removeRow(idx)}
-                          title="移除此列"
+                          data-tooltip="移除此列"
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -454,7 +454,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
                       type="button"
                       className="btn-remove-row"
                       onClick={() => removeRow(idx)}
-                      title="移除此列"
+                      data-tooltip="移除此列"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6"></polyline>
@@ -800,7 +800,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                           type="button"
                           className="btn-remove-row"
                           onClick={() => removeRow(idx)}
-                          title="移除此列"
+                          data-tooltip="移除此列"
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -837,7 +837,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
                       type="button"
                       className="btn-remove-row"
                       onClick={() => removeRow(idx)}
-                      title="移除此列"
+                      data-tooltip="移除此列"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6"></polyline>

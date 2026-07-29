@@ -87,9 +87,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const label = event.currentTarget;
 
     if (label.scrollWidth > label.clientWidth) {
-      label.title = label.textContent || '';
+      label.dataset.tooltip = label.textContent || '';
     } else {
-      label.removeAttribute('title');
+      delete label.dataset.tooltip;
     }
   };
 
@@ -236,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <p className="user-role" style={{ fontSize: '0.7rem', opacity: 0.6, margin: 0 }}>{user.role === 'ADMIN' ? '系統管理員' : '一般同仁'}</p>
             </div>
           </div>
-          <button className="btn-icon" title="登出" onClick={onLogout}>
+          <button className="btn-icon" data-tooltip="登出" onClick={onLogout}>
             <LogoutIcon size={20} />
           </button>
         </div>

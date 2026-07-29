@@ -45,6 +45,7 @@ export interface DocumentVersion {
   created_at?: string;
   cancel_reason?: string;
   has_source_file?: boolean;
+  access_count: number;
 
   // 廢止相關後設資料
   obsolete_reason?: string;
@@ -130,6 +131,7 @@ export interface DMSItem {
   can_preview?: boolean;
   has_source_file?: boolean;
   has_scheduled_version?: boolean;
+  access_count: number;
 
   // 廢止相關後設資料
   obsolete_reason?: string;

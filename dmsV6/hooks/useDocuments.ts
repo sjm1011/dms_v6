@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, DocumentSecurityLevel, User } from '../types';
 import { DocumentsAPI } from '../api/documents';
 
@@ -12,6 +12,25 @@ export const useDocuments = (
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const requestSeqRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
+
+  const incrementVersionAccessCount = useCallback((versionId: string) => {
+    setDocuments((currentDocuments) => currentDocuments.map((document) => {
+      let changed = false;
+      const versions = document.versions.map((version) => {
+        if (version.ver_id !== versionId) {
+          return version;
+        }
+
+        changed = true;
+        return {
+          ...version,
+          access_count: version.access_count + 1
+        };
+      });
+
+      return changed ? { ...document, versions } : document;
+    }));
+  }, []);
 
   // 載入文件清單
   const fetchDocuments = async (background = false) => {
@@ -281,6 +300,7 @@ export const useDocuments = (
     setDocuments,
     isLoadingDocuments,
     fetchDocuments,
+    incrementVersionAccessCount,
     handleCreateDocument,
     handleUploadVersion,
     handleEditDocument,

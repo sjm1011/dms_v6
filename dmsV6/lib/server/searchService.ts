@@ -7,6 +7,7 @@ import type {
 } from '../../types';
 import type { SessionUser } from '../session';
 import { query } from './db';
+import { getVersionAccessCounts } from './documentAccessService';
 import { getFileExt, isPdfExt, isPreviewableExt } from './fileStorage';
 
 interface SearchRow {
@@ -42,7 +43,10 @@ interface SearchRow {
   has_source_file: boolean;
 }
 
-const toVersion = (row: SearchRow): DocumentVersion => ({
+const toVersion = (
+  row: SearchRow,
+  accessCounts: Map<number, number>
+): DocumentVersion => ({
   ver_id: String(row.ver_id),
   ver_number: row.ver_number || '',
   seq: Number(row.seq),
@@ -57,12 +61,16 @@ const toVersion = (row: SearchRow): DocumentVersion => ({
   status: row.status,
   created_by: row.created_by,
   created_at: row.created_at,
-  has_source_file: row.has_source_file
+  has_source_file: row.has_source_file,
+  access_count: accessCounts.get(Number(row.ver_id)) || 0
 });
 
-const toDocument = (rows: SearchRow[]): Document => {
+const toDocument = (
+  rows: SearchRow[],
+  accessCounts: Map<number, number>
+): Document => {
   const first = rows[0];
-  const versions = rows.map(toVersion);
+  const versions = rows.map((row) => toVersion(row, accessCounts));
   const current = versions.find(version => version.status === 'Scheduled')
     || versions.find(version => version.status === 'Effective')
     || versions[0];
@@ -426,8 +434,12 @@ export const searchDocuments = async (
     grouped.set(row.id, rows);
   });
 
+  const accessCounts = await getVersionAccessCounts(
+    result.rows.map((row) => Number(row.ver_id))
+  );
+
   return {
-    documents: Array.from(grouped.values()).map(toDocument),
+    documents: Array.from(grouped.values()).map((rows) => toDocument(rows, accessCounts)),
     total: Number(result.rows[0]?.total_count || 0),
     page,
     page_size: pageSize
