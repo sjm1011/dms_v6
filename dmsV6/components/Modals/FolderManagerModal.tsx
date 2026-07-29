@@ -149,8 +149,8 @@ export const FolderManagerModal: React.FC<FolderManagerModalProps> = ({
         .managers-section { padding: 12px; border: 1px dashed var(--glass-border); border-radius: var(--radius-sm); }
         .managers-title { margin-bottom: 8px; color: var(--text-secondary); font-weight: 600; }
         .manager-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .manager-row input { flex: 1; min-width: 0; height: 36px; margin: 0; }
-        .manager-name-display { flex: 1; min-height: 36px; padding: 7px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
+        .manager-row input { flex: 1; min-width: 0; height: var(--modal-control-height); min-height: var(--modal-control-height); margin: 0; }
+        .manager-name-display { flex: 1; height: var(--modal-control-height); min-height: var(--modal-control-height); padding: 7px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); display: flex; align-items: center; box-sizing: border-box; }
         .manager-name-display.valid { color: #10b981; border-color: rgba(16, 185, 129, 0.4); }
         .manager-name-display.invalid { color: #ef4444; border-color: rgba(239, 68, 68, 0.4); }
         .btn-remove-row { border: 0; background: transparent; color: #ef4444; cursor: pointer; }

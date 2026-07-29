@@ -373,7 +373,10 @@ export const listPermissionOverview = async () => {
              f.df_name AS folder_name,
              COALESCE(ms.primary_managers, '') AS primary_managers,
              COALESCE(ms.co_managers, '') AS co_managers,
-             CASE WHEN f.df_access_type = 2 THEN 2 ELSE 1 END AS access_type,
+             CASE
+               WHEN f.df_access_type IN (1, 2, 3) THEN f.df_access_type
+               ELSE 3
+             END AS access_type,
              COALESCE(a.summary, '') AS acl_summary,
              (SELECT COUNT(*) FROM dms_folders c WHERE c.df_pid = f.df_fid AND c.df_status = 1)::int AS child_folder_count,
              (SELECT COUNT(*) FROM dms_doc doc WHERE doc.df_fid = f.df_fid AND doc.dd_status = 1)::int AS document_count

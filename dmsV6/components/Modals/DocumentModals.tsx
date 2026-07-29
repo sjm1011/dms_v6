@@ -168,7 +168,7 @@ function ChangeNoteInput({ value, selectId, onChange, inputRef }: ChangeNoteInpu
           top: 0,
           right: 4,
           width: 36,
-          height: 42,
+          height: 'var(--modal-control-height)',
           padding: 0
         }}
       >
@@ -430,7 +430,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
 
         <div className="input-group" style={{ marginBottom: 0 }}>
           <label>文件檔案</label>
-          <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => fileInputRef.current?.click()}>
+          <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" onClick={() => fileInputRef.current?.click()}>
             {file ? file.name : '選擇檔案'}
           </button>
           <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
@@ -473,7 +473,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
         {isPdfFile(file) && (
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label>PDF 原始編修檔案</label>
-            <button type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => sourceFileInputRef.current?.click()}>
+            <button type="button" className="btn btn-secondary btn-block" onClick={() => sourceFileInputRef.current?.click()}>
               {sourceFile ? sourceFile.name : '選擇原始檔案'}
             </button>
             <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
@@ -748,10 +748,10 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label>PDF 原始編修檔案</label>
             {targetDoc.has_source_file ? (
-              <div className="btn btn-secondary btn-block" style={{ height: 42, cursor: 'default' }}>原始編修檔案已存在，不可更換</div>
+              <div className="btn btn-secondary btn-block" style={{ cursor: 'default' }}>原始編修檔案已存在，不可更換</div>
             ) : (
               <>
-                <button type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => sourceFileInputRef.current?.click()}>
+                <button type="button" className="btn btn-secondary btn-block" onClick={() => sourceFileInputRef.current?.click()}>
                   {sourceFile ? sourceFile.name : '選擇原始檔案'}
                 </button>
                 <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
@@ -861,7 +861,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
 
         <div className="input-group" style={{ marginBottom: 0 }}>
           <label>文件檔案</label>
-          <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => fileInputRef.current?.click()}>
+          <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" onClick={() => fileInputRef.current?.click()}>
             {file ? file.name : '選擇新版檔案'}
           </button>
           <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => {
@@ -895,7 +895,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
         {isPdfFile(file) && (
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label>PDF 原始編修檔案</label>
-            <button type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => sourceFileInputRef.current?.click()}>
+            <button type="button" className="btn btn-secondary btn-block" onClick={() => sourceFileInputRef.current?.click()}>
               {sourceFile ? sourceFile.name : '選擇原始檔案'}
             </button>
             <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
@@ -971,7 +971,7 @@ export const ObsoleteDocModal: React.FC<ObsoleteDocModalProps> = ({
         </div>
         <div className="input-group" style={{ marginBottom: 0 }}>
           <label>廢止公文或核准文件</label>
-          <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" style={{ height: 42 }} onClick={() => fileInputRef.current?.click()}>
+          <button ref={fileButtonRef} type="button" className="btn btn-secondary btn-block" onClick={() => fileInputRef.current?.click()}>
             {file ? file.name : '選擇檔案'}
           </button>
           <input ref={fileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setFile(e.target.files?.[0] || null)} />

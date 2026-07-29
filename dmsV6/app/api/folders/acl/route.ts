@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { requireSession } from '../../../../lib/server/auth';
 import { fail, ok, parseJsonBody, serverError } from '../../../../lib/server/http';
 import { getFolderAcl, updateFolderAcl } from '../../../../lib/server/folderService';
+import type { FolderAccessType } from '../../../../types';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +24,7 @@ export const POST = async (request: NextRequest) => {
     const session = requireSession(request);
     const body = await parseJsonBody<{
       id: number;
-      access_type: number;
+      access_type: FolderAccessType;
       dept_ids: string[];
       uids: string[];
     }>(request);
@@ -31,9 +32,9 @@ export const POST = async (request: NextRequest) => {
     await updateFolderAcl(
       session.user,
       Number(body.id),
-      Number(body.access_type),
-      body.dept_ids || [],
-      body.uids || []
+      Number(body.access_type) as FolderAccessType,
+      Array.isArray(body.dept_ids) ? body.dept_ids : [],
+      Array.isArray(body.uids) ? body.uids : []
     );
 
     return ok(null);

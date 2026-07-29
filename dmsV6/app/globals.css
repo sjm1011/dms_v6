@@ -54,6 +54,7 @@
   --login-bg-a: hsla(260, 40%, 15%, 0.3);
   --login-bg-b: hsla(210, 50%, 15%, 0.3);
   --modal-overlay: rgba(5, 8, 15, 0.7);
+  --modal-control-height: 46px;
 
   --radius-sm: 8px;
   --radius-md: 14px;
@@ -1609,6 +1610,10 @@ tr.table-row.context-menu-active {
   justify-content: center;
 }
 
+.manager-role-icon.primary {
+  color: hsl(45, 95%, 60%);
+}
+
 .manager-role-icon.co-manager {
   color: var(--accent-blue);
 }
@@ -1843,7 +1848,8 @@ tr.table-row.context-menu-active {
 .modal-body input,
 .modal-body select {
   width: 100%;
-  min-height: 46px;
+  height: var(--modal-control-height);
+  min-height: var(--modal-control-height);
   padding: 10px 12px;
   background-color: var(--bg-primary);
   border: 1px solid var(--glass-border);
@@ -1853,11 +1859,18 @@ tr.table-row.context-menu-active {
   outline: none;
   transition: var(--transition-fast);
   margin-top: 8px;
+  box-sizing: border-box;
 }
 
 .modal-body .input-wrapper input {
   padding-left: 40px;
   margin-top: 0;
+}
+
+.modal-body .btn-block {
+  height: var(--modal-control-height);
+  min-height: var(--modal-control-height);
+  box-sizing: border-box;
 }
 
 .modal-body input:focus,
@@ -2049,11 +2062,14 @@ tr.table-row.context-menu-active {
   cursor: help;
   gap: 5px;
 }
-.badge-access.restricted svg {
-  display: block;
-  flex: 0 0 auto;
+.badge-access.managers-only {
+  background-color: hsla(215, 85%, 55%, 0.15);
+  color: hsl(215, 90%, 72%);
+  border: 1px solid hsla(215, 85%, 60%, 0.35);
+  cursor: help;
 }
-.badge-access.restricted.inherited {
+.badge-access.restricted.inherited,
+.badge-access.managers-only.inherited {
   background-color: hsla(258, 75%, 62%, 0.16);
   color: hsl(258, 88%, 76%);
   border-color: hsla(258, 75%, 68%, 0.45);

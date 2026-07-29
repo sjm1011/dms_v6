@@ -180,7 +180,10 @@ export const useFolders = (
   };
 
   // 新增資料夾
-  const handleCreateFolder = async (name: string, managers?: string[]) => {
+  const handleCreateFolder = async (
+    name: string,
+    managers?: string[]
+  ): Promise<{ id: string; name: string } | null> => {
     // 同層資料夾名稱重複檢查
     const normalizedNewName = name.trim().toLowerCase();
     const isDuplicate = folders.some(f => {
@@ -193,7 +196,7 @@ export const useFolders = (
 
     if (isDuplicate) {
       showToast(`名稱重複：同一層目錄已存在相同名稱的資料夾「${name}」。`, 'error');
-      return false;
+      return null;
     }
 
     try {
@@ -201,16 +204,16 @@ export const useFolders = (
       const res = await FoldersAPI.createFolder(name, parentId, managers);
       if (res.success) {
         showToast(`資料夾「${name}」建立成功。`, 'success');
-        fetchFolders();
-        return true;
+        void fetchFolders();
+        return { id: res.data.id, name };
       } else {
         showToast(res.error, 'error');
-        return false;
+        return null;
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       showToast('建立資料夾失敗：' + msg, 'error');
-      return false;
+      return null;
     }
   };
 

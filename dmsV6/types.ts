@@ -8,6 +8,8 @@ export interface User {
   token?: string;
 }
 
+export type FolderAccessType = 1 | 2 | 3;
+
 export interface Folder {
   id: string;
   parent_id: string | null;
@@ -18,7 +20,7 @@ export interface Folder {
   manager_role?: FolderManagerRole;
   can_assign_co_managers?: boolean;
   can_edit_primary_manager?: boolean;
-  access_type?: number;
+  access_type?: FolderAccessType;
   acl_summary?: string;
   is_access_inherited?: boolean;
   child_folder_count?: number;
@@ -116,7 +118,7 @@ export interface DMSItem {
   parent_title?: string | null;
   related_document_count?: number;
   related_version_count?: number;
-  access_type?: number;
+  access_type?: FolderAccessType;
   acl_summary?: string;
   is_access_inherited?: boolean;
   can_manage?: boolean;
@@ -155,7 +157,7 @@ export interface Department {
 }
 
 export interface FolderACL {
-  access_type: number; // 1: 公開, 2: 限閱
+  access_type: FolderAccessType; // 1：公開，2：限閱，3：僅限管理者
   dept_ids: string[];
   uids: string[];
   is_inherited: boolean;
@@ -217,7 +219,7 @@ export interface PermissionOverviewItem {
   folder_name: string;
   primary_managers: string;
   co_managers: string;
-  access_type: number;
+  access_type: FolderAccessType;
   acl_summary: string;
   child_folder_count: number;
   document_count: number;

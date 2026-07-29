@@ -10,8 +10,6 @@ import {
   SearchIcon,
   CreateNewFolderIcon,
   CloudUploadIcon,
-  CheckCircleIcon,
-  ErrorOutlineIcon,
   MenuIcon
 } from '../components/Icons';
 
@@ -36,7 +34,10 @@ interface MainLayoutProps {
   handleToggleExpand: (id: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  handleCreateFolder: (name: string, managers?: string[]) => Promise<boolean>;
+  handleCreateFolder: (
+    name: string,
+    managers?: string[]
+  ) => Promise<{ id: string; name: string } | null>;
   handleRenameFolder: (id: string, newName: string, managers?: string[]) => Promise<boolean>;
   handleArchiveFolder: (id: string, name: string) => Promise<boolean>;
   handleDeleteFolder: (id: string, name: string) => Promise<boolean>;
@@ -343,29 +344,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const canCreateFolder = currentFolderIsActive && (currentFolderId === '' ? isAdmin : isCurrentFolderManager());
   const canCreateDocument = currentFolderIsActive && (currentFolderId === '' ? isAdmin : isCurrentFolderManager());
   const hasLoadedCurrentManagerNames = loadedManagerFolderId === currentFolderId;
-  const currentFolderHasDetailedAcl = Boolean(currentFolder?.acl_summary?.trim());
-
   const renderCurrentFolderAccessBadge = () => {
     if (!currentFolder) return null;
 
-    const isRestricted = currentFolder.access_type === 2;
+    const accessType = currentFolder.access_type || 3;
+    const isRestricted = accessType === 2;
+    const isManagersOnly = accessType === 3;
     const isInherited = Boolean(currentFolder.is_access_inherited);
     const title = isRestricted
       ? isInherited
-        ? `授權對象：${currentFolder.acl_summary || '未設定詳細授權'}`
-        : currentFolderHasDetailedAcl
-          ? `限閱，已授權：${currentFolder.acl_summary}`
-          : '限閱，未設定詳細授權'
+        ? `繼承上層限閱設定；授權對象：${currentFolder.acl_summary || '未設定'}`
+        : `限閱；授權對象：${currentFolder.acl_summary || '未設定'}`
+      : isManagersOnly
+        ? isInherited
+          ? '繼承上層僅限管理者設定；只有 ADMIN 與有效資料夾管理員可進入'
+          : '僅限管理者；只有 ADMIN 與有效資料夾管理員可進入'
       : '公開，任何登入同仁皆可見並可進入';
-    const className = `badge-access folder-header-access-badge ${isRestricted ? 'restricted' : 'public'}${isInherited ? ' inherited' : ''}`;
-    const content = (
-      <>
-        <span>{isRestricted ? '限閱' : '公開'}</span>
-        {isRestricted && (currentFolderHasDetailedAcl
-          ? <CheckCircleIcon size={16} aria-hidden="true" />
-          : <ErrorOutlineIcon size={16} aria-hidden="true" />)}
-      </>
-    );
+    const modeClass = isRestricted ? 'restricted' : isManagersOnly ? 'managers-only' : 'public';
+    const className = `badge-access folder-header-access-badge ${modeClass}${isInherited ? ' inherited' : ''}`;
+    const content = isRestricted ? '限閱' : isManagersOnly ? '僅限管理者' : '公開';
 
     if (isInherited || !isCurrentFolderManager()) {
       return <span className={className} title={title}>{content}</span>;
@@ -979,7 +976,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       <NewFolderModal
         isOpen={isNewFolderOpen}
         onClose={() => setIsNewFolderOpen(false)}
-        onCreate={handleCreateFolder}
+        onCreate={async (name, managers) => {
+          const created = await handleCreateFolder(name, managers);
+          if (created) {
+            setAclFolder(created);
+            setIsFolderAclOpen(true);
+          }
+          return created;
+        }}
         isRoot={!currentFolderId}
         userRole={user.role}
         lookupFolderId={currentFolderId || undefined}

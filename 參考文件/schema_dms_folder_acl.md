@@ -12,9 +12,9 @@
 
 * **表名稱**：`dms_folder_acl`
 * **schema 檔名**：`schema_dms_folder_acl.md`、`schema_dms_folder_acl.html`
-* **用途**：紀錄限閱資料夾授權給哪些部門或使用者。資料夾是否公開或限閱由 `dms_folders.df_access_type` 決定。
+* **用途**：紀錄限閱資料夾授權給哪些部門或使用者。資料夾屬性由 `dms_folders.df_access_type` 決定。
 * **授權類型**：可設定為特定群組、特定使用者。
-* **資安規則**：沒有 ACL 紀錄不代表公開。若 `df_access_type = 2` 且沒有任何有效 ACL 紀錄，一般使用者不可見。
+* **資安規則**：`df_access_type = 2` 時至少必須存在 1 筆有效 ACL；沒有有效 ACL 時，後端必須拒絕存檔。`df_access_type = 3` 為僅限管理者，不使用 ACL。
 
 ### 欄位規劃
 

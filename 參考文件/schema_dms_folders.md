@@ -23,7 +23,7 @@
 | `df_root_fid` | INTEGER | Not Null | 根目錄的第一層資料夾 ID。若為第一層資料夾則等於 `df_fid`。用於 ACL 權限極速比對。 |
 | `df_name` | VARCHAR(255) | Not Null | 資料夾名稱。 |
 | `df_status` | SMALLINT | Not Null | 資料夾狀態。0: 已刪除(作廢), 1: 正常, 2: 封存。預設為 1。 |
-| `df_access_type` | SMALLINT | Not Null | 資料夾存取狀態。1: 公開, 2: 限閱。預設為 2。 |
+| `df_access_type` | SMALLINT | Not Null | 資料夾存取狀態。1: 公開, 2: 限閱, 3: 僅限管理者。預設為 3。 |
 | `df_crtby` | VARCHAR(50) | Not Null | 建立者的使用者帳號。 |
 | `df_crtat` | TIMESTAMP | Not Null, Default | 建立時間，預設為 `CURRENT_TIMESTAMP`。 |
 | `df_updby` | VARCHAR(50) | Nullable | 最後執行異動操作的使用者帳號。 |
@@ -42,7 +42,7 @@ CREATE TABLE dms_folders (
     df_root_fid INTEGER NOT NULL,
     df_name VARCHAR(255) NOT NULL,
     df_status SMALLINT NOT NULL DEFAULT 1,
-    df_access_type SMALLINT NOT NULL DEFAULT 2,
+    df_access_type SMALLINT NOT NULL DEFAULT 3,
     df_crtby VARCHAR(50) NOT NULL,
     df_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     df_updby VARCHAR(50),
@@ -62,7 +62,31 @@ CREATE INDEX idx_dms_folders_access_type ON dms_folders(df_access_type);
 
 ```sql
 ALTER TABLE dms_folders
-ADD COLUMN IF NOT EXISTS df_access_type SMALLINT NOT NULL DEFAULT 2;
+ADD COLUMN IF NOT EXISTS df_access_type SMALLINT NOT NULL DEFAULT 3;
+
+ALTER TABLE dms_folders
+ALTER COLUMN df_access_type SET DEFAULT 3;
+
+UPDATE dms_folders f
+   SET df_access_type = 3
+ WHERE f.df_access_type = 2
+   AND NOT EXISTS (
+         SELECT 1
+           FROM dms_folder_acl a
+           LEFT JOIN department d
+             ON a.dfa_type = 1
+            AND a.dfa_target = d.dept_id::text
+           LEFT JOIN employee e
+             ON a.dfa_type = 2
+            AND a.dfa_target = e.emp_id
+            AND e.emp_incumbent = 0
+          WHERE a.df_fid = f.df_fid
+            AND a.dfa_dc = 'N'
+            AND (
+                 (a.dfa_type = 1 AND d.dept_id IS NOT NULL)
+                 OR (a.dfa_type = 2 AND e.emp_id IS NOT NULL)
+            )
+       );
 
 CREATE INDEX IF NOT EXISTS idx_dms_folders_access_type
 ON dms_folders(df_access_type);
@@ -79,7 +103,7 @@ COMMENT ON COLUMN dms_folders.df_pid IS '父資料夾 ID。若為根目錄則為
 COMMENT ON COLUMN dms_folders.df_root_fid IS '根目錄的第一層資料夾 ID。若為第一層資料夾則等於 df_fid。用於 ACL 權限極速比對';
 COMMENT ON COLUMN dms_folders.df_name IS '資料夾名稱';
 COMMENT ON COLUMN dms_folders.df_status IS '資料夾狀態。0: 已刪除(作廢), 1: 正常, 2: 封存';
-COMMENT ON COLUMN dms_folders.df_access_type IS '資料夾存取狀態。1: 公開, 2: 限閱';
+COMMENT ON COLUMN dms_folders.df_access_type IS '資料夾存取狀態。1: 公開, 2: 限閱, 3: 僅限管理者';
 COMMENT ON COLUMN dms_folders.df_crtby IS '建立者的使用者帳號';
 COMMENT ON COLUMN dms_folders.df_crtat IS '建立時間，預設為目前時間';
 COMMENT ON COLUMN dms_folders.df_updby IS '最後執行異動操作的使用者帳號';

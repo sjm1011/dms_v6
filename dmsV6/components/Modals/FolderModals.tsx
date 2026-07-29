@@ -67,7 +67,8 @@ const styles = `
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
-    height: 33px;
+    height: var(--modal-control-height);
+    min-height: var(--modal-control-height);
     margin: 0;
     align-self: center;
   }
@@ -87,7 +88,8 @@ const styles = `
     overflow: hidden;
     text-overflow: ellipsis;
     box-sizing: border-box;
-    height: 33px;
+    height: var(--modal-control-height);
+    min-height: var(--modal-control-height);
     display: flex;
     align-items: center;
     margin: 0;
@@ -134,7 +136,10 @@ const styles = `
 interface NewFolderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (name: string, managers?: string[]) => Promise<boolean>;
+  onCreate: (
+    name: string,
+    managers?: string[]
+  ) => Promise<{ id: string; name: string } | null>;
   isRoot?: boolean;
   userRole?: string;
   lookupFolderId?: string;
@@ -314,12 +319,12 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
           showRequiredFieldMessage('第一層資料夾必須且只能輸入一位有效的資料夾管理員。', managerInputsRef.current[0]);
           return;
         }
-        const success = await onCreate(trimmed, validUids);
-        if (success) onClose();
+        const created = await onCreate(trimmed, validUids);
+        if (created) onClose();
       }
     } else {
-      const success = await onCreate(trimmed);
-      if (success) onClose();
+      const created = await onCreate(trimmed);
+      if (created) onClose();
     }
   };
 

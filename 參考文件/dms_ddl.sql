@@ -40,7 +40,7 @@ CREATE TABLE dms_folders (
     df_root_fid INTEGER NOT NULL,
     df_name VARCHAR(255) NOT NULL,
     df_status SMALLINT NOT NULL DEFAULT 1,
-    df_access_type SMALLINT NOT NULL DEFAULT 2,
+    df_access_type SMALLINT NOT NULL DEFAULT 3,
     df_crtby VARCHAR(50) NOT NULL,
     df_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     df_updby VARCHAR(50),
@@ -61,7 +61,7 @@ COMMENT ON COLUMN dms_folders.df_pid IS '父資料夾 ID。若為根目錄則為
 COMMENT ON COLUMN dms_folders.df_root_fid IS '根目錄的第一層資料夾 ID。若為第一層資料夾則等於 df_fid。用於 ACL 權限極速比對';
 COMMENT ON COLUMN dms_folders.df_name IS '資料夾名稱';
 COMMENT ON COLUMN dms_folders.df_status IS '資料夾狀態。0: 已刪除(作廢), 1: 正常, 2: 封存';
-COMMENT ON COLUMN dms_folders.df_access_type IS '資料夾存取狀態。1: 公開, 2: 限閱';
+COMMENT ON COLUMN dms_folders.df_access_type IS '資料夾存取狀態。1: 公開, 2: 限閱, 3: 僅限管理者';
 COMMENT ON COLUMN dms_folders.df_crtby IS '建立者的使用者帳號';
 COMMENT ON COLUMN dms_folders.df_crtat IS '建立時間，預設為目前時間';
 COMMENT ON COLUMN dms_folders.df_updby IS '最後執行異動操作的使用者帳號';

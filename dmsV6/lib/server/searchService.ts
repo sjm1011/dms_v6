@@ -141,10 +141,14 @@ export const searchDocuments = async (
       access_sources AS (
         SELECT DISTINCT ON (fa.df_fid)
                fa.df_fid,
-               fa.ancestor_fid AS source_fid
+               fa.ancestor_fid AS source_fid,
+               CASE
+                 WHEN af.df_access_type = 2 THEN 2
+                 ELSE 3
+               END AS source_access_type
           FROM folder_ancestors fa
           JOIN dms_folders af ON af.df_fid = fa.ancestor_fid
-         WHERE af.df_access_type = 2
+         WHERE af.df_access_type <> 1
          ORDER BY fa.df_fid,
                   fa.depth DESC
       ),
@@ -182,9 +186,10 @@ export const searchDocuments = async (
                 OR EXISTS (
                     SELECT 1
                       FROM dms_folder_acl a
-                      JOIN access_sources src ON src.source_fid = a.df_fid
+                     JOIN access_sources src ON src.source_fid = a.df_fid
                                              AND src.df_fid = f.df_fid
                      WHERE a.dfa_dc = 'N'
+                       AND src.source_access_type = 2
                        AND (
                             (a.dfa_type = 1 AND a.dfa_target = $2)
                             OR (a.dfa_type = 2 AND a.dfa_target = $1)

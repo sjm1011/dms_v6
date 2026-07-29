@@ -8,14 +8,19 @@ import {
   CloudUploadIcon,
   EditIcon,
   DeleteIcon,
-  HistoryIcon,
-  CheckCircleIcon,
-  ErrorOutlineIcon
+  HistoryIcon
 } from './Icons';
 
 const KeyIcon = ({ size = 18, style }: { size?: number, style?: React.CSSProperties }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', ...style }}>
     <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+  </svg>
+);
+
+const ManagerIcon = ({ size = 18 }: { size?: number }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3l7 3v5c0 4.6-2.8 8.2-7 10-4.2-1.8-7-5.4-7-10V6l7-3z" />
+    <path d="m9 12 2 2 4-4" />
   </svg>
 );
 
@@ -255,20 +260,28 @@ export const FileTable = React.memo<FileTableProps>(({
 
     if (item.access_type === 2) {
       const isInherited = Boolean(item.is_access_inherited);
-      const hasDetailedAcl = Boolean(item.acl_summary?.trim());
       return (
         <span
           className={`badge-access restricted${isInherited ? ' inherited' : ''}`}
           title={isInherited
-            ? `授權對象：${item.acl_summary || '未設定詳細授權'}`
-            : item.acl_summary
-              ? `授權對象：${item.acl_summary}`
-              : '限閱：未設定詳細授權'}
+            ? `繼承上層限閱設定；授權對象：${item.acl_summary || '未設定'}`
+            : `限閱；授權對象：${item.acl_summary || '未設定'}`}
         >
-          <span>限閱</span>
-          {hasDetailedAcl
-            ? <CheckCircleIcon size={16} aria-hidden="true" />
-            : <ErrorOutlineIcon size={16} aria-hidden="true" />}
+          限閱
+        </span>
+      );
+    }
+
+    if (item.access_type === 3) {
+      const isInherited = Boolean(item.is_access_inherited);
+      return (
+        <span
+          className={`badge-access managers-only${isInherited ? ' inherited' : ''}`}
+          title={isInherited
+            ? '繼承上層僅限管理者設定；只有 ADMIN 與有效資料夾管理員可進入'
+            : '只有 ADMIN 與有效資料夾管理員可進入'}
+        >
+          僅限管理者
         </span>
       );
     }
@@ -281,6 +294,14 @@ export const FileTable = React.memo<FileTableProps>(({
   };
 
   const renderManagerRoleIcon = (item: DMSItem) => {
+    if (item.manager_role === 'PRIMARY') {
+      return (
+        <span className="manager-role-icon primary" title="您是此資料夾的管理員" aria-label="您是此資料夾的管理員">
+          <ManagerIcon />
+        </span>
+      );
+    }
+
     if (item.manager_role === 'CO_MANAGER') {
       return (
         <span className="manager-role-icon co-manager" title="您是此資料夾的協同管理員" aria-label="您是此資料夾的協同管理員">

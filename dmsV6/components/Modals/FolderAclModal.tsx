@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Modal } from '../Modal';
 import { FoldersAPI } from '../../api/folders';
 import { EmployeeAPI } from '../../api/employee';
-import { Department } from '../../types';
+import { Department, FolderAccessType } from '../../types';
 
 interface FolderAclModalProps {
   isOpen: boolean;
@@ -88,10 +88,17 @@ const styles = `
     color: #f97316;
     box-shadow: 0 0 12px rgba(249, 115, 22, 0.2);
   }
+  .access-type-btn.active-managers-only {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+    color: #60a5fa;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+  }
   .depts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+    column-gap: 10px;
+    row-gap: 0;
     background: rgba(0, 0, 0, 0.15);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
@@ -107,7 +114,7 @@ const styles = `
     font-size: 0.85rem;
     color: var(--text-primary);
     cursor: pointer;
-    padding: 4px;
+    padding: 1px 4px;
     user-select: none;
   }
   .dept-item input[type="checkbox"] {
@@ -167,7 +174,8 @@ const styles = `
     outline: none;
     transition: border-color 0.2s;
     box-sizing: border-box;
-    height: 33px;
+    height: var(--modal-control-height);
+    min-height: var(--modal-control-height);
     margin: 0;
   }
   .user-row input[type="text"]:focus {
@@ -186,7 +194,8 @@ const styles = `
     overflow: hidden;
     text-overflow: ellipsis;
     box-sizing: border-box;
-    height: 33px;
+    height: var(--modal-control-height);
+    min-height: var(--modal-control-height);
     display: flex;
     align-items: center;
     margin: 0;
@@ -255,7 +264,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
   folderName,
   onSaved
 }) => {
-  const [accessType, setAccessType] = useState<number>(1); // 1: 公開, 2: 限閱
+  const [accessType, setAccessType] = useState<FolderAccessType>(3);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [userRows, setUserRows] = useState<UserRow[]>([{ uid: '', name: '', isValid: false, isChecking: false }]);
@@ -276,6 +285,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
       setLoading(true);
       setError('');
       setIsInherited(false);
+      setAccessType(3);
       setSelectedDepts([]);
       setUserRows([{ uid: '', name: '', isValid: false, isChecking: false }]);
       
@@ -457,19 +467,33 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
     if (isInherited) return;
 
     setError('');
-    
+
+    const invalidIndex = userRows.findIndex(
+      row => row.uid.trim() !== '' && (!row.isValid || row.isChecking)
+    );
+    if (accessType === 2 && invalidIndex >= 0) {
+      setError('請修正或移除尚未完成有效驗證的員工編號。');
+      userInputsRef.current[invalidIndex]?.focus();
+      return;
+    }
+
     // 過濾出有效的同仁帳號
     const validUids = userRows
       .filter(r => r.uid.trim() !== '' && r.isValid)
       .map(r => r.uid.trim());
+
+    if (accessType === 2 && selectedDepts.length === 0 && validUids.length === 0) {
+      setError('限閱資料夾至少必須指定 1 個部門或特定使用者。');
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await FoldersAPI.updateFolderACL(
         folderId,
         accessType,
-        accessType === 1 ? [] : selectedDepts,
-        accessType === 1 ? [] : validUids
+        accessType === 2 ? selectedDepts : [],
+        accessType === 2 ? validUids : []
       );
 
       if (res.success) {
@@ -520,7 +544,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
         <div className="acl-form">
           {isInherited && (
             <div className="acl-inherited-notice">
-              此資料夾已繼承上層資料夾的限閱屬性，不得再進行其他限閱設定。
+              {`此資料夾已繼承上層資料夾的「${accessType === 2 ? '限閱' : '僅限管理者'}」屬性，不得另行設定。`}
             </div>
           )}
           <label className="acl-label">資料夾屬性</label>
@@ -531,7 +555,15 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
               onClick={() => setAccessType(1)}
               disabled={loading || isInherited}
             >
-              <span>🌐</span> 公開
+              公開
+            </button>
+            <button
+              type="button"
+              className={`access-type-btn ${accessType === 3 ? 'active-managers-only' : ''}`}
+              onClick={() => setAccessType(3)}
+              disabled={loading || isInherited}
+            >
+              僅限管理者
             </button>
             <button
               type="button"
@@ -539,7 +571,7 @@ export const FolderAclModal: React.FC<FolderAclModalProps> = ({
               onClick={() => setAccessType(2)}
               disabled={loading || isInherited}
             >
-              <span>🔒</span> 限閱
+              限閱
             </button>
           </div>
 

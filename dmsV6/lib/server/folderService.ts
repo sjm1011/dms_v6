@@ -1,5 +1,5 @@
 import type { PoolClient } from 'pg';
-import type { Folder, FolderACL } from '../../types';
+import type { Folder, FolderACL, FolderAccessType } from '../../types';
 import type { SessionUser } from '../session';
 import { isAdmin } from './auth';
 import { query, withTransaction } from './db';
@@ -22,6 +22,21 @@ interface FolderRow {
   acl_summary: string | null;
 }
 
+const ACCESS_PUBLIC = 1;
+const ACCESS_RESTRICTED = 2;
+const ACCESS_MANAGERS_ONLY = 3;
+const VALID_ACCESS_TYPES = new Set([
+  ACCESS_PUBLIC,
+  ACCESS_RESTRICTED,
+  ACCESS_MANAGERS_ONLY
+]);
+
+const normalizeAccessType = (value: number): FolderAccessType => (
+  value === ACCESS_PUBLIC || value === ACCESS_RESTRICTED || value === ACCESS_MANAGERS_ONLY
+    ? value
+    : ACCESS_MANAGERS_ONLY
+);
+
 const toFolder = (row: FolderRow): Folder => ({
   id: String(row.id),
   parent_id: row.parent_id === null ? null : String(row.parent_id),
@@ -32,7 +47,7 @@ const toFolder = (row: FolderRow): Folder => ({
   manager_role: row.manager_role,
   can_assign_co_managers: Boolean(row.can_assign_co_managers),
   can_edit_primary_manager: Boolean(row.can_edit_primary_manager),
-  access_type: Number(row.access_type || 2),
+  access_type: normalizeAccessType(Number(row.access_type)),
   is_access_inherited: Boolean(row.is_access_inherited),
   acl_summary: row.acl_summary || '',
   child_folder_count: Number(row.child_folder_count || 0),
@@ -143,10 +158,14 @@ export const listFolders = async (user: SessionUser) => {
       access_sources AS (
         SELECT DISTINCT ON (fa.df_fid)
                fa.df_fid,
-               fa.ancestor_fid AS source_fid
+               fa.ancestor_fid AS source_fid,
+               CASE
+                 WHEN af.df_access_type = 2 THEN 2
+                 ELSE 3
+               END AS source_access_type
           FROM folder_ancestors fa
           JOIN dms_folders af ON af.df_fid = fa.ancestor_fid
-         WHERE af.df_access_type = 2
+         WHERE af.df_access_type <> 1
          ORDER BY fa.df_fid,
                   fa.depth DESC
       ),
@@ -182,6 +201,7 @@ export const listFolders = async (user: SessionUser) => {
                       JOIN access_sources src ON src.source_fid = a.df_fid
                                              AND src.df_fid = f.df_fid
                      WHERE a.dfa_dc = 'N'
+                       AND src.source_access_type = 2
                        AND (
                             (a.dfa_type = 1 AND a.dfa_target = $2)
                             OR (a.dfa_type = 2 AND a.dfa_target = $1)
@@ -207,9 +227,10 @@ export const listFolders = async (user: SessionUser) => {
           FROM access_sources src
           JOIN visible v ON v.df_fid = src.df_fid
           JOIN dms_folder_acl a ON a.df_fid = src.source_fid
-          LEFT JOIN department d ON a.dfa_type = 1 AND a.dfa_target = d.dept_id::text
-          LEFT JOIN employee e ON a.dfa_type = 2 AND a.dfa_target = e.emp_id
-         WHERE a.dfa_dc = 'N'
+         LEFT JOIN department d ON a.dfa_type = 1 AND a.dfa_target = d.dept_id::text
+         LEFT JOIN employee e ON a.dfa_type = 2 AND a.dfa_target = e.emp_id
+         WHERE src.source_access_type = 2
+           AND a.dfa_dc = 'N'
          GROUP BY src.df_fid
       ),
       child_counts AS (
@@ -233,7 +254,7 @@ export const listFolders = async (user: SessionUser) => {
              f.df_root_fid AS root_id,
              f.df_name AS name,
              f.df_status AS status,
-             CASE WHEN src.source_fid IS NULL THEN 1 ELSE 2 END AS access_type,
+             COALESCE(src.source_access_type, 1) AS access_type,
              (src.source_fid IS NOT NULL AND src.source_fid <> f.df_fid) AS is_access_inherited,
              EXISTS (
                SELECT 1
@@ -313,9 +334,13 @@ export const getFolderAccessStatus = async (
           JOIN ancestors a ON a.df_pid = p.df_fid
       ),
       access_source AS (
-        SELECT a.df_fid AS source_fid
+        SELECT a.df_fid AS source_fid,
+               CASE
+                 WHEN a.df_access_type = 2 THEN 2
+                 ELSE 3
+               END AS source_access_type
           FROM ancestors a
-         WHERE a.df_access_type = 2
+         WHERE a.df_access_type <> 1
          ORDER BY a.depth DESC
          LIMIT 1
       )
@@ -332,6 +357,7 @@ export const getFolderAccessStatus = async (
                      FROM dms_folder_acl a
                      JOIN access_source src ON src.source_fid = a.df_fid
                     WHERE a.dfa_dc = 'N'
+                      AND src.source_access_type = 2
                       AND (
                            (a.dfa_type = 1 AND a.dfa_target = $3)
                            OR (a.dfa_type = 2 AND a.dfa_target = $2)
@@ -557,7 +583,7 @@ export const createFolder = async (
              0,
              $2,
              1,
-             2,
+             3,
              $3,
              CURRENT_TIMESTAMP
        )
@@ -589,7 +615,11 @@ export const createFolder = async (
         resourceType: 'FOLDER',
         folderId,
         managedFolderId: rootId,
-        metadata: { name: trimmedName, parent_id: parentId || null }
+        metadata: {
+          name: trimmedName,
+          parent_id: parentId || null,
+          access_type: ACCESS_MANAGERS_ONLY
+        }
       },
       client
     );
@@ -797,7 +827,10 @@ export const archiveFolder = async (user: SessionUser, id: number) => {
 export const getFolderAcl = async (user: SessionUser, folderId: number): Promise<FolderACL> => {
   await requireFolderManage(user, folderId);
 
-  const folder = await query<{ access_type: number; source_fid: number | null }>(
+  const folder = await query<{
+    access_type: number;
+    source_fid: number | null;
+  }>(
     `WITH RECURSIVE ancestors AS (
         SELECT f.df_fid,
                f.df_pid,
@@ -814,20 +847,25 @@ export const getFolderAcl = async (user: SessionUser, folderId: number): Promise
           JOIN ancestors a ON a.df_pid = p.df_fid
       ),
       access_source AS (
-        SELECT a.df_fid AS source_fid
+        SELECT a.df_fid AS source_fid,
+               CASE
+                 WHEN a.df_access_type = 2 THEN 2
+                 ELSE 3
+               END AS source_access_type
           FROM ancestors a
-         WHERE a.df_access_type = 2
+         WHERE a.df_access_type <> 1
          ORDER BY a.depth DESC
          LIMIT 1
       )
-      SELECT CASE WHEN src.source_fid IS NULL THEN 1 ELSE 2 END AS access_type,
+      SELECT COALESCE(src.source_access_type, 1) AS access_type,
              src.source_fid
         FROM (SELECT 1) seed
         LEFT JOIN access_source src ON true`,
     [folderId]
   );
   const sourceFolderId = folder.rows[0]?.source_fid ?? null;
-  const acl = await query<{ dfa_type: number; dfa_target: string }>(
+  const acl = sourceFolderId !== null && Number(folder.rows[0]?.access_type) === ACCESS_RESTRICTED
+    ? await query<{ dfa_type: number; dfa_target: string }>(
     `SELECT dfa_type,
             dfa_target
        FROM dms_folder_acl
@@ -835,11 +873,12 @@ export const getFolderAcl = async (user: SessionUser, folderId: number): Promise
         AND dfa_dc = 'N'
       ORDER BY dfa_type,
                dfa_target`,
-    [sourceFolderId]
-  );
+      [sourceFolderId]
+    )
+    : { rows: [] as { dfa_type: number; dfa_target: string }[] };
 
   return {
-    access_type: Number(folder.rows[0]?.access_type || 1),
+    access_type: normalizeAccessType(Number(folder.rows[0]?.access_type || ACCESS_PUBLIC)),
     dept_ids: acl.rows.filter((row) => row.dfa_type === 1).map((row) => row.dfa_target),
     uids: acl.rows.filter((row) => row.dfa_type === 2).map((row) => row.dfa_target),
     is_inherited: sourceFolderId !== null && sourceFolderId !== folderId,
@@ -852,11 +891,16 @@ export const getFolderAcl = async (user: SessionUser, folderId: number): Promise
 export const updateFolderAcl = async (
   user: SessionUser,
   folderId: number,
-  accessType: number,
+  accessType: FolderAccessType,
   deptIds: string[],
   uids: string[]
 ) => {
   await requireFolderManage(user, folderId);
+
+  if (!VALID_ACCESS_TYPES.has(accessType)) {
+    throw new Error('資料夾屬性無效，僅能設定為公開、限閱或僅限管理者。');
+  }
+
   const inherited = await query<{ inherited: boolean }>(
     `WITH RECURSIVE ancestors AS (
         SELECT f.df_pid AS df_fid
@@ -872,35 +916,100 @@ export const updateFolderAcl = async (
                SELECT 1
                  FROM ancestors a
                  JOIN dms_folders f ON f.df_fid = a.df_fid
-                WHERE f.df_access_type = 2
+                WHERE f.df_access_type <> 1
              ) AS inherited`,
     [folderId]
   );
 
   if (inherited.rows[0]?.inherited) {
-    throw new Error('此資料夾已繼承上層資料夾的限閱屬性，不得另行設定。');
+    throw new Error('此資料夾已繼承上層資料夾的存取限制，不得另行設定。');
   }
 
   const normalizedDeptIds = Array.from(
-    new Set(deptIds.map((value) => value.trim()).filter(Boolean))
+    new Set(deptIds.map((value) => String(value || '').trim()).filter(Boolean))
   );
   const normalizedUids = Array.from(
     new Map(
       uids
-        .map((value) => value.trim())
+        .map((value) => String(value || '').trim())
         .filter(Boolean)
         .map((value) => [value.toUpperCase(), value.toUpperCase()])
     ).values()
   );
 
+  if (
+    accessType === ACCESS_RESTRICTED
+    && normalizedDeptIds.length === 0
+    && normalizedUids.length === 0
+  ) {
+    throw new Error('限閱資料夾至少必須指定 1 個部門或特定使用者。');
+  }
+
   await withTransaction(async (client) => {
+    const beforeFolder = await client.query<{ access_type: number }>(
+      `SELECT df_access_type AS access_type
+         FROM dms_folders
+        WHERE df_fid = $1
+          AND df_status = 1`,
+      [folderId]
+    );
+
+    if (beforeFolder.rows.length === 0) {
+      throw new Error('找不到有效的資料夾。');
+    }
+
+    const beforeAcl = await client.query<{ dfa_type: number; dfa_target: string }>(
+      `SELECT dfa_type,
+              dfa_target
+         FROM dms_folder_acl
+        WHERE df_fid = $1
+          AND dfa_dc = 'N'
+        ORDER BY dfa_type,
+                 dfa_target`,
+      [folderId]
+    );
+
+    if (accessType === ACCESS_RESTRICTED && normalizedDeptIds.length > 0) {
+      const validDepartments = await client.query<{ dept_id: string }>(
+        `SELECT dept_id::text AS dept_id
+           FROM department
+          WHERE dept_id::text = ANY($1::text[])`,
+        [normalizedDeptIds]
+      );
+      const validIds = new Set(validDepartments.rows.map((row) => row.dept_id));
+      const invalidIds = normalizedDeptIds.filter((id) => !validIds.has(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`授權部門不存在：${invalidIds.join('、')}。`);
+      }
+    }
+
+    if (accessType === ACCESS_RESTRICTED && normalizedUids.length > 0) {
+      const validEmployees = await client.query<{ employee_id: string }>(
+        `SELECT emp_id AS employee_id
+           FROM employee
+          WHERE emp_id = ANY($1::text[])
+            AND emp_incumbent = 0`,
+        [normalizedUids]
+      );
+      const validIds = new Set(
+        validEmployees.rows.map((row) => row.employee_id.toUpperCase())
+      );
+      const invalidIds = normalizedUids.filter((id) => !validIds.has(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`授權使用者不存在或已非在職人員：${invalidIds.join('、')}。`);
+      }
+    }
+
+    const nextDeptIds = accessType === ACCESS_RESTRICTED ? normalizedDeptIds : [];
+    const nextUids = accessType === ACCESS_RESTRICTED ? normalizedUids : [];
+
     await client.query(
       `UPDATE dms_folders
           SET df_access_type = $2,
               df_updby = $3,
               df_updat = CURRENT_TIMESTAMP
         WHERE df_fid = $1`,
-      [folderId, accessType === 1 ? 1 : 2, user.id]
+      [folderId, accessType, user.id]
     );
     await client.query(
       `UPDATE dms_folder_acl
@@ -912,7 +1021,7 @@ export const updateFolderAcl = async (
       [folderId, user.id]
     );
 
-    if (normalizedDeptIds.length > 0) {
+    if (nextDeptIds.length > 0) {
       await client.query(
         `INSERT INTO dms_folder_acl (
                df_fid,
@@ -929,11 +1038,11 @@ export const updateFolderAcl = async (
                 CURRENT_TIMESTAMP,
                 'N'
            FROM UNNEST($3::text[]) AS dept_id`,
-        [folderId, user.id, normalizedDeptIds]
+        [folderId, user.id, nextDeptIds]
       );
     }
 
-    if (normalizedUids.length > 0) {
+    if (nextUids.length > 0) {
       await client.query(
         `INSERT INTO dms_folder_acl (
                df_fid,
@@ -950,7 +1059,7 @@ export const updateFolderAcl = async (
                 CURRENT_TIMESTAMP,
                 'N'
            FROM UNNEST($3::text[]) AS employee_uid`,
-        [folderId, user.id, normalizedUids]
+        [folderId, user.id, nextUids]
       );
     }
 
@@ -960,7 +1069,26 @@ export const updateFolderAcl = async (
         action: 'FOLDER_ACL_UPDATED',
         resourceType: 'ACL',
         folderId,
-        metadata: { access_type: accessType, dept_ids: normalizedDeptIds, uids: normalizedUids }
+        beforeData: {
+          access_type: Number(beforeFolder.rows[0].access_type),
+          dept_ids: beforeAcl.rows
+            .filter((row) => row.dfa_type === 1)
+            .map((row) => row.dfa_target),
+          uids: beforeAcl.rows
+            .filter((row) => row.dfa_type === 2)
+            .map((row) => row.dfa_target)
+        },
+        afterData: {
+          access_type: accessType,
+          dept_ids: nextDeptIds,
+          uids: nextUids
+        },
+        metadata: {
+          access_type: accessType,
+          dept_ids: nextDeptIds,
+          uids: nextUids
+        },
+        required: true
       },
       client
     );

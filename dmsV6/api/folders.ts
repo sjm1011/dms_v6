@@ -1,4 +1,11 @@
-import { Folder, ApiResponse, FolderACL, FolderAccessStatus, FolderManagerInfo } from '../types';
+import {
+  Folder,
+  ApiResponse,
+  FolderACL,
+  FolderAccessStatus,
+  FolderAccessType,
+  FolderManagerInfo
+} from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 export const FoldersAPI = {
@@ -44,7 +51,11 @@ export const FoldersAPI = {
     return result;
   },
 
-  createFolder: async (name: string, parentId?: number, managers?: string[]): Promise<ApiResponse<Folder>> => {
+  createFolder: async (
+    name: string,
+    parentId?: number,
+    managers?: string[]
+  ): Promise<ApiResponse<Pick<Folder, 'id'>>> => {
     const payload: any = { name };
     if (parentId !== undefined && parentId !== null) {
       payload.parent_id = parentId;
@@ -134,7 +145,12 @@ export const FoldersAPI = {
     return await handleResponse(response);
   },
 
-  updateFolderACL: async (id: string, accessType: number, deptIds: string[], uids: string[]): Promise<ApiResponse<null>> => {
+  updateFolderACL: async (
+    id: string,
+    accessType: FolderAccessType,
+    deptIds: string[],
+    uids: string[]
+  ): Promise<ApiResponse<null>> => {
     const response = await fetch(`${API_BASE}/folders/acl`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
