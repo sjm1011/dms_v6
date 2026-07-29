@@ -417,7 +417,7 @@ export const getFolderManagerInfo = async (
         JOIN employee e ON e.emp_id = m.usr_uid
        WHERE COALESCE(TRIM(e.emp_name), '') <> ''
        ORDER BY m.manager_type,
-                e.emp_name`,
+                e.emp_id`,
     [folderId]
   );
   const names = managerNames.rows

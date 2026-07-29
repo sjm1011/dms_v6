@@ -294,6 +294,10 @@ export const FileTable = React.memo<FileTableProps>(({
   };
 
   const renderManagerRoleIcon = (item: DMSItem) => {
+    if (item.type !== 'folder') {
+      return null;
+    }
+
     if (item.manager_role === 'PRIMARY') {
       return (
         <span className="manager-role-icon primary" title="您是此資料夾的管理員" aria-label="您是此資料夾的管理員">

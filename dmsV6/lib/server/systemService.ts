@@ -353,8 +353,8 @@ export const listPermissionOverview = async () => {
   const result = await query(
     `WITH manager_summary AS (
         SELECT m.df_fid,
-               STRING_AGG(e.emp_name, '、' ORDER BY e.emp_name) FILTER (WHERE m.dfm_type = 1) AS primary_managers,
-               STRING_AGG(e.emp_name, '、' ORDER BY e.emp_name) FILTER (WHERE m.dfm_type = 2) AS co_managers
+               STRING_AGG(e.emp_name, '、' ORDER BY e.emp_id) FILTER (WHERE m.dfm_type = 1) AS primary_managers,
+               STRING_AGG(e.emp_name, '、' ORDER BY e.emp_id) FILTER (WHERE m.dfm_type = 2) AS co_managers
           FROM dms_folder_managers m
           JOIN employee e ON e.emp_id = m.usr_uid
          WHERE m.dfm_dc = 'N'
