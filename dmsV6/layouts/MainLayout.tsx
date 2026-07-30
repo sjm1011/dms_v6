@@ -79,7 +79,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [isSidebarDrawer, setIsSidebarDrawer] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarOpenButtonRef = useRef<HTMLButtonElement>(null);
-  const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
   const [searchDocuments, setSearchDocuments] = useState<Document[]>([]);
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchPage, setSearchPage] = useState(1);
@@ -233,8 +232,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     try {
       const response = await SearchAPI.searchDocuments(
         keyword,
-        searchScope,
-        currentFolderId || '0',
         page,
         controller.signal
       );
@@ -255,7 +252,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         if (searchAbortRef.current === controller) searchAbortRef.current = null;
       }
     }
-  }, [clearSearch, currentFolderId, searchQuery, searchScope, showToast]);
+  }, [clearSearch, searchQuery, showToast]);
 
   useEffect(() => () => {
     searchRequestSeqRef.current += 1;
@@ -805,14 +802,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               event.preventDefault();
               void executeSearch(1);
             }}>
-              <select
-                aria-label="搜尋範圍"
-                value={searchScope}
-                onChange={(event) => setSearchScope(event.target.value as 'current' | 'all')}
-              >
-                <option value="current">目前資料夾及子資料夾</option>
-                <option value="all">所有可見資料夾</option>
-              </select>
               <div className="search-box">
                 <SearchIcon size={16} style={{ position: 'absolute', left: 12, color: 'var(--text-muted)' }} />
                 <input

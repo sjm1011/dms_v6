@@ -954,21 +954,6 @@ select {
   gap: 8px;
 }
 
-.document-search select {
-  min-height: 34px;
-  padding: 7px 30px 7px 10px;
-  color: var(--text-primary);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  outline: none;
-}
-
-.document-search select:focus {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px var(--focus-ring);
-}
-
 .search-box span {
   position: absolute;
   left: 12px;
@@ -2360,10 +2345,6 @@ button.folder-header-access-badge {
   .document-search {
     align-items: stretch;
     flex-wrap: wrap;
-  }
-
-  .document-search select {
-    flex: 1 1 210px;
   }
 
   .document-search .search-box {

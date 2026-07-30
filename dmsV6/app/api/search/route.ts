@@ -9,14 +9,9 @@ export const GET = async (request: NextRequest) => {
   try {
     const session = requireSession(request);
     const params = request.nextUrl.searchParams;
-    const scope = params.get('scope') === 'all' ? 'all' : 'current';
-    const folderId = Number(params.get('folder_id') || 0);
     const page = Number(params.get('page') || 1);
     const pageSize = Number(params.get('page_size') || 50);
 
-    if (!Number.isSafeInteger(folderId) || folderId < 0) {
-      return fail('搜尋範圍的資料夾識別碼不正確。', 400);
-    }
     if (!Number.isSafeInteger(page) || page < 1) {
       return fail('搜尋頁碼不正確。', 400);
     }
@@ -26,8 +21,6 @@ export const GET = async (request: NextRequest) => {
 
     return ok(await searchDocuments(session.user, {
       keyword: params.get('keyword') || '',
-      scope,
-      folderId,
       page,
       pageSize
     }));

@@ -533,13 +533,13 @@ Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由
 #### 4.13.1. 跨資料夾文件關鍵字搜尋
 
 * 系統提供跨資料夾文件關鍵字搜尋，不使用前端目前清單篩選，也不搜尋符合條件的資料夾。
-* 預設搜尋範圍為目前資料夾及其所有正常狀態子資料夾；使用者可切換為所有目前帳號可見的資料夾。位於文件庫根目錄時，兩種範圍均包含根目錄文件及所有可見資料夾。
+* 搜尋範圍固定為目前帳號可見的所有資料夾，畫面不提供搜尋範圍選項；搜尋結果亦包含文件庫根目錄中目前帳號可見的文件。
 * 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發布檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。
 * 搜尋必須由使用者按下 `Enter` 或「搜尋」按鈕後執行，不得於每次輸入字元時送出跨資料夾查詢。
 * 一般使用者只可搜尋有效文件的目前有效版本。對文件所屬資料夾具有管理權的使用者，可同時搜尋及看到該管理範圍內尚未生效的預約版本；不得看到其他資料夾的預約、歷史、撤回或廢止資料。
-* 搜尋範圍、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。
+* 資料夾可見性、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。
 * 搜尋結果只顯示文件，並顯示文件所在資料夾完整路徑。結果提供前往所在資料夾、預覽、下載及符合目前使用者權限的既有文件管理操作。
-* 搜尋結果採伺服器端分頁，每頁固定 50 份文件；關鍵字或搜尋範圍改變時從第 1 頁重新查詢。
+* 搜尋結果採伺服器端分頁，每頁固定 50 份文件；關鍵字改變時從第 1 頁重新查詢。
 
 ### 4.14. 資料夾管理員權限
 
@@ -797,7 +797,7 @@ DMS_NEXT_PORT=3000
 | `GET /api/departments` | `app/api/departments/route.ts` | 透過 `employeeService.ts` 查詢所有部門 |
 | `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | 透過 `documentService.ts` 查詢指定資料夾下之有效文件 |
 | `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件或相關文件、上傳新版本、修訂、廢止或刪除 |
-| `GET /api/search?keyword=...&scope=...&folder_id=...&page=...` | `app/api/search/route.ts` | 透過 `searchService.ts` 依 ACL、管理範圍及版本可見性執行跨資料夾文件關鍵字搜尋 |
+| `GET /api/search?keyword=...&page=...&page_size=...` | `app/api/search/route.ts` | 透過 `searchService.ts` 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋 |
 | `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
 | `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
 | `GET /api/system/audit` | `app/api/system/audit/route.ts` | 透過 `systemService.ts` 查詢及分頁顯示 `dms_log` |

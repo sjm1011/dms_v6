@@ -109,8 +109,6 @@ export const searchDocuments = async (
   user: SessionUser,
   options: {
     keyword: string;
-    scope: 'current' | 'all';
-    folderId: number;
     page: number;
     pageSize: number;
   }
@@ -126,7 +124,6 @@ export const searchDocuments = async (
   const page = Math.max(1, options.page);
   const pageSize = Math.min(100, Math.max(1, options.pageSize));
   const offset = (page - 1) * pageSize;
-  const scopeAll = options.scope === 'all' || options.folderId === 0;
   const normalizedUid = user.id.toUpperCase();
   const normalizedKeyword = keyword.toLocaleLowerCase('zh-TW');
   const normalizedCode = keyword.toUpperCase();
@@ -205,18 +202,6 @@ export const searchDocuments = async (
                 )
            )
       ),
-      scope_tree AS (
-        SELECT f.df_fid
-          FROM dms_folders f
-         WHERE $4 = false
-           AND f.df_fid = $5
-           AND f.df_status = 1
-        UNION ALL
-        SELECT child.df_fid
-          FROM dms_folders child
-          JOIN scope_tree parent ON parent.df_fid = child.df_pid
-         WHERE child.df_status = 1
-      ),
       folder_paths AS (
         SELECT fa.df_fid,
                STRING_AGG(ancestor.df_name, ' / ' ORDER BY fa.depth DESC) AS folder_path
@@ -290,22 +275,11 @@ export const searchDocuments = async (
                 )
            )
            AND (
-                (
-                  d.df_fid = 0
-                  AND ($4 = true OR $5 = 0)
-                )
+                d.df_fid = 0
                 OR EXISTS (
                   SELECT 1
                     FROM visible vis
                    WHERE vis.df_fid = d.df_fid
-                     AND (
-                          $4 = true
-                          OR EXISTS (
-                            SELECT 1
-                              FROM scope_tree st
-                             WHERE st.df_fid = d.df_fid
-                          )
-                     )
                 )
            )
       ),
@@ -347,22 +321,22 @@ export const searchDocuments = async (
       matched_documents AS (
         SELECT da.*,
                CASE
-                 WHEN UPPER(COALESCE(da.dd_code, '')) = $7 THEN 0
-                 WHEN POSITION($6 IN LOWER(COALESCE(da.dd_code, ''))) > 0 THEN 1
-                 WHEN POSITION($6 IN LOWER(da.dd_title)) > 0 THEN 2
+                 WHEN UPPER(COALESCE(da.dd_code, '')) = $5 THEN 0
+                 WHEN POSITION($4 IN LOWER(COALESCE(da.dd_code, ''))) > 0 THEN 1
+                 WHEN POSITION($4 IN LOWER(da.dd_title)) > 0 THEN 2
                  ELSE 3
                END AS match_rank
           FROM document_access da
-         WHERE POSITION($6 IN LOWER(COALESCE(da.dd_code, ''))) > 0
-            OR POSITION($6 IN LOWER(da.dd_title)) > 0
+         WHERE POSITION($4 IN LOWER(COALESCE(da.dd_code, ''))) > 0
+            OR POSITION($4 IN LOWER(da.dd_title)) > 0
             OR EXISTS (
               SELECT 1
                 FROM searchable_versions sv
                WHERE sv.dd_id = da.dd_id
                  AND (
-                      POSITION($6 IN LOWER(COALESCE(sv.ddv_no, ''))) > 0
-                      OR POSITION($6 IN LOWER(COALESCE(sv.ddv_chg_note, ''))) > 0
-                      OR POSITION($6 IN LOWER(sv.dfi_name)) > 0
+                      POSITION($4 IN LOWER(COALESCE(sv.ddv_no, ''))) > 0
+                      OR POSITION($4 IN LOWER(COALESCE(sv.ddv_chg_note, ''))) > 0
+                      OR POSITION($4 IN LOWER(sv.dfi_name)) > 0
                  )
             )
       ),
@@ -374,8 +348,8 @@ export const searchDocuments = async (
                   md.dd_code NULLS LAST,
                   md.dd_title,
                   md.dd_id
-         LIMIT $8
-        OFFSET $9
+         LIMIT $6
+        OFFSET $7
       )
       SELECT pd.total_count,
              pd.dd_id AS id,
@@ -418,8 +392,6 @@ export const searchDocuments = async (
       normalizedUid,
       user.dept_id || '',
       user.role,
-      scopeAll,
-      options.folderId,
       normalizedKeyword,
       normalizedCode,
       pageSize,

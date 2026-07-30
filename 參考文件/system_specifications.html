@@ -632,13 +632,19 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>一般使用者的資料夾瀏覽與搜尋結果均須套用上述規則；不得在搜尋結果中揭露無權限、尚未生效、歷史、已撤回或已廢止文件的標題、版本、檔名或其他可識別資訊。</p>
 <h4>4.13.1. 跨資料夾文件關鍵字搜尋</h4>
 <p>* 系統提供跨資料夾文件關鍵字搜尋，不使用前端目前清單篩選，也不搜尋符合條件的資料夾。</p>
-<p>* 預設搜尋範圍為目前資料夾及其所有正常狀態子資料夾；使用者可切換為所有目前帳號可見的資料夾。位於文件庫根目錄時，兩種範圍均包含根目錄文件及所有可見資料夾。</p>
+<ul>
+  <li>搜尋範圍固定為目前帳號可見的所有資料夾，畫面不提供搜尋範圍選項；搜尋結果亦包含文件庫根目錄中目前帳號可見的文件。</li>
+</ul>
 <p>* 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發布檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。</p>
 <p>* 搜尋必須由使用者按下 <code>Enter</code> 或「搜尋」按鈕後執行，不得於每次輸入字元時送出跨資料夾查詢。</p>
 <p>* 一般使用者只可搜尋有效文件的目前有效版本。對文件所屬資料夾具有管理權的使用者，可同時搜尋及看到該管理範圍內尚未生效的預約版本；不得看到其他資料夾的預約、歷史、撤回或廢止資料。</p>
-<p>* 搜尋範圍、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。</p>
+<ul>
+  <li>資料夾可見性、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。</li>
+</ul>
 <p>* 搜尋結果只顯示文件，並顯示文件所在資料夾完整路徑。結果提供前往所在資料夾、預覽、下載及符合目前使用者權限的既有文件管理操作。</p>
-<p>* 搜尋結果採伺服器端分頁，每頁固定 50 份文件；關鍵字或搜尋範圍改變時從第 1 頁重新查詢。</p>
+<ul>
+  <li>搜尋結果採伺服器端分頁，每頁固定 50 份文件；關鍵字改變時從第 1 頁重新查詢。</li>
+</ul>
 <h3>4.14. 資料夾管理員權限</h3>
 <p>ADMIN 除機密文件例外外，具備所有資料夾管理員權限，並可於根目錄建立文件。根目錄文件不屬於任何資料夾管理員繼承範圍，只能設定為「一般」或「敏感」；非 ADMIN 不得建立、版更、廢止或維護根目錄文件，並僅可依一般使用者權限查閱符合生效條件的根目錄文件。未被有效指派的 ADMIN 不得存取或管理機密文件。</p>
 <p>資料夾管理員可：</p>
@@ -857,7 +863,7 @@ DMS_NEXT_PORT=3000</code></pre>
     <tr><td><code>GET /api/departments</code></td><td><code>app/api/departments/route.ts</code></td><td>透過 <code>employeeService.ts</code> 查詢所有部門</td></tr>
     <tr><td><code>GET /api/documents?folder_id=...</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 查詢指定資料夾下之有效文件</td></tr>
     <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件或相關文件、上傳新版本、修訂、廢止或刪除</td></tr>
-    <tr><td><code>GET /api/search?keyword=...&amp;scope=...&amp;folder_id=...&amp;page=...</code></td><td><code>app/api/search/route.ts</code></td><td>透過 <code>searchService.ts</code> 依 ACL、管理範圍及版本可見性執行跨資料夾文件關鍵字搜尋</td></tr>
+    <tr><td><code>GET /api/search?keyword=...&amp;page=...&amp;page_size=...</code></td><td><code>app/api/search/route.ts</code></td><td>透過 <code>searchService.ts</code> 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋</td></tr>
     <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 讀取實體檔案並傳送下載串流</td></tr>
     <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得預覽串流，PDF 檔案則動態加入浮水印</td></tr>
     <tr><td><code>GET /api/system/audit</code></td><td><code>app/api/system/audit/route.ts</code></td><td>透過 <code>systemService.ts</code> 查詢及分頁顯示 <code>dms_log</code></td></tr>
