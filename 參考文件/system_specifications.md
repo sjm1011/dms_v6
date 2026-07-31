@@ -145,7 +145,7 @@
 * 新增資料夾預設為 `access_type = 3`。建立成功後立即開啟資料夾屬性 Modal；若取消設定，資料夾仍以「僅限管理者」保留。
 * **受限屬性繼承規則**：直接上層資料夾的有效屬性為限閱或僅限管理者時，其子資料夾必須繼承該存取限制，不得另行設定。新建子資料夾仍須顯示資料夾屬性 Modal，但全部控制項唯讀且只提供「關閉」。
 * **目前資料夾屬性顯示**：進入實體資料夾後，畫面標題與項目數量之間必須顯示「公開」、「僅限管理者」或「限閱」文字框。具備該資料夾管理權限的使用者可點擊非繼承屬性的文字框開啟資料夾屬性 Modal。繼承受限屬性的文字框不得提供點擊功能，只能以不同色系與提示文字顯示實際模式；繼承限閱時，提示文字必須包含授權摘要。
-* **限閱顯示規則**：限閱模式必須至少存在 1 個有效授權對象，因此目前資料夾標題列及清單「屬性／版本」欄位不再顯示已授權或未授權狀態圖示，只保留模式文字、繼承色系及授權摘要提示。
+* **限閱顯示規則**：限閱模式必須至少存在 1 個有效授權對象，因此目前資料夾標題列及清單「屬性 / 版本」欄位不再顯示已授權或未授權狀態圖示，只保留模式文字、繼承色系及授權摘要提示。
 * 根目錄不是實體資料夾節點，不套用 `dms_folder_acl`。位於根目錄的「一般」與「敏感」文件固定公開查閱，但建立、版更、廢止與維護仍固定僅限 ADMIN。根目錄不存在資料夾管理員指派範圍，因此不得建立或改為「機密」文件。
 
 ---
@@ -447,15 +447,15 @@ Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由
 * 上一個版本的 `effective_until` (結束時間) 設為新版本生效時間。
 * 一般使用者於版更完成後看到新版本。
 
-同一份文件同一時間只允許一個尚未撤回且尚未生效的預約版本。此限制必須由後端 API (應用程式介面) 檢查，不得僅依賴前端畫面防呆；判斷條件為同一 `document_id` (文件識別碼) 下不存在 `cancelled_at` (撤回日期) 為空白且 `effective_at` (生效時間) 晚於目前時間的版本。若已存在預約版本，資料夾管理員必須先撤回該版本並回復前版，才能再上傳新的預約版本。
+同一份文件同一時間只允許一個尚未撤回且尚未生效的預約版本。此限制必須由後端 API (應用程式介面) 檢查，不得僅依賴前端畫面防呆；判斷條件為同一 `document_id` (文件識別碼) 下不存在 `cancelled_at` (撤回日期) 為空白且 `effective_at` (生效時間) 晚於目前時間的版本。若已存在預約版本，資料夾管理員必須先從該預約版本的操作選單執行「刪除預約版本」，才能再上傳新的預約版本。
 
 版本生效不需另行改寫版本狀態；系統以 `effective_at` (生效時間)、`effective_until` (結束時間) 與 `cancelled_at` (撤回日期) 判斷目前有效版本。
 
 ### 4.10. 撤回版本並回復前版
 
-資料夾管理員可對最新一筆未撤回版本執行「撤回版本並回復前版」。
+資料夾管理員可對最新一筆已生效且未撤回的版本執行「撤回版本並回復前版」。尚未生效的預約版本應使用「刪除預約版本」，不進入撤回流程。
 
-不論該版本是否已到生效日期，撤回時均依下列規則處理：
+撤回時依下列規則處理：
 
 * 被撤回版本寫入 `cancelled_at` (撤回日期)、`cancelled_by` (撤回人員) 與 `cancel_reason` (撤回原因)。
 * 被撤回版本的正式發佈檔案、異動說明與修訂對照表永久保留。
@@ -800,10 +800,12 @@ DMS_NEXT_PORT=3000
 | `GET /api/test` | `app/api/test/route.ts` | 進行伺服器端資料庫連線測試 |
 | `GET /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 查詢資料夾樹與 ACL |
 | `POST /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 建立新資料夾 |
-| `PUT /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 重新命名或移動資料夾 |
+| `PUT /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 重新命名資料夾 |
 | `DELETE /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 封存或刪除空資料夾 |
 | `GET /api/folders/acl` | `app/api/folders/acl/route.ts` | 透過 `folderService.ts` 查詢資料夾有效 ACL 規則 |
 | `POST /api/folders/acl` | `app/api/folders/acl/route.ts` | 透過 `folderService.ts` 新增或修改資料夾 ACL 授權 |
+| `GET /api/folders/managers` | `app/api/folders/managers/route.ts` | 查詢目前資料夾的有效管理員姓名，或於授權畫面依權限查詢必要的員工編號 |
+| `PUT /api/folders/managers` | `app/api/folders/managers/route.ts` | 指派、更換或撤銷資料夾管理員及協同管理員 |
 | `GET /api/employee?uid=...` | `app/api/employee/route.ts` | 透過 `employeeService.ts` 以 UID 精準檢索員工資料 |
 | `GET /api/departments` | `app/api/departments/route.ts` | 透過 `employeeService.ts` 查詢所有部門 |
 | `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | 透過 `documentService.ts` 查詢指定資料夾下之有效文件 |
