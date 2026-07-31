@@ -104,6 +104,7 @@ interface FileTableProps {
   onUploadVersion?: (item: DMSItem) => void;
   onCreateRelatedDocument?: (item: DMSItem) => void;
   onEditDocument?: (item: DMSItem) => void;
+  onMoveDocument?: (item: DMSItem) => void;
   onDeleteScheduledVersion?: (item: DMSItem) => void;
   onCancelVersion?: (item: DMSItem) => void;
   onObsoleteDocument?: (item: DMSItem) => void;
@@ -127,6 +128,7 @@ export const FileTable = React.memo<FileTableProps>(({
   onUploadVersion,
   onCreateRelatedDocument,
   onEditDocument,
+  onMoveDocument,
   onDeleteScheduledVersion,
   onCancelVersion,
   onObsoleteDocument,
@@ -372,6 +374,15 @@ export const FileTable = React.memo<FileTableProps>(({
           icon: <EditIcon size={18} />,
           onClick: () => onEditDocument?.(item)
         });
+
+        if (onMoveDocument && !item.parent_document_id && item.status !== 'Obsolete') {
+          actions.push({
+            key: 'move-document',
+            label: '移動文件',
+            icon: <FolderOpenIcon size={18} />,
+            onClick: () => onMoveDocument(item)
+          });
+        }
 
         if (item.status === 'Scheduled') {
           actions.push({

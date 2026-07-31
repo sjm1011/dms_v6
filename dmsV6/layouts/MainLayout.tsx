@@ -19,7 +19,7 @@ import { ErrorDetailModal, TestResultModal } from '../components/Modals/Feedback
 import { FolderAclModal } from '../components/Modals/FolderAclModal';
 import { FolderManagerModal } from '../components/Modals/FolderManagerModal';
 import { SystemManagement } from '../components/SystemManagement';
-import { ACCEPTED_DOCUMENT_FILE_TYPES, DeleteScheduledVersionModal, EditDocumentModal, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal } from '../components/Modals/DocumentModals';
+import { ACCEPTED_DOCUMENT_FILE_TYPES, DeleteScheduledVersionModal, EditDocumentModal, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal, MoveDocumentModal } from '../components/Modals/DocumentModals';
 
 interface MainLayoutProps {
   user: User;
@@ -108,6 +108,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const [isNewDocOpen, setIsNewDocOpen] = useState(false);
   const [isUploadVerOpen, setIsUploadVerOpen] = useState(false);
   const [isEditDocumentOpen, setIsEditDocumentOpen] = useState(false);
+  const [isMoveDocumentOpen, setIsMoveDocumentOpen] = useState(false);
   const [isDeleteScheduledVersionOpen, setIsDeleteScheduledVersionOpen] = useState(false);
   const [isObsoleteDocOpen, setIsObsoleteDocOpen] = useState(false);
   const [isDeleteDocOpen, setIsDeleteDocOpen] = useState(false);
@@ -189,6 +190,39 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   }, [folders]);
 
   const currentFolder = currentFolderId ? foldersById.get(currentFolderId) || null : null;
+  const getFolderPathById = useCallback((folderId: string) => {
+    const names: string[] = [];
+    const visited = new Set<string>();
+    let folder = foldersById.get(folderId);
+
+    while (folder && !visited.has(folder.id)) {
+      visited.add(folder.id);
+      names.unshift(folder.name);
+      folder = folder.parent_id ? foldersById.get(folder.parent_id) : undefined;
+    }
+
+    return names.length > 0 ? `檔案庫 / ${names.join(' / ')}` : '檔案庫';
+  }, [foldersById]);
+  const moveDestinations = useMemo(() => folders
+    .filter((folder) =>
+      folder.status === 1
+      && folder.id !== currentFolderId
+      && (
+        activeDoc?.security_level === 3
+          ? Boolean(folder.manager_role)
+          : Boolean(folder.can_manage)
+      )
+    )
+    .map((folder) => ({
+      id: folder.id,
+      path: getFolderPathById(folder.id)
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path, 'zh-Hant')), [
+      activeDoc?.security_level,
+      currentFolderId,
+      folders,
+      getFolderPathById
+    ]);
   const currentFolderIsActive = currentFolderId === '' || currentFolder?.status === 1;
   const canLoadCurrentFolderDocuments = currentFolderId === '' || currentFolderIsActive;
   const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments && activeSystemPage === null);
@@ -957,6 +991,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                   const doc = openDocument(item);
                   if (doc) setIsEditDocumentOpen(true);
                 }}
+                onMoveDocument={!isSearchMode ? (item) => {
+                  const doc = openDocument(item);
+                  if (doc) setIsMoveDocumentOpen(true);
+                } : undefined}
                 onDeleteScheduledVersion={(item) => {
                   const doc = openDocument(item);
                   if (doc) setIsDeleteScheduledVersionOpen(true);
@@ -1181,6 +1219,33 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           );
           if (success && isSearchMode) await executeSearch(searchPage);
           return success;
+        }}
+      />
+
+      <MoveDocumentModal
+        isOpen={isMoveDocumentOpen}
+        onClose={() => setIsMoveDocumentOpen(false)}
+        targetName={activeDoc?.title || ''}
+        sourceFolderPath={activeDoc ? getFolderPathById(activeDoc.folder_id) : ''}
+        relatedDocumentCount={activeDoc?.related_document_count || 0}
+        destinations={moveDestinations}
+        onMove={async (destinationFolderId) => {
+          if (!activeDoc) return false;
+          const destination = moveDestinations.find(
+            (folder) => folder.id === destinationFolderId
+          );
+          if (!destination) return false;
+
+          const result = await documentsHook.handleMoveDocument(
+            activeDoc.id,
+            activeDoc.title,
+            destinationFolderId,
+            destination.path
+          );
+          if (!result) return false;
+
+          await fetchFolders(true);
+          return true;
         }}
       />
 

@@ -236,6 +236,31 @@ export const useDocuments = (
     }
   };
 
+  const handleMoveDocument = async (
+    docId: string,
+    documentName: string,
+    destinationFolderId: string,
+    destinationFolderName: string
+  ) => {
+    try {
+      const res = await DocumentsAPI.moveDocument(docId, destinationFolderId);
+      if (res.success) {
+        showToast(
+          `文件「${documentName}」共 ${res.data.moved_document_count} 份已移至「${destinationFolderName}」。`,
+          'success'
+        );
+        void fetchDocuments(true);
+        return res.data;
+      }
+      showToast(res.error, 'error');
+      return null;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToast('移動文件失敗：' + msg, 'error');
+      return null;
+    }
+  };
+
   // 廢止文件
   const handleObsoleteDocument = async (docId: string, docName: string, reason: string, file: File) => {
     try {
@@ -304,6 +329,7 @@ export const useDocuments = (
     handleCreateDocument,
     handleUploadVersion,
     handleEditDocument,
+    handleMoveDocument,
     handleCancelLatestVersion,
     handleDeleteScheduledVersion,
     handleObsoleteDocument,

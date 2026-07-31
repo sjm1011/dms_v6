@@ -1,4 +1,9 @@
-import { Document, ApiResponse, DocumentSecurityLevel } from '../types';
+import {
+  Document,
+  ApiResponse,
+  DocumentSecurityLevel,
+  MoveDocumentResult
+} from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 interface UploadFilePayload {
@@ -579,6 +584,22 @@ export const DocumentsAPI = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
       body: JSON.stringify(body)
+    });
+    return await handleResponse(response);
+  },
+
+  moveDocument: async (
+    docId: string,
+    destinationFolderId: string
+  ): Promise<ApiResponse<MoveDocumentResult>> => {
+    const response = await fetch(`${API_BASE}/documents`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({
+        action: 'move_document',
+        doc_id: docId,
+        destination_folder_id: destinationFolderId
+      })
     });
     return await handleResponse(response);
   },

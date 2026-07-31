@@ -153,6 +153,13 @@ export interface DocumentSearchResult {
   page_size: number;
 }
 
+export interface MoveDocumentResult {
+  document_id: string;
+  source_folder_id: string;
+  destination_folder_id: string;
+  moved_document_count: number;
+}
+
 export interface Department {
   dept_id: string;
   dept_name: string;

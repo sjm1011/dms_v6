@@ -589,6 +589,16 @@ DMS 不強制要求每次上傳新版時必須提供修訂前後對照表。未�
 
 任何具備文件查閱權限的使用者皆可檢視其可見文件版本之修訂對照表。若版本被撤回，該版本之修訂對照表仍需保留，並依版本可見性與歷史紀錄權限控管；無權檢視該版本者，不得透過修訂對照表取得已撤回版本內容。
 
+### 4.16. 跨資料夾移動文件
+
+* 「移動文件」只變更文件主檔的所屬資料夾 `dms_doc.df_fid`，不得建立新文件、拆分版本、變更文件識別碼、搬動實體檔案或修改 `dms_doc_ver`、`dms_file.dfi_path` 與既有點閱紀錄。
+* 移動單位為第一階主文件整組。主文件及其全部相關文件，包括已廢止的相關文件，必須在同一個 PostgreSQL 交易內移至相同目的資料夾；全部版本與檔案關聯維持不變。相關文件不得單獨移動，前端只在有效主文件的操作選單顯示「移動文件」，後端亦須拒絕直接以相關文件識別碼提出的請求。
+* 檔案庫根目錄內的文件不得移出，文件亦不得移入檔案庫根目錄。目的資料夾必須有效，且不得與來源資料夾相同。
+* 操作者必須同時具有來源及目的資料夾的有效文件管理權。一般與敏感文件沿用資料夾管理權；機密文件的來源及目的資料夾均須有操作者目前有效的資料夾管理員或協同管理員指派。移動不得改變文件機敏等級。
+* 移動後，文件清單、搜尋、調閱及下載權限必須立即依目的資料夾的 ACL 與管理指派重新計算，不得保留來源資料夾的可見權限快取。
+* 移動畫面使用共用 Modal，顯示來源完整路徑、主文件名稱、相關文件數量、可管理的有效目的資料夾及 ACL 變更警告。目的資料夾欄位為第一個可編輯欄位，按 `Enter` 觸發主要按鈕；送出期間不得重複操作。成功後停留在來源資料夾並重新整理文件清單與資料夾文件數量。
+* 移動成功時只寫入 1 筆 `DOCUMENT_MOVED` 稽核事件。主要異動與必要稽核必須位於同一交易，任一項失敗時全部回復。
+
 ---
 
 ## 5. 全域稽核紀錄規格
@@ -613,7 +623,7 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 * 存取事件：`DOCUMENT_PREVIEWED` (調閱文件)、`DOCUMENT_PREVIEW_DENIED` (調閱文件遭拒)、`DOCUMENT_DOWNLOADED` (下載文件)、`DOCUMENT_DOWNLOAD_DENIED` (文件下載遭拒)。
 * 資料夾事件：`FOLDER_CREATED` (建立資料夾)、`FOLDER_UPDATED` (修改資料夾)、`FOLDER_ARCHIVED` (封存資料夾)、`FOLDER_DELETED` (作廢資料夾)。
 * 權限事件：`FOLDER_MANAGER_UPDATED` (資料夾管理員異動)、`FOLDER_CO_MANAGER_UPDATED` (協同管理員異動)、`FOLDER_ACL_UPDATED` (資料夾存取控制清單異動)。
-* 文件事件：`DOCUMENT_CREATED` (建立文件)、`DOCUMENT_VERSION_CREATED` (上傳新版文件)、`DOCUMENT_UPDATED` (修改文件描述)、`DOCUMENT_VERSION_CANCELLED` (撤回新版文件)、`DOCUMENT_VERSION_DELETED` (刪除預約版本)、`DOCUMENT_DELETED` (刪除文件)、`DOCUMENT_OBSOLETED` (廢止文件)。
+* 文件事件：`DOCUMENT_CREATED` (建立文件)、`DOCUMENT_VERSION_CREATED` (上傳新版文件)、`DOCUMENT_UPDATED` (修改文件描述)、`DOCUMENT_VERSION_CANCELLED` (撤回新版文件)、`DOCUMENT_VERSION_DELETED` (刪除預約版本)、`DOCUMENT_MOVED` (移動文件)、`DOCUMENT_DELETED` (刪除文件)、`DOCUMENT_OBSOLETED` (廢止文件)。
 
 ### 5.3. 稽核資料欄位
 
@@ -671,6 +681,7 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 * 新增文件與上傳第一版時，需記錄文件主檔、第一筆版本、正式發佈檔案與生效時間。
 * 上傳新版或預約生效版本時，需記錄 `DOCUMENT_VERSION_CREATED` (上傳新版文件)、新版本資料，以及前一版本 `effective_until` (結束時間) 被設定為新版本 `effective_at` (生效時間) 的異動。
 * 修改文件或預約版本資料時，需記錄 `DOCUMENT_UPDATED` (修改文件描述)，並在 `metadata` (額外資料) 保存異動前後資料。
+* 跨資料夾移動主文件群組時，需記錄 1 筆 `DOCUMENT_MOVED` (移動文件)。`dl_before_data` 與 `dl_after_data` 分別保存來源、目的資料夾識別碼及事件當時完整路徑；`dl_metadata` 保存來源與目的資料夾、文件識別碼清單、相關文件數量、移動文件總數及 `audit_scope_folder_ids`。`audit_context.resource_location` 使用「來源完整路徑 → 目的完整路徑」。
 * 撤回版本並回復前版時，需記錄 `DOCUMENT_VERSION_CANCELLED` (撤回新版文件)，並保存撤回原因。
 * 刪除第一版文件時，需記錄 `DOCUMENT_DELETED` (刪除文件)，並保存操作者、所屬資料夾、文件主檔識別碼、第一版版本識別碼、刪除原因與請求來源資訊。
 * 手動廢止文件時，需記錄廢止原因、廢止公文、文件主檔狀態從 `Effective` (有效的) 改為 `Obsolete` (已廢止) 的異動。
@@ -796,7 +807,7 @@ DMS_NEXT_PORT=3000
 | `GET /api/employee?uid=...` | `app/api/employee/route.ts` | 透過 `employeeService.ts` 以 UID 精準檢索員工資料 |
 | `GET /api/departments` | `app/api/departments/route.ts` | 透過 `employeeService.ts` 查詢所有部門 |
 | `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | 透過 `documentService.ts` 查詢指定資料夾下之有效文件 |
-| `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件或相關文件、上傳新版本、修訂、廢止或刪除 |
+| `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件或相關文件、上傳新版本、修訂、移動、廢止或刪除 |
 | `GET /api/search?keyword=...&page=...&page_size=...` | `app/api/search/route.ts` | 透過 `searchService.ts` 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋 |
 | `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
 | `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
@@ -971,6 +982,7 @@ _github.bat "本次修改摘要"
 * 查詢來源固定為現行 `dms_log`，不合併早期保留的 `dms_audit_log`。
 * 系統管理員可查詢全部稽核紀錄。資料夾管理員及協同管理員只能查詢目前有效管理節點及其全部子資料夾的 `DOCUMENT`、`VERSION` 文件事件。
 * 管理範圍於每次列表、總筆數、篩選選項、明細及 CSV 匯出時，依目前有效的 `dms_folder_managers` 指派與事件 `df_fid` 重新判斷，不得依賴前端隱藏或 `dl_managed_df_fid` 快照。
+* `DOCUMENT_MOVED` 以 `dl_metadata.audit_scope_folder_ids` 同時保存來源及目的資料夾。資料夾管理員及協同管理員只要目前管理範圍涵蓋其中任一端，即可查詢同一筆移動事件；系統管理員仍只看到 1 筆，不得為來源與目的重複建立事件。
 * 新接任的資料夾管理員或協同管理員可查看接任前的歷史文件紀錄；管理權撤銷後立即失去該範圍的查詢與匯出權限。系統不保存每筆事件發生當時的管理者名單。
 * 同一使用者具有多個管理指派時，查詢範圍為各管理資料夾子樹的聯集，同一筆稽核紀錄不得重複顯示。
 * 不存在或格式錯誤的版本識別碼所產生的 `DOCUMENT_PREVIEW_DENIED` 沒有資料夾歸屬，只提供系統管理員查詢。

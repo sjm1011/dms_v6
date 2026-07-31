@@ -59,7 +59,12 @@ const buildAuditWhere = (user: SessionUser, filters: AuditFilters) => {
   if (!isAdmin(user)) {
     params.push(user.id.toUpperCase());
     conditions.push(`l.dl_resource_type IN ('DOCUMENT', 'VERSION')`);
-    conditions.push('l.df_fid IN (SELECT df_fid FROM managed_folders)');
+    conditions.push(`EXISTS (
+      SELECT 1
+        FROM managed_folders scoped_folder
+       WHERE l.df_fid = scoped_folder.df_fid
+          OR (l.dl_metadata -> 'audit_scope_folder_ids') ? scoped_folder.df_fid::text
+    )`);
   }
 
   const defaultFrom = new Date();
@@ -199,7 +204,12 @@ export const listAuditLogs = async (user: SessionUser, filters: AuditFilters, ex
        SELECT DISTINCT l.dl_action AS action
          FROM dms_log l
         ${isAdmin(user) ? '' : `WHERE l.dl_resource_type IN ('DOCUMENT', 'VERSION')
-          AND l.df_fid IN (SELECT df_fid FROM managed_folders)`}
+          AND EXISTS (
+                SELECT 1
+                  FROM managed_folders scoped_folder
+                 WHERE l.df_fid = scoped_folder.df_fid
+                    OR (l.dl_metadata -> 'audit_scope_folder_ids') ? scoped_folder.df_fid::text
+              )`}
         ORDER BY l.dl_action`,
       isAdmin(user) ? [] : [user.id.toUpperCase()]
     )).rows.map(row => row.action);

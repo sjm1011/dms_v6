@@ -19,6 +19,7 @@ const actionLabels: Record<string, string> = {
   DOCUMENT_UPDATED: '修改文件描述',
   DOCUMENT_VERSION_CANCELLED: '撤回新版文件',
   DOCUMENT_VERSION_DELETED: '刪除預約版本',
+  DOCUMENT_MOVED: '移動文件',
   DOCUMENT_OBSOLETED: '廢止文件',
   DOCUMENT_DELETED: '刪除文件',
   SYSTEM_ADMIN_ASSIGNED: '指定系統管理員',

@@ -990,6 +990,97 @@ interface DeleteDocModalProps {
   onDelete: () => Promise<boolean>;
 }
 
+interface MoveDocumentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  targetName: string;
+  sourceFolderPath: string;
+  relatedDocumentCount?: number;
+  destinations: Array<{ id: string; path: string }>;
+  onMove: (destinationFolderId: string) => Promise<boolean>;
+}
+
+export const MoveDocumentModal: React.FC<MoveDocumentModalProps> = ({
+  isOpen,
+  onClose,
+  targetName,
+  sourceFolderPath,
+  relatedDocumentCount = 0,
+  destinations,
+  onMove
+}) => {
+  const [destinationFolderId, setDestinationFolderId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const destinationRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDestinationFolderId('');
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const handleConfirm = async () => {
+    if (!destinationFolderId) {
+      showRequiredFieldMessage('請選擇目的資料夾。', destinationRef.current);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await onMove(destinationFolderId);
+      if (success) onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={isSubmitting ? () => undefined : onClose}
+      title="移動文件"
+      closeOnOverlayClick={!isSubmitting}
+      footer={
+        <>
+          <button className="btn btn-secondary" disabled={isSubmitting} onClick={onClose}>取消</button>
+          <button className="btn btn-primary" disabled={isSubmitting} onClick={handleConfirm}>
+            {isSubmitting ? '移動中...' : '確認移動'}
+          </button>
+        </>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p>文件：<strong>{targetName}</strong></p>
+        <p>來源：{sourceFolderPath}</p>
+        {relatedDocumentCount > 0 && (
+          <p>將連同 {relatedDocumentCount} 份相關文件整組移動。</p>
+        )}
+        <div className="input-group" style={{ marginBottom: 0 }}>
+          <label htmlFor="move-document-destination">目的資料夾</label>
+          <select
+            id="move-document-destination"
+            ref={destinationRef}
+            value={destinationFolderId}
+            disabled={isSubmitting}
+            onChange={(event) => setDestinationFolderId(event.target.value)}
+          >
+            <option value="">請選擇目的資料夾</option>
+            {destinations.map((destination) => (
+              <option key={destination.id} value={destination.id}>
+                {destination.path}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p style={{ color: 'var(--color-warning)' }}>
+          移動後，此文件將套用目的資料夾的權限設定。原本可查看文件的使用者可能會失去權限，也可能有其他使用者取得查看權限。
+        </p>
+      </div>
+    </Modal>
+  );
+};
+
 export const DeleteDocModal: React.FC<DeleteDocModalProps> = ({
   isOpen,
   onClose,

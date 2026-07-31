@@ -679,6 +679,16 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 備註。</p>
 <p>修訂對照表屬於 DMS 的版本紀錄，不取代正式發佈檔案內容。</p>
 <p>任何具備文件查閱權限的使用者皆可檢視其可見文件版本之修訂對照表。若版本被撤回，該版本之修訂對照表仍需保留，並依版本可見性與歷史紀錄權限控管；無權檢視該版本者，不得透過修訂對照表取得已撤回版本內容。</p>
+<h3>4.16. 跨資料夾移動文件</h3>
+<ul>
+  <li>「移動文件」只變更文件主檔的所屬資料夾 <code>dms_doc.df_fid</code>，不得建立新文件、拆分版本、變更文件識別碼、搬動實體檔案或修改 <code>dms_doc_ver</code>、<code>dms_file.dfi_path</code> 與既有點閱紀錄。</li>
+  <li>移動單位為第一階主文件整組。主文件及其全部相關文件，包括已廢止的相關文件，必須在同一個 PostgreSQL 交易內移至相同目的資料夾；全部版本與檔案關聯維持不變。相關文件不得單獨移動，前端只在有效主文件的操作選單顯示「移動文件」，後端亦須拒絕直接以相關文件識別碼提出的請求。</li>
+  <li>檔案庫根目錄內的文件不得移出，文件亦不得移入檔案庫根目錄。目的資料夾必須有效，且不得與來源資料夾相同。</li>
+  <li>操作者必須同時具有來源及目的資料夾的有效文件管理權。一般與敏感文件沿用資料夾管理權；機密文件的來源及目的資料夾均須有操作者目前有效的資料夾管理員或協同管理員指派。移動不得改變文件機敏等級。</li>
+  <li>移動後，文件清單、搜尋、調閱及下載權限必須立即依目的資料夾的 ACL 與管理指派重新計算，不得保留來源資料夾的可見權限快取。</li>
+  <li>移動畫面使用共用 Modal，顯示來源完整路徑、主文件名稱、相關文件數量、可管理的有效目的資料夾及 ACL 變更警告。目的資料夾欄位為第一個可編輯欄位，按 <code>Enter</code> 觸發主要按鈕；送出期間不得重複操作。成功後停留在來源資料夾並重新整理文件清單與資料夾文件數量。</li>
+  <li>移動成功時只寫入 1 筆 <code>DOCUMENT_MOVED</code> 稽核事件。主要異動與必要稽核必須位於同一交易，任一項失敗時全部回復。</li>
+</ul>
 <p>---</p>
 <h2>5. 全域稽核紀錄規格</h2>
 <p>DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登入、調閱、下載、資料夾屬性、資料夾管理員、ACL (存取控制清單)、調閱拒絕與 PDF 正式原檔下載拒絕等事件。</p>
@@ -701,7 +711,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
 <p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
 <ul>
-  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</li>
+  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_MOVED</code> (移動文件)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</li>
 </ul>
 <h3>5.3. 稽核資料欄位</h3>
 <p>全域稽核紀錄建議至少保存下列欄位：</p>
@@ -756,6 +766,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
   <li>新增文件與上傳第一版時，需記錄文件主檔、第一筆版本、正式發佈檔案與生效時間。</li>
   <li>上傳新版或預約生效版本時，需記錄 <code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、新版本資料，以及前一版本 <code>effective_until</code> (結束時間) 被設定為新版本 <code>effective_at</code> (生效時間) 的異動。</li>
   <li>修改文件或預約版本資料時，需記錄 <code>DOCUMENT_UPDATED</code> (修改文件描述)，並在 <code>metadata</code> (額外資料) 保存異動前後資料。</li>
+  <li>跨資料夾移動主文件群組時，需記錄 1 筆 <code>DOCUMENT_MOVED</code> (移動文件)。<code>dl_before_data</code> 與 <code>dl_after_data</code> 分別保存來源、目的資料夾識別碼及事件當時完整路徑；<code>dl_metadata</code> 保存來源與目的資料夾、文件識別碼清單、相關文件數量、移動文件總數及 <code>audit_scope_folder_ids</code>。<code>audit_context.resource_location</code> 使用「來源完整路徑 → 目的完整路徑」。</li>
   <li>撤回版本並回復前版時，需記錄 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)，並保存撤回原因。</li>
 </ul>
 <p>* 刪除第一版文件時，需記錄 <code>DOCUMENT_DELETED</code> (刪除文件)，並保存操作者、所屬資料夾、文件主檔識別碼、第一版版本識別碼、刪除原因與請求來源資訊。</p>
@@ -862,7 +873,7 @@ DMS_NEXT_PORT=3000</code></pre>
     <tr><td><code>GET /api/employee?uid=...</code></td><td><code>app/api/employee/route.ts</code></td><td>透過 <code>employeeService.ts</code> 以 UID 精準檢索員工資料</td></tr>
     <tr><td><code>GET /api/departments</code></td><td><code>app/api/departments/route.ts</code></td><td>透過 <code>employeeService.ts</code> 查詢所有部門</td></tr>
     <tr><td><code>GET /api/documents?folder_id=...</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 查詢指定資料夾下之有效文件</td></tr>
-    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件或相關文件、上傳新版本、修訂、廢止或刪除</td></tr>
+    <tr><td><code>POST /api/documents</code></td><td><code>app/api/documents/route.ts</code></td><td>透過 <code>documentService.ts</code> 建立新文件或相關文件、上傳新版本、修訂、移動、廢止或刪除</td></tr>
     <tr><td><code>GET /api/search?keyword=...&amp;page=...&amp;page_size=...</code></td><td><code>app/api/search/route.ts</code></td><td>透過 <code>searchService.ts</code> 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋</td></tr>
     <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 讀取實體檔案並傳送下載串流</td></tr>
     <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得預覽串流，PDF 檔案則動態加入浮水印</td></tr>
@@ -992,6 +1003,7 @@ DMS_NEXT_PORT=3000</code></pre>
   <li>查詢來源固定為現行 <code>dms_log</code>，不合併早期保留的 <code>dms_audit_log</code>。</li>
   <li>系統管理員可查詢全部稽核紀錄。資料夾管理員及協同管理員只能查詢目前有效管理節點及其全部子資料夾的 <code>DOCUMENT</code>、<code>VERSION</code> 文件事件。</li>
   <li>管理範圍於每次列表、總筆數、篩選選項、明細及 CSV 匯出時，依目前有效的 <code>dms_folder_managers</code> 指派與事件 <code>df_fid</code> 重新判斷，不得依賴前端隱藏或 <code>dl_managed_df_fid</code> 快照。</li>
+  <li><code>DOCUMENT_MOVED</code> 以 <code>dl_metadata.audit_scope_folder_ids</code> 同時保存來源及目的資料夾。資料夾管理員及協同管理員只要目前管理範圍涵蓋其中任一端，即可查詢同一筆移動事件；系統管理員仍只看到 1 筆，不得為來源與目的重複建立事件。</li>
   <li>新接任的資料夾管理員或協同管理員可查看接任前的歷史文件紀錄；管理權撤銷後立即失去該範圍的查詢與匯出權限。系統不保存每筆事件發生當時的管理者名單。</li>
   <li>同一使用者具有多個管理指派時，查詢範圍為各管理資料夾子樹的聯集，同一筆稽核紀錄不得重複顯示。</li>
   <li>不存在或格式錯誤的版本識別碼所產生的 <code>DOCUMENT_PREVIEW_DENIED</code> 沒有資料夾歸屬，只提供系統管理員查詢。</li>

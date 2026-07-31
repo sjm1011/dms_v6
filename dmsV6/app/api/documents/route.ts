@@ -8,6 +8,7 @@ import {
   deleteScheduledVersion,
   editDocument,
   listDocuments,
+  moveDocument,
   obsoleteDocument,
   uploadVersion
 } from '../../../lib/server/documentService';
@@ -66,6 +67,14 @@ export const POST = async (request: NextRequest) => {
         Number(body.version_id)
       );
       return ok(null);
+    }
+
+    if (body.action === 'move_document') {
+      return ok(await moveDocument(
+        session.user,
+        Number(body.doc_id),
+        Number(body.destination_folder_id)
+      ));
     }
 
     return fail('不支援的文件操作。', 400);

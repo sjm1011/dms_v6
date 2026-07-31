@@ -221,7 +221,7 @@
 <p>* <strong>表名稱</strong>：<code>dms_log</code></p>
 <p>* <strong>schema 檔名</strong>：<code>schema_dms_log.md</code>、<code>schema_dms_log.html</code></p>
 <ul>
-  <li><strong>用途</strong>：保存登入、文件調閱、調閱拒絕、文件下載、文件生命週期、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。</li>
+  <li><strong>用途</strong>：保存登入、文件調閱、調閱拒絕、文件下載、文件生命週期、文件移動、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。</li>
 </ul>
 <h3>欄位規劃</h3>
 <table>
@@ -390,6 +390,8 @@ COMMENT ON COLUMN dms_log.dl_metadata IS '額外資料';</code></pre>
 <ul>
   <li><code>dl_before_data</code>、<code>dl_after_data</code> 與 <code>dl_metadata</code> 必須保存合法 JSONB 資料；無額外資料時可使用 <code>{}</code>。</li>
   <li><code>dl_metadata.audit_context</code> 必須保存事件發生當下的 <code>resource_location</code>、<code>target_type</code>、<code>target_name</code> 與 <code>target_version</code>，避免後續更名造成歷史紀錄失真。</li>
+  <li><code>DOCUMENT_MOVED</code> 每次主文件群組移動只寫入 1 筆，並與 <code>dms_doc.df_fid</code> 異動置於同一交易。<code>dl_before_data</code> 與 <code>dl_after_data</code> 保存來源、目的資料夾識別碼及完整路徑；<code>dl_metadata</code> 保存 <code>source_folder_id</code>、<code>destination_folder_id</code>、<code>document_ids</code>、<code>related_document_count</code>、<code>moved_document_count</code> 與 <code>audit_scope_folder_ids</code>。</li>
+  <li><code>DOCUMENT_MOVED</code> 的 <code>dl_metadata.audit_context.resource_location</code> 必須使用「來源完整路徑 → 目的完整路徑」。資料夾管理者查詢時，<code>audit_scope_folder_ids</code> 的來源或目的任一端位於目前管理範圍即可顯示該事件，不得因此建立 2 筆稽核紀錄。</li>
   <li>所有由 HTTP API 觸發的事件應寫入 <code>dl_ip_address</code>、<code>dl_user_agent</code> 與 <code>dl_request_id</code>；登入失敗可保存嘗試登入的帳號，但不得保存密碼。</li>
   <li>一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。</li>
 </ul>

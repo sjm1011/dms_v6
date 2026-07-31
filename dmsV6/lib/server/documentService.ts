@@ -1,5 +1,10 @@
 import type { PoolClient } from 'pg';
-import type { Document, DocumentSecurityLevel, DocumentVersion } from '../../types';
+import type {
+  Document,
+  DocumentSecurityLevel,
+  DocumentVersion,
+  MoveDocumentResult
+} from '../../types';
 import type { SessionUser } from '../session';
 import {
   getWindowsFileNameValidationError,
@@ -113,6 +118,34 @@ const canManageDocumentBySecurity = async (
     return hasAssignedFolderManagerRole(user, folderId);
   }
   return folderId > 0 ? canManageFolder(user, folderId) : isAdmin(user);
+};
+
+const getFolderPath = async (client: PoolClient, folderId: number) => {
+  const result = await client.query<{ folder_path: string | null }>(
+    `WITH RECURSIVE ancestors AS (
+        SELECT f.df_fid,
+               f.df_pid,
+               f.df_name,
+               0 AS depth
+          FROM dms_folders f
+         WHERE f.df_fid = $1
+        UNION ALL
+        SELECT parent.df_fid,
+               parent.df_pid,
+               parent.df_name,
+               child.depth + 1 AS depth
+          FROM dms_folders parent
+          JOIN ancestors child ON child.df_pid = parent.df_fid
+      )
+      SELECT CASE
+               WHEN COUNT(*) = 0 THEN NULL
+               ELSE '檔案庫 / ' || STRING_AGG(df_name, ' / ' ORDER BY depth DESC)
+             END AS folder_path
+        FROM ancestors`,
+    [folderId]
+  );
+
+  return result.rows[0]?.folder_path || '';
 };
 
 const formatTaipeiDownloadDate = (value = new Date()) => {
@@ -1452,6 +1485,186 @@ export const deleteFirstVersionDocument = async (user: SessionUser, docId: numbe
         WHERE dd_id = ANY($1::int[])`,
       [targetIds]
     );
+  });
+};
+
+export const moveDocument = async (
+  user: SessionUser,
+  docId: number,
+  destinationFolderId: number
+): Promise<MoveDocumentResult> => {
+  if (!Number.isSafeInteger(docId) || docId <= 0) {
+    throw new Error('文件識別碼格式錯誤。');
+  }
+  if (!Number.isSafeInteger(destinationFolderId) || destinationFolderId <= 0) {
+    throw new Error('目的資料夾格式錯誤，且不得移至檔案庫根目錄。');
+  }
+
+  const documentResult = await query<{
+    df_fid: number;
+    dd_parent_id: number | null;
+    dd_status: number;
+    dd_title: string;
+    security_level: number;
+  }>(
+    `SELECT document.df_fid,
+            document.dd_parent_id,
+            document.dd_status,
+            document.dd_title,
+            COALESCE(parent.dd_security_level, document.dd_security_level) AS security_level
+       FROM dms_doc document
+       LEFT JOIN dms_doc parent ON parent.dd_id = document.dd_parent_id
+      WHERE document.dd_id = $1`,
+    [docId]
+  );
+  const documentRow = documentResult.rows[0];
+
+  if (!documentRow || documentRow.dd_status !== 1) {
+    throw new Error('文件不存在或已廢止。');
+  }
+  if (documentRow.dd_parent_id !== null) {
+    throw new Error('相關文件不可單獨移動，請由主文件執行移動。');
+  }
+  if (documentRow.df_fid <= 0) {
+    throw new Error('檔案庫根目錄內的文件不可移動。');
+  }
+  if (documentRow.df_fid === destinationFolderId) {
+    throw new Error('目的資料夾不可與目前資料夾相同。');
+  }
+
+  const destinationResult = await query<{ df_status: number }>(
+    `SELECT df_status
+       FROM dms_folders
+      WHERE df_fid = $1`,
+    [destinationFolderId]
+  );
+  if (!destinationResult.rows[0] || destinationResult.rows[0].df_status !== 1) {
+    throw new Error('目的資料夾不存在或已失效。');
+  }
+
+  const [canManageSource, canManageDestination] = await Promise.all([
+    canManageDocumentBySecurity(user, documentRow.df_fid, documentRow.security_level),
+    canManageDocumentBySecurity(user, destinationFolderId, documentRow.security_level)
+  ]);
+  if (!canManageSource) {
+    throw new Error('沒有來源資料夾的文件管理權限。');
+  }
+  if (!canManageDestination) {
+    throw new Error('沒有目的資料夾的文件管理權限。');
+  }
+
+  return withTransaction(async (client) => {
+    const folders = await client.query<{ df_fid: number; df_status: number }>(
+      `SELECT df_fid,
+              df_status
+         FROM dms_folders
+        WHERE df_fid = ANY($1::int[])
+        ORDER BY df_fid
+        FOR UPDATE`,
+      [[documentRow.df_fid, destinationFolderId]]
+    );
+    const folderStatus = new Map(
+      folders.rows.map((folder) => [folder.df_fid, folder.df_status])
+    );
+    if (folderStatus.get(documentRow.df_fid) !== 1) {
+      throw new Error('來源資料夾狀態已變更，請重新整理後再試。');
+    }
+    if (folderStatus.get(destinationFolderId) !== 1) {
+      throw new Error('目的資料夾狀態已變更，請重新整理後再試。');
+    }
+
+    const targets = await client.query<{
+      dd_id: number;
+      df_fid: number;
+      dd_parent_id: number | null;
+      dd_status: number;
+      dd_title: string;
+    }>(
+      `SELECT dd_id,
+              df_fid,
+              dd_parent_id,
+              dd_status,
+              dd_title
+         FROM dms_doc
+        WHERE dd_id = $1
+           OR dd_parent_id = $1
+        ORDER BY CASE WHEN dd_id = $1 THEN 0 ELSE 1 END,
+                 dd_id
+        FOR UPDATE`,
+      [docId]
+    );
+    const mainDocument = targets.rows[0];
+    if (
+      !mainDocument
+      || mainDocument.dd_id !== docId
+      || mainDocument.dd_parent_id !== null
+      || mainDocument.dd_status !== 1
+    ) {
+      throw new Error('文件狀態已變更，請重新整理後再試。');
+    }
+    if (targets.rows.some((target) => target.df_fid !== documentRow.df_fid)) {
+      throw new Error('文件群組的所在資料夾不一致，無法執行移動。');
+    }
+
+    const sourceFolderPath = await getFolderPath(client, documentRow.df_fid);
+    const destinationFolderPath = await getFolderPath(client, destinationFolderId);
+    if (!sourceFolderPath || !destinationFolderPath) {
+      throw new Error('無法取得來源或目的資料夾路徑。');
+    }
+
+    const documentIds = targets.rows.map((target) => target.dd_id);
+    await client.query(
+      `UPDATE dms_doc
+          SET df_fid = $2,
+              dd_updby = $3,
+              dd_updat = CURRENT_TIMESTAMP
+        WHERE dd_id = ANY($1::int[])`,
+      [documentIds, destinationFolderId, user.id]
+    );
+
+    await writeAudit({
+      user,
+      action: 'DOCUMENT_MOVED',
+      resourceType: 'DOCUMENT',
+      resourceId: docId,
+      folderId: destinationFolderId,
+      documentId: docId,
+      beforeData: {
+        folder_id: String(documentRow.df_fid),
+        folder_path: sourceFolderPath
+      },
+      afterData: {
+        folder_id: String(destinationFolderId),
+        folder_path: destinationFolderPath
+      },
+      metadata: {
+        source_folder_id: String(documentRow.df_fid),
+        destination_folder_id: String(destinationFolderId),
+        source_folder_path: sourceFolderPath,
+        destination_folder_path: destinationFolderPath,
+        audit_scope_folder_ids: [
+          String(documentRow.df_fid),
+          String(destinationFolderId)
+        ],
+        document_ids: documentIds.map(String),
+        related_document_count: Math.max(0, documentIds.length - 1),
+        moved_document_count: documentIds.length
+      },
+      auditContext: {
+        resource_location: `${sourceFolderPath} → ${destinationFolderPath}`,
+        target_type: 'DOCUMENT',
+        target_name: mainDocument.dd_title,
+        target_version: null
+      },
+      required: true
+    }, client);
+
+    return {
+      document_id: String(docId),
+      source_folder_id: String(documentRow.df_fid),
+      destination_folder_id: String(destinationFolderId),
+      moved_document_count: documentIds.length
+    };
   });
 };
 

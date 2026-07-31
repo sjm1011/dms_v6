@@ -29,6 +29,7 @@ export interface AuditPayload {
   beforeData?: Record<string, unknown> | null;
   afterData?: Record<string, unknown> | null;
   metadata?: Record<string, unknown>;
+  auditContext?: AuditContextSnapshot;
   required?: boolean;
 }
 
@@ -219,17 +220,19 @@ export const writeAudit = async (payload: AuditPayload, client?: PoolClient) => 
     || (nestedBeforeData && typeof nestedBeforeData === 'object' && !Array.isArray(nestedBeforeData) ? nestedBeforeData as Record<string, unknown> : {});
   const afterData = payload.afterData
     || (nestedAfterData && typeof nestedAfterData === 'object' && !Array.isArray(nestedAfterData) ? nestedAfterData as Record<string, unknown> : {});
-  let auditContext: AuditContextSnapshot;
-  try {
-    auditContext = await buildAuditContext({ ...payload, metadata, beforeData, afterData }, client);
-  } catch (error) {
-    if (payload.required) throw error;
-    auditContext = {
-      resource_location: '系統',
-      target_type: payload.resourceType,
-      target_name: textValue(payload.resourceId) || '系統資源',
-      target_version: textValue(metadata.version) || null
-    };
+  let auditContext = payload.auditContext;
+  if (!auditContext) {
+    try {
+      auditContext = await buildAuditContext({ ...payload, metadata, beforeData, afterData }, client);
+    } catch (error) {
+      if (payload.required) throw error;
+      auditContext = {
+        resource_location: '系統',
+        target_type: payload.resourceType,
+        target_name: textValue(payload.resourceId) || '系統資源',
+        target_version: textValue(metadata.version) || null
+      };
+    }
   }
   metadata.audit_context = auditContext;
 

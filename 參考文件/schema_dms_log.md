@@ -12,7 +12,7 @@
 
 * **表名稱**：`dms_log`
 * **schema 檔名**：`schema_dms_log.md`、`schema_dms_log.html`
-* **用途**：保存登入、文件調閱、調閱拒絕、文件下載、文件生命週期、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。
+* **用途**：保存登入、文件調閱、調閱拒絕、文件下載、文件生命週期、文件移動、資料夾異動、權限異動與 PDF 正式原檔下載拒絕等全域稽核紀錄。
 
 ### 欄位規劃
 
@@ -197,6 +197,8 @@ SELECT dl_id,
 * `dl_result` 必須使用 `SUCCESS`、`FAILED` 或 `DENIED`。
 * `dl_before_data`、`dl_after_data` 與 `dl_metadata` 必須保存合法 JSONB 資料；無額外資料時可使用 `{}`。
 * `dl_metadata.audit_context` 必須保存事件發生當下的 `resource_location`、`target_type`、`target_name` 與 `target_version`，避免後續更名造成歷史紀錄失真。
+* `DOCUMENT_MOVED` 每次主文件群組移動只寫入 1 筆，並與 `dms_doc.df_fid` 異動置於同一交易。`dl_before_data` 與 `dl_after_data` 保存來源、目的資料夾識別碼及完整路徑；`dl_metadata` 保存 `source_folder_id`、`destination_folder_id`、`document_ids`、`related_document_count`、`moved_document_count` 與 `audit_scope_folder_ids`。
+* `DOCUMENT_MOVED` 的 `dl_metadata.audit_context.resource_location` 必須使用「來源完整路徑 → 目的完整路徑」。資料夾管理者查詢時，`audit_scope_folder_ids` 的來源或目的任一端位於目前管理範圍即可顯示該事件，不得因此建立 2 筆稽核紀錄。
 * 所有由 HTTP API 觸發的事件應寫入 `dl_ip_address`、`dl_user_agent` 與 `dl_request_id`；登入失敗可保存嘗試登入的帳號，但不得保存密碼。
 * 一般 API 僅允許查詢稽核紀錄，不提供更新或刪除稽核紀錄的端點。
 * 系統管理介面新增 `SYSTEM_ADMIN_ASSIGNED`、`SYSTEM_ADMIN_REVOKED`、`AUDIT_LOG_EXPORTED`、`FOLDER_RESTORED` 與 `FOLDER_PURGED` 事件。
