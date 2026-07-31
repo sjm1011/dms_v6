@@ -636,6 +636,14 @@ export const DocumentsAPI = {
     await downloadBlob(`${API_BASE}/documents/download?version_id=${encodeURIComponent(versionId)}`, fileName, false);
   },
 
+  downloadSourceFile: async (versionId: string): Promise<void> => {
+    await downloadBlob(
+      `${API_BASE}/documents/download?version_id=${encodeURIComponent(versionId)}&file=source`,
+      '原始編修檔案',
+      false
+    );
+  },
+
   previewVersion: async (
     versionId: string,
     documentName?: string,

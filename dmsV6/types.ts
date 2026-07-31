@@ -45,6 +45,7 @@ export interface DocumentVersion {
   created_at?: string;
   cancel_reason?: string;
   has_source_file?: boolean;
+  source_file_name?: string;
   access_count: number;
 
   // 廢止相關後設資料
@@ -92,6 +93,7 @@ export interface Document {
   is_pdf?: boolean;
   can_preview?: boolean;
   has_source_file?: boolean;
+  source_file_name?: string;
 }
 
 export interface DMSItem {
@@ -130,6 +132,7 @@ export interface DMSItem {
   is_pdf?: boolean;
   can_preview?: boolean;
   has_source_file?: boolean;
+  source_file_name?: string;
   has_scheduled_version?: boolean;
   access_count: number;
 

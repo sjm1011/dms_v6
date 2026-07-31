@@ -526,6 +526,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             ? ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(currentExtension)
             : false,
           has_source_file: !!displayVersion.has_source_file,
+          source_file_name: displayVersion.source_file_name,
           has_scheduled_version: Boolean(scheduledVersion),
           access_count: displayVersion.access_count
         });
@@ -584,6 +585,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             ? ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)
             : false,
           has_source_file: Boolean(displayVersion.has_source_file),
+          source_file_name: displayVersion.source_file_name,
           has_scheduled_version: Boolean(scheduledVersion),
           access_count: displayVersion.access_count
         });
@@ -614,7 +616,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           can_preview: ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'].includes(
             selectedVersion.ext?.replace(/^\./, '').toLowerCase() || ''
           ),
-          has_source_file: Boolean(selectedVersion.has_source_file)
+          has_source_file: Boolean(selectedVersion.has_source_file),
+          source_file_name: selectedVersion.source_file_name
         }
       : doc;
     setActiveDoc(selectedDoc);
@@ -692,6 +695,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       }
     } catch (err: unknown) {
       showToast('下載文件失敗：' + (err instanceof Error ? err.message : String(err)), 'error');
+    }
+  };
+
+  const handleDownloadSourceFile = async (item: DMSItem) => {
+    if (!item.ver_id) return;
+    try {
+      await DocumentsAPI.downloadSourceFile(item.ver_id);
+    } catch (err: unknown) {
+      showToast('下載原始編修檔案失敗：' + (err instanceof Error ? err.message : String(err)), 'error');
     }
   };
 
@@ -977,6 +989,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
                 }}
                 onPreviewDocument={handlePreviewDocument}
                 onDownloadDocument={handleDownloadDocument}
+                onDownloadSourceFile={handleDownloadSourceFile}
                 onUploadVersion={(item) => {
                   const doc = openDocument(item);
                   if (doc) uploadVerFileInputRef.current?.click();

@@ -101,6 +101,7 @@ interface FileTableProps {
   onSetAcl?: (id: string, name: string) => void;
   onPreviewDocument?: (item: DMSItem) => void;
   onDownloadDocument?: (item: DMSItem) => void;
+  onDownloadSourceFile?: (item: DMSItem) => void;
   onUploadVersion?: (item: DMSItem) => void;
   onCreateRelatedDocument?: (item: DMSItem) => void;
   onEditDocument?: (item: DMSItem) => void;
@@ -125,6 +126,7 @@ export const FileTable = React.memo<FileTableProps>(({
   onSetAcl,
   onPreviewDocument,
   onDownloadDocument,
+  onDownloadSourceFile,
   onUploadVersion,
   onCreateRelatedDocument,
   onEditDocument,
@@ -355,6 +357,15 @@ export const FileTable = React.memo<FileTableProps>(({
           label: item.is_pdf ? '下載正式 PDF' : '下載正式檔案',
           icon: <CloudDownloadIcon size={18} />,
           onClick: () => onDownloadDocument?.(item)
+        });
+      }
+
+      if (item.can_manage && item.has_source_file) {
+        actions.push({
+          key: 'download-source-file',
+          label: '下載原始編修檔案',
+          icon: <CloudDownloadIcon size={18} />,
+          onClick: () => onDownloadSourceFile?.(item)
         });
       }
 

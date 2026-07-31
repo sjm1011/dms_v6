@@ -10,7 +10,10 @@ export const GET = async (request: NextRequest) => {
   try {
     const session = requireSession(request);
     const versionId = request.nextUrl.searchParams.get('version_id') || '';
-    const file = await getFileForAccess(session.user, versionId, 'download');
+    const filePurpose = request.nextUrl.searchParams.get('file') === 'source'
+      ? 'source'
+      : 'published';
+    const file = await getFileForAccess(session.user, versionId, 'download', filePurpose);
 
     return new NextResponse(Readable.toWeb(file.stream) as ReadableStream, {
       status: 200,

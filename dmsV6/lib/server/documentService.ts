@@ -47,6 +47,7 @@ interface VersionRow {
   created_at: string;
   status: string;
   has_source_file: boolean;
+  source_file_name: string | null;
 }
 
 interface DocumentRow extends VersionRow {
@@ -236,6 +237,7 @@ const toVersion = (
   created_at: row.created_at,
   cancel_reason: row.cancel_reason || undefined,
   has_source_file: row.has_source_file,
+  source_file_name: row.source_file_name || undefined,
   access_count: accessCounts.get(Number(row.ver_id)) || 0
 });
 
@@ -272,7 +274,8 @@ const toDocument = (
     can_manage: first.can_manage,
     is_pdf: current ? isPdfExt(current.ext || getFileExt(current.file_name || '')) : false,
     can_preview: current ? isPreviewableExt(current.ext || getFileExt(current.file_name || '')) : false,
-    has_source_file: current?.has_source_file || false
+    has_source_file: current?.has_source_file || false,
+    source_file_name: current?.source_file_name
   };
 };
 
@@ -341,6 +344,7 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
              v.ddv_eff_to::text AS effective_until,
              v.ddv_cancel_reason AS cancel_reason,
              (v.ddv_src_dfi_id IS NOT NULL) AS has_source_file,
+             CASE WHEN $2 = true THEN source_file.dfi_name ELSE NULL END AS source_file_name,
              v.ddv_crtby AS created_by,
              v.ddv_crtat::text AS created_at,
              CASE
@@ -353,6 +357,7 @@ export const listDocuments = async (user: SessionUser, folderId: number) => {
         JOIN visible_doc vd ON vd.dd_id = d.dd_id
         JOIN dms_doc_ver v ON v.dd_id = d.dd_id
         JOIN dms_file f ON f.dfi_id = v.ddv_pub_dfi_id
+        LEFT JOIN dms_file source_file ON source_file.dfi_id = v.ddv_src_dfi_id
         LEFT JOIN dms_doc parent ON parent.dd_id = d.dd_parent_id
         LEFT JOIN related_counts rc ON rc.dd_id = d.dd_id
        WHERE $2 = true
@@ -829,6 +834,7 @@ export const editDocument = async (
       effective_at: string;
       change_note: string;
       source_file_id: number | null;
+      source_file_name: string | null;
       published_ext: string;
       is_scheduled: boolean;
       parent_document_id: number | null;
@@ -844,11 +850,13 @@ export const editDocument = async (
               v.ddv_eff_at::text AS effective_at,
               v.ddv_chg_note AS change_note,
               v.ddv_src_dfi_id AS source_file_id,
+              source_file.dfi_name AS source_file_name,
               f.dfi_ext AS published_ext,
               (v.ddv_eff_at > CURRENT_TIMESTAMP) AS is_scheduled
          FROM dms_doc d
          JOIN dms_doc_ver v ON v.dd_id = d.dd_id
          JOIN dms_file f ON f.dfi_id = v.ddv_pub_dfi_id
+         LEFT JOIN dms_file source_file ON source_file.dfi_id = v.ddv_src_dfi_id
         WHERE d.dd_id = $1
           AND v.ddv_id = $2
           AND v.ddv_cancel_at IS NULL
@@ -886,12 +894,8 @@ export const editDocument = async (
       throw new Error('相關文件的機敏等級由主文件繼承，不得獨立設定。');
     }
 
-    if (payload.source_file && currentRow.source_file_id) {
-      throw new Error('PDF 原始編修檔案已存在，不允許覆蓋。');
-    }
-
     if (payload.source_file && !isPdfExt(currentRow.published_ext)) {
-      throw new Error('只有 PDF 正式發佈檔案可以新增原始編修檔案。');
+      throw new Error('只有 PDF 正式發佈檔案可以新增或替換原始編修檔案。');
     }
 
     const source = payload.source_file
@@ -901,6 +905,15 @@ export const editDocument = async (
     const updatedSecurityLevel = requestedSecurityLevel ?? normalizeSecurityLevel(
       currentRow.security_level
     );
+
+    if (source && currentRow.source_file_id) {
+      await client.query(
+        `UPDATE dms_file
+            SET dfi_status = 0
+          WHERE dfi_id = $1`,
+        [currentRow.source_file_id]
+      );
+    }
 
     if (!currentRow.is_scheduled) {
       await client.query(
@@ -929,7 +942,7 @@ export const editDocument = async (
               ddv_rev_date = $3,
               ddv_eff_at = $4,
               ddv_chg_note = $5,
-              ddv_src_dfi_id = COALESCE(ddv_src_dfi_id, $6),
+              ddv_src_dfi_id = COALESCE($6, ddv_src_dfi_id),
               ddv_updby = $7,
               ddv_updat = CURRENT_TIMESTAMP
         WHERE ddv_id = $1`,
@@ -972,7 +985,8 @@ export const editDocument = async (
             revision_date: currentRow.revision_date,
             effective_at: currentRow.effective_at,
             change_note: currentRow.change_note,
-            has_source_file: Boolean(currentRow.source_file_id)
+            has_source_file: Boolean(currentRow.source_file_id),
+            source_file_name: currentRow.source_file_name
           },
           after_data: {
             code: updatedCode,
@@ -982,7 +996,9 @@ export const editDocument = async (
             revision_date: payload.revision_date,
             effective_at: payload.effective_at,
             change_note: changeNote,
-            has_source_file: Boolean(currentRow.source_file_id || source?.id)
+            has_source_file: Boolean(currentRow.source_file_id || source?.id),
+            source_file_name: source?.storedFile.name || currentRow.source_file_name,
+            source_file_replaced: Boolean(source && currentRow.source_file_id)
           }
         }
       },
@@ -1671,7 +1687,8 @@ export const moveDocument = async (
 export const getFileForAccess = async (
   user: SessionUser,
   requestedVersionId: number | string,
-  mode: 'preview' | 'download'
+  mode: 'preview' | 'download',
+  filePurpose: 'published' | 'source' = 'published'
 ) => {
   const versionId = Number(requestedVersionId);
 
@@ -1687,7 +1704,7 @@ export const getFileForAccess = async (
         metadata: { attempted_version_id: String(requestedVersionId) }
       });
     }
-    throw new Error('找不到文件版本。');
+    throw new Error(filePurpose === 'source' ? '找不到原始編修檔案。' : '找不到文件版本。');
   }
 
   const result = await query<FileRow>(
@@ -1709,9 +1726,14 @@ export const getFileForAccess = async (
        FROM dms_doc_ver v
        JOIN dms_doc d ON d.dd_id = v.dd_id
        LEFT JOIN dms_doc parent ON parent.dd_id = d.dd_parent_id
-       JOIN dms_file f ON f.dfi_id = v.ddv_pub_dfi_id
-      WHERE v.ddv_id = $1`,
-    [versionId]
+       JOIN dms_file f
+         ON f.dfi_id = CASE
+              WHEN $2 = 'source' THEN v.ddv_src_dfi_id
+              ELSE v.ddv_pub_dfi_id
+            END
+      WHERE v.ddv_id = $1
+        AND f.dfi_status = 1`,
+    [versionId, filePurpose]
   );
   const row = result.rows[0];
 
@@ -1728,7 +1750,7 @@ export const getFileForAccess = async (
         metadata: { attempted_version_id: String(requestedVersionId) }
       });
     }
-    throw new Error('找不到文件版本。');
+    throw new Error(filePurpose === 'source' ? '找不到原始編修檔案。' : '找不到文件版本。');
   }
 
   const hasAssignedManagerRole = await hasAssignedFolderManagerRole(user, row.df_fid);
@@ -1766,6 +1788,11 @@ export const getFileForAccess = async (
   if (row.security_level === 3 && !hasAssignedManagerRole) {
     await writeAccessDenied('機密文件僅限資料夾管理員或協同管理員存取。');
     throw new Error('沒有此文件的存取權限。');
+  }
+
+  if (filePurpose === 'source' && !canManage) {
+    await writeAccessDenied('原始編修檔案僅限具文件管理權限者下載。');
+    throw new Error('沒有此文件的管理權限。');
   }
 
   if (!canManage) {
@@ -1839,7 +1866,7 @@ export const getFileForAccess = async (
       file_name: row.dfi_name,
       mime: row.dfi_mime,
       ext: row.dfi_ext,
-      file_purpose: 'PUBLISHED_FILE'
+      file_purpose: filePurpose === 'source' ? 'SOURCE_FILE' : 'PUBLISHED_FILE'
     }
   });
 

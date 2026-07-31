@@ -41,6 +41,7 @@ interface SearchRow {
   created_at: string;
   status: DocumentVersion['status'];
   has_source_file: boolean;
+  source_file_name: string | null;
 }
 
 const toVersion = (
@@ -62,6 +63,7 @@ const toVersion = (
   created_by: row.created_by,
   created_at: row.created_at,
   has_source_file: row.has_source_file,
+  source_file_name: row.source_file_name || undefined,
   access_count: accessCounts.get(Number(row.ver_id)) || 0
 });
 
@@ -101,7 +103,8 @@ const toDocument = (
     can_manage: first.can_manage,
     is_pdf: current ? isPdfExt(current.ext || getFileExt(current.file_name || '')) : false,
     can_preview: current ? isPreviewableExt(current.ext || getFileExt(current.file_name || '')) : false,
-    has_source_file: current?.has_source_file || false
+    has_source_file: current?.has_source_file || false,
+    source_file_name: current?.source_file_name
   };
 };
 
@@ -295,6 +298,7 @@ export const searchDocuments = async (
                v.ddv_crtby,
                v.ddv_crtat,
                v.ddv_src_dfi_id,
+               source_file.dfi_name AS source_file_name,
                file.dfi_name,
                file.dfi_size,
                file.dfi_mime,
@@ -306,6 +310,7 @@ export const searchDocuments = async (
           FROM document_access da
           JOIN dms_doc_ver v ON v.dd_id = da.dd_id
           JOIN dms_file file ON file.dfi_id = v.ddv_pub_dfi_id
+          LEFT JOIN dms_file source_file ON source_file.dfi_id = v.ddv_src_dfi_id
          WHERE v.ddv_cancel_at IS NULL
            AND (
                 (
@@ -380,7 +385,8 @@ export const searchDocuments = async (
              sv.ddv_crtby AS created_by,
              sv.ddv_crtat::text AS created_at,
              sv.version_status AS status,
-             (sv.ddv_src_dfi_id IS NOT NULL) AS has_source_file
+             (sv.ddv_src_dfi_id IS NOT NULL) AS has_source_file,
+             CASE WHEN pd.can_manage = true THEN sv.source_file_name ELSE NULL END AS source_file_name
         FROM paged_documents pd
         JOIN searchable_versions sv ON sv.dd_id = pd.dd_id
        ORDER BY pd.match_rank,

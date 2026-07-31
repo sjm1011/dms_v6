@@ -747,16 +747,14 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
         {!isScheduledVersion && targetDoc?.is_pdf && (
           <div className="input-group" style={{ marginBottom: 0 }}>
             <label>PDF 原始編修檔案</label>
-            {targetDoc.has_source_file ? (
-              <div className="btn btn-secondary btn-block" style={{ cursor: 'default' }}>原始編修檔案已存在，不可更換</div>
-            ) : (
-              <>
-                <button type="button" className="btn btn-secondary btn-block" onClick={() => sourceFileInputRef.current?.click()}>
-                  {sourceFile ? sourceFile.name : '選擇原始檔案'}
-                </button>
-                <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
-              </>
-            )}
+            <button type="button" className="btn btn-secondary btn-block" onClick={() => sourceFileInputRef.current?.click()}>
+              {sourceFile
+                ? sourceFile.name
+                : targetDoc.has_source_file
+                  ? targetDoc.source_file_name || '選擇替換檔案'
+                  : '選擇原始檔案'}
+            </button>
+            <input ref={sourceFileInputRef} type="file" accept={ACCEPTED_DOCUMENT_FILE_TYPES} style={{ display: 'none' }} onChange={(e) => setSourceFile(e.target.files?.[0] || null)} />
           </div>
         )}
       </div>
