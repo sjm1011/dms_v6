@@ -319,7 +319,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
       return;
     }
     if (!effAt) {
-      showRequiredFieldMessage('請輸入生效日期。', effAtInputRef.current);
+      showRequiredFieldMessage('請輸入發行日期。', effAtInputRef.current);
       return;
     }
     if (!changeNote.trim()) {
@@ -455,7 +455,7 @@ export const NewDocModal: React.FC<NewDocModalProps> = ({
             <input ref={revisionDateInputRef} type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} />
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label>生效日期</label>
+            <label>發行日期</label>
             <input ref={effAtInputRef} type="date" value={effAt} min={getTodayString()} onChange={(e) => setEffAt(e.target.value)} />
           </div>
         </div>
@@ -590,7 +590,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
     }
     if (!effAt) {
       showRequiredFieldMessage(
-        isScheduledVersion ? '請輸入發行日期。' : '請輸入生效日期。',
+        '請輸入發行日期。',
         effAtInputRef.current
       );
       return;
@@ -729,7 +729,7 @@ export const EditDocumentModal: React.FC<EditDocumentModalProps> = ({
             <input ref={revisionDateInputRef} type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} />
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label>{isScheduledVersion ? '發行日期' : '生效日期'}</label>
+            <label>發行日期</label>
             <input ref={effAtInputRef} type="date" value={effAt} onChange={(e) => setEffAt(e.target.value)} />
           </div>
         </div>
@@ -806,7 +806,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
       return;
     }
     if (!effAt) {
-      showRequiredFieldMessage('請輸入生效日期。', effAtInputRef.current);
+      showRequiredFieldMessage('請輸入發行日期。', effAtInputRef.current);
       return;
     }
     if (!changeNote.trim()) {
@@ -875,7 +875,7 @@ export const UploadVerModal: React.FC<UploadVerModalProps> = ({ isOpen, onClose,
             <input ref={revisionDateInputRef} type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} />
           </div>
           <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label>生效日期</label>
+            <label>發行日期</label>
             <input ref={effAtInputRef} type="date" value={effAt} min={getTodayString()} onChange={(e) => setEffAt(e.target.value)} />
           </div>
         </div>
@@ -1264,7 +1264,7 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({ isOpen, onClose, his
                 <th>狀態</th>
                 <th>修訂日期</th>
                 <th className="access-count-column">點閱次數</th>
-                <th>生效日期</th>
+                <th>發行日期</th>
                 <th>結束日期</th>
                 <th>異動說明</th>
               </tr>

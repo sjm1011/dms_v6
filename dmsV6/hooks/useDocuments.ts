@@ -164,7 +164,7 @@ export const useDocuments = (
         sourceFile
       );
       if (res.success) {
-        showToast(`新版本 ${version || ''} 已建立，系統會依生效日期切換版本。`, 'success');
+        showToast(`新版本 ${version || ''} 已建立，系統會依發行日期切換版本。`, 'success');
         void fetchDocuments(true);
         return true;
       } else {

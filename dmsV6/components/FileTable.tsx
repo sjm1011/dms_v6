@@ -117,6 +117,13 @@ interface FileTableProps {
   emptyDescription?: string;
 }
 
+type VersionPairConnectorPlacement = {
+  key: string;
+  left: number;
+  top: number;
+  height: number;
+};
+
 export const FileTable = React.memo<FileTableProps>(({
   items,
   onEnterFolder,
@@ -145,6 +152,9 @@ export const FileTable = React.memo<FileTableProps>(({
   const [actionMenuPlacement, setActionMenuPlacement] = React.useState<React.CSSProperties | null>(null);
   const actionMenuRef = React.useRef<HTMLDivElement | null>(null);
   const actionMenuSourceRef = React.useRef<HTMLTableRowElement | null>(null);
+  const tableWrapperRef = React.useRef<HTMLDivElement | null>(null);
+  const versionTitleRefs = React.useRef<Map<string, HTMLSpanElement>>(new Map());
+  const [versionPairConnectors, setVersionPairConnectors] = React.useState<VersionPairConnectorPlacement[]>([]);
 
   const closeActionMenu = React.useCallback((restoreFocus = false) => {
     setOpenActionId(null);
@@ -238,7 +248,7 @@ export const FileTable = React.memo<FileTableProps>(({
         ? (
             <span
               className="badge-access scheduled"
-              data-tooltip={`生效日期：${item.effective_at?.split(' ')[0] || '-'}`}
+              data-tooltip={`發行日期：${item.effective_at?.split(' ')[0] || '-'}`}
             >
               即將生效
             </span>
@@ -508,6 +518,69 @@ export const FileTable = React.memo<FileTableProps>(({
 
   const getActionId = (item: DMSItem) => `${item.type}-${item.id}-${item.ver_id || ''}`;
 
+  React.useLayoutEffect(() => {
+    const wrapper = tableWrapperRef.current;
+    if (!wrapper) {
+      setVersionPairConnectors([]);
+      return;
+    }
+
+    const measureVersionPairConnectors = () => {
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const placements: VersionPairConnectorPlacement[] = [];
+
+      items.forEach((item, index) => {
+        const targetItem = items[index + 1];
+        const isVersionPair = item.type === 'document'
+          && item.status === 'Effective'
+          && targetItem?.type === 'document'
+          && targetItem.status === 'Scheduled'
+          && String(targetItem.id) === String(item.id);
+
+        if (!isVersionPair) {
+          return;
+        }
+
+        const sourceTitle = versionTitleRefs.current.get(getActionId(item));
+        const targetTitle = versionTitleRefs.current.get(getActionId(targetItem));
+        if (!sourceTitle || !targetTitle) {
+          return;
+        }
+
+        const sourceRect = sourceTitle.getBoundingClientRect();
+        const targetRect = targetTitle.getBoundingClientRect();
+        const top = sourceRect.top + sourceRect.height / 2 - wrapperRect.top;
+        const bottom = targetRect.top + targetRect.height / 2 - wrapperRect.top;
+
+        if (bottom <= top) {
+          return;
+        }
+
+        placements.push({
+          key: `${getActionId(item)}-${getActionId(targetItem)}`,
+          left: Math.max(sourceRect.right, targetRect.right) - wrapperRect.left + 8,
+          top,
+          height: bottom - top
+        });
+      });
+
+      setVersionPairConnectors(placements);
+    };
+
+    const frameId = window.requestAnimationFrame(measureVersionPairConnectors);
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(measureVersionPairConnectors);
+    resizeObserver?.observe(wrapper);
+    window.addEventListener('resize', measureVersionPairConnectors);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', measureVersionPairConnectors);
+    };
+  }, [items]);
+
   const openActionMenu = (
     item: DMSItem,
     sourceRow: HTMLTableRowElement,
@@ -647,17 +720,18 @@ export const FileTable = React.memo<FileTableProps>(({
 
   return (
     <>
-      <table id="files-table">
-        <thead>
-          <tr>
-            <th style={{ width: '62%' }}>名稱</th>
-            <th className="property-version-column" style={{ width: '16%' }}>屬性 / 版本</th>
-            <th style={{ width: '12%' }}>修訂日期</th>
-            <th className="access-count-column" style={{ width: '10%' }}>點閱次數</th>
-          </tr>
-        </thead>
-        <tbody id="files-list">
-          {items.map((item, index) => {
+      <div className="file-table-wrapper" ref={tableWrapperRef}>
+        <table id="files-table">
+          <thead>
+            <tr>
+              <th style={{ width: '62%' }}>名稱</th>
+              <th className="property-version-column" style={{ width: '16%' }}>屬性 / 版本</th>
+              <th style={{ width: '12%' }}>發行日期</th>
+              <th className="access-count-column" style={{ width: '10%' }}>點閱次數</th>
+            </tr>
+          </thead>
+          <tbody id="files-list">
+            {items.map((item, index) => {
             const previousItem = items[index - 1];
             const nextItem = items[index + 1];
             const isRelatedDocument = Boolean(item.parent_document_id);
@@ -670,6 +744,16 @@ export const FileTable = React.memo<FileTableProps>(({
               && !isRelatedDocument
               && Boolean(nextItem?.parent_document_id)
               && String(nextItem?.parent_document_id) === String(item.id);
+            const isVersionPairSource = item.type === 'document'
+              && item.status === 'Effective'
+              && nextItem?.type === 'document'
+              && nextItem.status === 'Scheduled'
+              && String(nextItem.id) === String(item.id);
+            const isVersionPairTarget = item.type === 'document'
+              && item.status === 'Scheduled'
+              && previousItem?.type === 'document'
+              && previousItem.status === 'Effective'
+              && String(previousItem.id) === String(item.id);
             const rowClassNames = ['table-row'];
             const hasActions = getActionItems(item).length > 0;
             const isActionMenuOpen = openActionId === getActionId(item);
@@ -688,6 +772,12 @@ export const FileTable = React.memo<FileTableProps>(({
             }
             if (isRelatedDocumentParentRow) {
               rowClassNames.push('related-document-parent-row');
+            }
+            if (isVersionPairSource) {
+              rowClassNames.push('version-pair-source');
+            }
+            if (isVersionPairTarget) {
+              rowClassNames.push('version-pair-target');
             }
             if (isActionMenuOpen) {
               rowClassNames.push('context-menu-active');
@@ -776,7 +866,19 @@ export const FileTable = React.memo<FileTableProps>(({
                         {item.type === 'document' && item.code && (
                           <span className="document-code">{item.code}</span>
                         )}
-                        <span className="document-title">{item.name}</span>
+                        <span
+                          className="document-title"
+                          ref={(node) => {
+                            const key = getActionId(item);
+                            if (node) {
+                              versionTitleRefs.current.set(key, node);
+                            } else {
+                              versionTitleRefs.current.delete(key);
+                            }
+                          }}
+                        >
+                          {item.name}
+                        </span>
                       </span>
                     </span>
                     {renderManagerRoleIcon(item)}
@@ -785,15 +887,38 @@ export const FileTable = React.memo<FileTableProps>(({
                 <td className="property-version-column">
                   {renderAccessBadge(item)}
                 </td>
-                <td>{item.type === 'document' ? (item.revision_date || '-') : ''}</td>
+                <td>{item.type === 'document' ? (item.effective_at?.split(' ')[0] || '-') : ''}</td>
                 <td className="access-count-column">
                   {item.type === 'document' ? item.access_count.toLocaleString('zh-TW') : ''}
                 </td>
               </tr>
             );
-          })}
-        </tbody>
-      </table>
+            })}
+          </tbody>
+        </table>
+        <div className="version-pair-overlay" aria-hidden="true">
+          {versionPairConnectors.map(connector => (
+            <svg
+              key={connector.key}
+              className="version-pair-overlay-connector"
+              style={{
+                left: connector.left,
+                top: connector.top,
+                height: connector.height
+              }}
+              viewBox="0 0 32 100"
+              preserveAspectRatio="none"
+              focusable="false"
+            >
+              <path
+                vectorEffect="non-scaling-stroke"
+                d="M0 0h12c10 0 18 22.4 18 50s-8 50-18 50H8"
+              />
+              <polygon points="13,90 0,100 13,110" />
+            </svg>
+          ))}
+        </div>
+      </div>
       {renderActionMenu()}
     </>
   );

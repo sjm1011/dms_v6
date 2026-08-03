@@ -777,7 +777,7 @@ export const editDocument = async (
 
   validateDocumentFileNamePart(payload.version);
   if (!payload.revision_date) throw new Error('修訂日期不可空白。');
-  if (!payload.effective_at) throw new Error('生效日期不可空白。');
+  if (!payload.effective_at) throw new Error('發行日期不可空白。');
   if (!changeNote) throw new Error('異動說明不可空白。');
 
   const doc = await query<{

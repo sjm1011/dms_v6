@@ -487,7 +487,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         : undefined;
       const effectiveVersion = doc.versions?.find(v => v.status === 'Effective');
       const displayVersions = scheduledVersion
-        ? [scheduledVersion, effectiveVersion].filter(
+        ? [effectiveVersion, scheduledVersion].filter(
             (version): version is DocumentVersion => Boolean(version)
           )
         : [effectiveVersion || doc.versions?.[0]].filter(
@@ -544,7 +544,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         : undefined;
       const effectiveVersion = doc.versions.find(version => version.status === 'Effective');
       const displayVersions = scheduledVersion
-        ? [scheduledVersion, effectiveVersion].filter(
+        ? [effectiveVersion, scheduledVersion].filter(
             (version): version is DocumentVersion => Boolean(version)
           )
         : [effectiveVersion || doc.versions[0]].filter(

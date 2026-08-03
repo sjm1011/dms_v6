@@ -1341,6 +1341,12 @@ table {
   --related-document-line-color: color-mix(in srgb, var(--accent-cyan) 62%, var(--bg-primary));
 }
 
+.file-table-wrapper {
+  --version-pair-line-color: color-mix(in srgb, var(--color-warning) 72%, var(--text-primary));
+  position: relative;
+  min-width: 720px;
+}
+
 #files-table .property-version-column {
   white-space: nowrap;
 }
@@ -1556,6 +1562,47 @@ tr.table-row.context-menu-active {
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.version-pair-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.version-pair-overlay-connector {
+  position: absolute;
+  width: 32px;
+  overflow: visible;
+  color: var(--version-pair-line-color);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.version-pair-overlay-connector polygon {
+  fill: currentColor;
+  stroke: none;
+}
+
+#files-table tbody tr.version-pair-source > td {
+  padding-bottom: 4px;
+  border-bottom-color: transparent;
+}
+
+#files-table tbody tr.version-pair-target > td {
+  padding-top: 4px;
+}
+
+#files-table tbody tr.grouped-related-document-row.version-pair-source > td {
+  padding-bottom: 2px;
+}
+
+#files-table tbody tr.grouped-related-document-row.version-pair-target > td {
+  padding-top: 2px;
 }
 
 .folder-path-link {
