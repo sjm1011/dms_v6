@@ -190,6 +190,103 @@ export type DocumentSecurityLevel = 1 | 2 | 3;
 
 export type SystemPage = 'audit' | 'settings' | 'permissions' | 'status' | 'recycle';
 
+export type MainView = 'dashboard' | 'library' | 'system';
+
+export type DashboardSection = 'announcements' | 'recent_documents' | 'manager_summary' | 'admin_alerts';
+
+export interface DashboardSectionError {
+  section: DashboardSection;
+  message: string;
+}
+
+export interface DashboardAnnouncement {
+  announcement_id: string;
+  title: string;
+  body: string;
+  priority: 1 | 2 | 3;
+  revision: number;
+  published_at: string;
+  expires_at: string | null;
+  is_read: boolean;
+}
+
+export interface DashboardDocumentItem {
+  document_id: string;
+  version_id: string;
+  code: string | null;
+  title: string;
+  version: string;
+  version_sequence: number;
+  revision_date: string;
+  effective_at: string;
+  folder_id: string;
+  folder_path: string;
+  ext: string;
+  can_preview: boolean;
+}
+
+export interface DashboardManagerSummary {
+  total: number;
+  items: DashboardDocumentItem[];
+}
+
+export interface DashboardAdminAlert {
+  id: string;
+  level: 'warning' | 'critical';
+  title: string;
+  message: string;
+  target: 'status' | 'recycle';
+}
+
+export interface DashboardData {
+  generated_at: string;
+  announcement_summary: {
+    total: number;
+    unread: number;
+    urgent_unread: number;
+  };
+  announcements: DashboardAnnouncement[];
+  recent_documents: {
+    total: number;
+    items: DashboardDocumentItem[];
+  };
+  manager_summary: DashboardManagerSummary | null;
+  admin_alerts: DashboardAdminAlert[];
+  section_errors: DashboardSectionError[];
+}
+
+export type AnnouncementDisplayStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
+
+export interface AnnouncementManagementItem {
+  announcement_id: string;
+  title: string;
+  body: string;
+  priority: 1 | 2 | 3;
+  status: 0 | 1 | 2;
+  display_status: AnnouncementDisplayStatus;
+  revision: number;
+  audience_all: boolean;
+  audience_admin: boolean;
+  audience_manager: boolean;
+  published_at: string | null;
+  expires_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string | null;
+}
+
+export interface AnnouncementInput {
+  title: string;
+  body: string;
+  priority: 1 | 2 | 3;
+  audience_all: boolean;
+  audience_admin: boolean;
+  audience_manager: boolean;
+  published_at: string | null;
+  expires_at: string | null;
+}
+
 export interface AuditLogItem {
   id: string;
   event_at: string;

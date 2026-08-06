@@ -1,4 +1,4 @@
-import type { ApiResponse, AuditLogItem, PermissionOverviewItem, PurgeJobItem, RecycleBatchItem, SystemAdminItem, SystemStatusData } from '../types';
+import type { AnnouncementInput, AnnouncementManagementItem, ApiResponse, AuditLogItem, PermissionOverviewItem, PurgeJobItem, RecycleBatchItem, SystemAdminItem, SystemStatusData } from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 export interface AuditQuery {
@@ -56,6 +56,41 @@ export const SystemAPI = {
   },
   recycleAction: async (payload: Record<string, unknown>): Promise<ApiResponse<null | { job_id: string }>> => {
     const response = await apiFetch(`${API_BASE}/system/recycle`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeader() }, body: JSON.stringify(payload) }, 60_000);
+    return await handleResponse(response);
+  },
+  getAnnouncements: async (status = '', page = 1, pageSize = 20): Promise<ApiResponse<{ rows: AnnouncementManagementItem[]; total: number; page: number; page_size: number }>> => {
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+    if (status) params.set('status', status);
+    const response = await apiFetch(`${API_BASE}/system/announcements?${params.toString()}`, { cache: 'no-store', headers: getAuthHeader() });
+    return await handleResponse(response);
+  },
+  createAnnouncementDraft: async (input: AnnouncementInput): Promise<ApiResponse<{ announcement_id: string; revision: number }>> => {
+    const response = await apiFetch(`${API_BASE}/system/announcements`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(input)
+    });
+    return await handleResponse(response);
+  },
+  updateAnnouncement: async (
+    announcementId: string,
+    revision: number,
+    action: 'update' | 'publish',
+    input: AnnouncementInput
+  ): Promise<ApiResponse<{ announcement_id: string; revision: number }>> => {
+    const response = await apiFetch(`${API_BASE}/system/announcements`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ ...input, announcement_id: Number(announcementId), revision, action })
+    });
+    return await handleResponse(response);
+  },
+  archiveAnnouncement: async (announcementId: string, revision: number): Promise<ApiResponse<null>> => {
+    const response = await apiFetch(`${API_BASE}/system/announcements`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ announcement_id: Number(announcementId), revision })
+    });
     return await handleResponse(response);
   }
 };

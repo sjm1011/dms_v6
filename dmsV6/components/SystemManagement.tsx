@@ -6,6 +6,7 @@ import { type AuditQuery, SystemAPI } from '../api/system';
 import { formatAuditActor, getAuditActionLabel, getAuditResourceLabel, getAuditResultLabel, getAuditRoleLabel } from '../lib/auditLabels';
 import type { AuditLogItem, PermissionOverviewItem, PurgeJobItem, RecycleBatchItem, SystemAdminItem, SystemPage, SystemStatusData } from '../types';
 import { CheckCircleIcon, CloudDownloadIcon, DeleteIcon, ErrorOutlineIcon, PersonIcon, SearchIcon } from './Icons';
+import { AnnouncementManagement } from './AnnouncementManagement';
 import { Modal } from './Modal';
 
 interface SystemManagementProps {
@@ -46,10 +47,10 @@ const recentDateRange = (months: number) => {
   return { date_from: localDate(dateFrom), date_to: localDate(dateTo) };
 };
 
-const PageShell: React.FC<{ title: string; description: string; actions?: React.ReactNode; children: React.ReactNode }> = ({ title, description, actions, children }) => (
+const PageShell: React.FC<{ title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode }> = ({ title, description, actions, children }) => (
   <div className="system-page">
     <header className="system-page-header">
-      <div><p className="system-root-label">系統管理</p><h1>{title}</h1><p>{description}</p></div>
+      <div><p className="system-root-label">系統管理</p><h1>{title}</h1>{description && <p>{description}</p>}</div>
       {actions && <div className="system-page-actions">{actions}</div>}
     </header>
     <div className="system-page-body">{children}</div>
@@ -180,10 +181,11 @@ const SettingsPage: React.FC<{ currentUserId: string; showToast: SystemManagemen
     try { await SystemAPI.revokeAdmin(revoke.emp_id); showToast('系統管理員權限已撤銷，對象重新登入後生效。', 'success'); setRevoke(null); await load(); }
     catch (error) { showToast(error instanceof Error ? error.message : String(error), 'error'); }
   };
-  return <PageShell title="系統設定" description="目前提供系統管理員設定；其他系統設定將於後續功能加入。" actions={<button className="btn btn-primary" onClick={() => setAddOpen(true)}><PersonIcon size={18} />指定系統管理員</button>}>
-    <section className="system-section"><div className="system-section-title"><h2>系統管理員</h2><p>角色異動必須重新登入才會生效。</p></div>
+  return <PageShell title="系統設定">
+    <section className="system-section"><div className="system-section-title system-admin-title"><div><h2>系統管理員</h2><p>角色異動必須重新登入才會生效。</p></div><button className="btn btn-primary" onClick={() => setAddOpen(true)}><PersonIcon size={18} />指定系統管理員</button></div>
       {loading ? <Loading /> : <div className="system-table-wrap"><table className="system-table"><thead><tr><th>員工編號</th><th>姓名</th><th>部門</th><th>指定人</th><th>指定時間</th><th></th></tr></thead><tbody>{admins.map(admin => <tr key={admin.emp_id}><td>{admin.emp_id}</td><td>{admin.emp_name}</td><td>{admin.dept_name || '—'}</td><td>{admin.assigned_by}</td><td>{formatDateTime(admin.assigned_at)}</td><td><button className="btn btn-danger btn-small" disabled={admin.emp_id.toUpperCase() === currentUserId.toUpperCase()} onClick={() => setRevoke(admin)}>撤銷</button></td></tr>)}</tbody></table></div>}
     </section>
+    <AnnouncementManagement showToast={showToast} />
     <Modal isOpen={addOpen} onClose={() => { setAddOpen(false); setEmployeeId(''); setVerified(null); }} title="指定系統管理員" footer={<><button className="btn btn-secondary" onClick={() => setAddOpen(false)}>取消</button><button className="btn btn-primary" disabled={!verified || verified.uid !== employeeId} onClick={assign}>指定</button></>}>
       <label>員工編號<input data-enter-action="blur-or-submit" value={employeeId} onChange={e => { setEmployeeId(e.target.value.toUpperCase()); setVerified(null); }} onBlur={() => void validate()} placeholder="請輸入員工編號" /></label>
       <div className={`lookup-result ${verified ? 'success' : ''}`}>{validating ? '驗證中...' : verified ? `姓名：${verified.name}` : '輸入後按 Enter 或移出欄位進行驗證。'}</div>

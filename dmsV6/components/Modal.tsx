@@ -52,6 +52,12 @@ export const Modal: React.FC<ModalProps> = ({
     const currentIndex = inputs.indexOf(target);
     if (currentIndex < 0) return;
 
+    if (target instanceof HTMLTextAreaElement
+      && target.dataset.enterAction === 'multiline'
+      && event.shiftKey) {
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
 

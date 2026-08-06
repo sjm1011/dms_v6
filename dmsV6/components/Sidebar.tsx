@@ -1,7 +1,8 @@
 import React from 'react';
 import { APP_VERSION_LABEL } from '../lib/appVersion';
-import { Folder, SystemPage, User } from '../types';
+import { Folder, MainView, SystemPage, User } from '../types';
 import { 
+  DashboardIcon,
   ServerIcon, 
   ChevronRightIcon, 
   AccountCircleIcon, 
@@ -14,6 +15,8 @@ interface SidebarProps {
   user: User | null;
   folders: Folder[];
   currentFolderId: string;
+  activeView: MainView;
+  onSelectDashboard: () => void;
   onSelectFolder: (id: string) => void;
   expandedFolders: Set<string>;
   onToggleExpand: (id: string) => void;
@@ -29,6 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   user,
   folders,
   currentFolderId,
+  activeView,
+  onSelectDashboard,
   onSelectFolder,
   expandedFolders,
   onToggleExpand,
@@ -102,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const subFolders = foldersByParentId.get(folder.id) || [];
     const hasChildren = subFolders.length > 0;
     const isExpanded = expandedFolders.has(folder.id);
-    const isActive = currentFolderId === folder.id;
+    const isActive = activeView === 'library' && currentFolderId === folder.id;
 
     return (
       <li key={folder.id} className="folder-item-wrapper">
@@ -176,10 +181,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-menu">
         <div className="folder-tree-container">
           <ul className="folder-list">
+            <li className="folder-item-wrapper">
+              <div
+                className={`folder-link ${activeView === 'dashboard' ? 'active' : ''}`}
+                onClick={onSelectDashboard}
+              >
+                <div className="folder-link-content">
+                  <DashboardIcon className="icon" size={20} />
+                  {renderSidebarLabel('儀表板')}
+                </div>
+              </div>
+            </li>
+
             {/* 根目錄虛擬項目 */}
             <li className="folder-item-wrapper">
               <div 
-                className={`folder-link ${currentFolderId === '' ? 'active' : ''}`}
+                className={`folder-link ${activeView === 'library' && currentFolderId === '' ? 'active' : ''}`}
                 onClick={() => onSelectFolder('')}
               >
                 <div className="folder-link-content">
@@ -206,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <ul className="folder-children system-menu-children">
                     {systemItems.map(item => (
                       <li key={item.page} className="folder-item-wrapper">
-                        <div className={`folder-link system-menu-link ${activeSystemPage === item.page ? 'active' : ''}`} onClick={() => onSelectSystemPage(item.page)}>
+                        <div className={`folder-link system-menu-link ${activeView === 'system' && activeSystemPage === item.page ? 'active' : ''}`} onClick={() => onSelectSystemPage(item.page)}>
                           <div className="folder-link-content">
                             <span className="icon system-menu-icon">{item.icon}</span>
                             {renderSidebarLabel(item.label)}

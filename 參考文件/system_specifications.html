@@ -229,6 +229,7 @@
 <p>* <strong>檔案與文件處理</strong>：伺服器端獨立處理實體檔案儲存、副檔名與 MIME Type 白名單檢核，並使用 <code>pdf-lib</code> 進行 PDF 檔案處理與浮水印動態生成。</p>
 <h3>1.5. 資料表與欄位命名規則</h3>
 <p>本系統資料表與欄位採短表名與短欄位前綴。命名需符合既有 schema 文件風格，例如 <code>dms_folders</code> 使用 <code>df_</code> 前綴、<code>dms_folder_acl</code> 使用 <code>dfa_</code> 前綴、<code>dms_folder_managers</code> 使用 <code>dfm_</code> 前綴。</p>
+<p>系統所有中文 UI、訊息、參考文件與程式註解一律以「發佈」為唯一標準用字，不得使用其他異體；後續新增或修改功能亦適用此規則。既有英文程式識別碼與資料庫欄位名稱，例如 <code>published_at</code>、<code>PUBLISHED</code>、<code>pub</code>，不受此中文用字規則影響。</p>
 <p>文件管理與版本控管核心資料表命名如下：</p>
 <table>
   <thead>
@@ -241,6 +242,8 @@
     <tr><td><code>dms_ver_rev</code></td><td>版本修訂對照表</td><td><code>dvr_</code></td><td><code>dvr_id</code></td></tr>
     <tr><td><code>dms_log</code></td><td>系統稽核紀錄</td><td><code>dl_</code></td><td><code>dl_id</code></td></tr>
     <tr><td><code>dms_purge_job</code></td><td>實體檔案清理工作</td><td><code>dpj_</code></td><td><code>dpj_id</code></td></tr>
+    <tr><td><code>dms_ann</code></td><td>系統公告主檔</td><td><code>dan_</code></td><td><code>dan_id</code></td></tr>
+    <tr><td><code>dms_ann_read</code></td><td>公告已讀紀錄</td><td><code>danr_</code></td><td><code>danr_id</code></td></tr>
   </tbody>
 </table>
 <p>欄位命名原則如下：</p>
@@ -249,7 +252,11 @@
 <p>* 本專案資料庫不建立實體 <code>FOREIGN KEY</code> 約束。跨表關聯以欄位命名、索引、後端交易檢核與必要查詢條件維護，不依賴資料庫外鍵。</p>
 <p>* 索引定義只使用原始欄位，不得在索引欄位或條件內使用 <code>UPPER()</code>、<code>LOWER()</code>、<code>BTRIM()</code>、<code>CAST()</code>、<code>::type</code> 或其他函數與型別轉換。需要統一大小寫或格式的資料，必須由前端在送出前完成正規化，後端再執行防呆檢核。</p>
 <p>* 關聯欄位若只指向單一父表，沿用父表主鍵欄位名，例如 <code>dms_doc_ver.dd_id</code>、<code>dms_ver_rev.ddv_id</code>。</p>
-<p>* 同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 <code>ddv_pub_dfi_id</code> (正式發佈檔案) 與 <code>ddv_src_dfi_id</code> (原始編修檔案)。</p>
+<ul>
+  <li>同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 <code>ddv_pub_dfi_id</code> (正式發佈檔案) 與 <code>ddv_src_dfi_id</code> (原始編修檔案)。</li>
+  <li><code>da_</code> 已由 <code>dms_admins</code> 使用，公告主檔為避免前綴衝突，使用 <code>dan_</code>；公告已讀紀錄再增加語意字母，使用 <code>danr_</code>。</li>
+  <li><code>dms_ann_read.dan_id</code> 沿用公告主檔識別碼名稱，邏輯關聯至 <code>dms_ann.dan_id</code>。</li>
+</ul>
 <p>* 欄位名稱不得包含句點。<code>dms_doc.dd_id</code> 僅代表 SQL 查詢中的「資料表名稱 + 欄位名稱」參照方式，實際欄位名稱為 <code>dd_id</code>。</p>
 <p>* 文件版本不設 <code>ddv_status</code> 欄位。版本狀態需由 <code>ddv_eff_at</code>、<code>ddv_eff_to</code> 與 <code>ddv_cancel_at</code> 推導。</p>
 <p>* 建立、更新、作廢欄位延續既有命名慣例，例如 <code>crtby</code>、<code>crtat</code>、<code>updby</code>、<code>updat</code>、<code>dc</code>、<code>dcby</code>、<code>dcat</code>。</p>
@@ -269,6 +276,8 @@
     <tr><td>廢止</td><td><code>obs</code></td><td><code>dd_obs_at</code>、<code>dd_obs_reason</code></td></tr>
     <tr><td>撤回</td><td><code>cancel</code></td><td><code>ddv_cancel_at</code>、<code>ddv_cancel_reason</code></td></tr>
     <tr><td>發佈</td><td><code>pub</code></td><td><code>ddv_pub_dfi_id</code></td></tr>
+    <tr><td>公告</td><td><code>ann</code> 或 <code>dan</code> 前綴</td><td><code>dms_ann</code>、<code>dan_id</code></td></tr>
+    <tr><td>公告已讀</td><td><code>ann_read</code> 或 <code>danr</code> 前綴</td><td><code>dms_ann_read</code>、<code>danr_id</code></td></tr>
     <tr><td>原始檔</td><td><code>src</code></td><td><code>ddv_src_dfi_id</code></td></tr>
     <tr><td>作廢</td><td><code>dc</code></td><td><code>dvr_dc</code></td></tr>
   </tbody>
@@ -285,6 +294,8 @@
     <tr><td><code>dms_ver_rev</code></td><td><code>dvr_id</code>、<code>ddv_id</code>、<code>dvr_base_ddv_id</code>、<code>dfi_id</code>、<code>dvr_note</code>、<code>dvr_dc</code>、<code>dvr_crtby</code>、<code>dvr_crtat</code>、<code>dvr_dcby</code>、<code>dvr_dcat</code></td></tr>
     <tr><td><code>dms_log</code></td><td><code>dl_id</code>、<code>dl_event_at</code>、<code>dl_actor_uid</code>、<code>dl_actor_name</code>、<code>dl_actor_role</code>、<code>dl_action</code>、<code>dl_resource_type</code>、<code>dl_resource_id</code>、<code>dl_managed_df_fid</code>、<code>df_fid</code>、<code>dd_id</code>、<code>ddv_id</code>、<code>dl_result</code>、<code>dl_ip_address</code>、<code>dl_user_agent</code>、<code>dl_request_id</code>、<code>dl_reason</code>、<code>dl_before_data</code>、<code>dl_after_data</code>、<code>dl_metadata</code></td></tr>
     <tr><td><code>dms_purge_job</code></td><td><code>dpj_id</code>、<code>df_fid</code>、<code>dpj_status</code>、<code>dpj_manifest</code>、<code>dpj_requested_by</code>、<code>dpj_requested_at</code>、<code>dpj_completed_at</code>、<code>dpj_retry_count</code>、<code>dpj_error</code></td></tr>
+    <tr><td><code>dms_ann</code></td><td><code>dan_id</code>、<code>dan_title</code>、<code>dan_body</code>、<code>dan_priority</code>、<code>dan_status</code>、<code>dan_rev</code>、<code>dan_aud_all</code>、<code>dan_aud_admin</code>、<code>dan_aud_mgr</code>、<code>dan_pub_at</code>、<code>dan_exp_at</code>、<code>dan_crtby</code>、<code>dan_crtat</code>、<code>dan_updby</code>、<code>dan_updat</code></td></tr>
+    <tr><td><code>dms_ann_read</code></td><td><code>danr_id</code>、<code>dan_id</code>、<code>danr_rev</code>、<code>danr_uid</code>、<code>danr_read_at</code></td></tr>
   </tbody>
 </table>
 <p>第 5 節稽核資料表採同一命名原則。全域稽核表使用 <code>dms_log</code>。既有 <code>dms_audit_log</code> 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 <code>dms_doc_access_log</code>。</p>
@@ -357,7 +368,9 @@
 <p>* 當管理員對某一正常狀態（<code>1</code>）的資料夾進行封存時，系統將執行遞迴封存，一併將其下所有子資料夾之狀態更新為 <code>2</code>。</p>
 <p>* <strong>文件聯動廢止</strong>：被封存資料夾及其子資料夾下的所有文件，其文件主檔狀態將被自動更新為 <code>Obsolete</code> (已廢止)，並於文件主檔註記廢止時間與廢止原因。文件版本的有效期間與撤回紀錄不因資料夾封存而改寫，以確保版本歷史維持原始紀錄。</p>
 <p>* <strong>文件庫顯示規則</strong>：已封存資料夾不得顯示於文件庫的資料夾樹、資料夾清單與一般文件瀏覽流程中。已封存資料夾與其文件保留於資料庫及檔案儲存中，改由「資源回收區」檢視。</p>
-<p>* <strong>還原與永久刪除</strong>：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 8.5 節規則永久作廢資料並刪除實體檔案。</p>
+<ul>
+  <li><strong>還原與永久刪除</strong>：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 9.5 節規則永久作廢資料並刪除實體檔案。</li>
+</ul>
 <p>---</p>
 <h2>4. 文件管理與版本控管</h2>
 <p>DMS 不負責文件簽核流程。文件內容之擬稿、會簽、核准均由 BPM 系統處理；DMS 僅負責保存 BPM 簽核完成後，由資料夾管理員上傳之正式文件，並管理其版本、預約生效、有效期間、撤回、廢止、查閱與下載規則。</p>
@@ -626,7 +639,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <h4>4.13.1. 跨資料夾文件關鍵字搜尋</h4>
 <p>* 系統提供跨資料夾文件關鍵字搜尋，不使用前端目前清單篩選，也不搜尋符合條件的資料夾。</p>
 <p>* 搜尋範圍固定為目前帳號可見的所有資料夾，畫面不提供搜尋範圍選項；搜尋結果亦包含文件庫根目錄中目前帳號可見的文件。</p>
-<p>* 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發布檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。</p>
+<p>* 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發佈檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。</p>
 <p>* 搜尋必須由使用者按下 <code>Enter</code> 或「搜尋」按鈕後執行，不得於每次輸入字元時送出跨資料夾查詢。</p>
 <p>* 一般使用者只可搜尋有效文件的目前有效版本。對文件所屬資料夾具有管理權的使用者，可同時搜尋及看到該管理範圍內尚未生效的預約版本；不得看到其他資料夾的預約、歷史、撤回或廢止資料。</p>
 <p>* 資料夾可見性、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。</p>
@@ -695,7 +708,10 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 存取事件：<code>DOCUMENT_PREVIEWED</code> (調閱文件)、<code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)、<code>DOCUMENT_DOWNLOADED</code> (下載文件)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)。</p>
 <p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
 <p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
-<p>* 文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_MOVED</code> (移動文件)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</p>
+<ul>
+  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_MOVED</code> (移動文件)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</li>
+  <li>公告事件：<code>ANNOUNCEMENT_CREATED</code> (建立公告)、<code>ANNOUNCEMENT_UPDATED</code> (修改公告)、<code>ANNOUNCEMENT_PUBLISHED</code> (發佈公告)、<code>ANNOUNCEMENT_ARCHIVED</code> (封存公告)。公告已讀只寫入 <code>dms_ann_read</code>，不逐筆寫入 <code>dms_log</code>。</li>
+</ul>
 <h3>5.3. 稽核資料欄位</h3>
 <p>全域稽核紀錄建議至少保存下列欄位：</p>
 <table>
@@ -709,7 +725,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
     <tr><td><code>dl_actor_name</code> (操作者姓名)</td><td>執行動作的使用者姓名。</td></tr>
     <tr><td><code>dl_actor_role</code> (操作者角色)</td><td>執行動作當下的登入角色，僅記錄 <code>ADMIN</code> (系統管理員) 或 <code>USER</code> (一般使用者)。資料夾管理員屬於計算型管理身分，不寫入為登入角色。</td></tr>
     <tr><td><code>dl_action</code> (動作代碼)</td><td>本次事件類型，例如 <code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)。</td></tr>
-    <tr><td><code>dl_resource_type</code> (資源類型)</td><td>被操作的資源類型，例如 <code>AUTH</code> (驗證)、<code>FOLDER</code> (資料夾)、<code>DOCUMENT</code> (文件主檔)、<code>VERSION</code> (文件版本)、<code>ACL</code> (存取控制清單)。</td></tr>
+    <tr><td><code>dl_resource_type</code> (資源類型)</td><td>被操作的資源類型，例如 <code>AUTH</code> (驗證)、<code>FOLDER</code> (資料夾)、<code>DOCUMENT</code> (文件主檔)、<code>VERSION</code> (文件版本)、<code>ACL</code> (存取控制清單)、<code>ANNOUNCEMENT</code> (公告)。</td></tr>
     <tr><td><code>dl_resource_id</code> (資源識別碼)</td><td>被操作資源的主要識別碼。</td></tr>
     <tr><td><code>dl_managed_df_fid</code> (管理資料夾節點識別碼)</td><td>事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。</td></tr>
     <tr><td><code>df_fid</code> (資料夾識別碼)</td><td>事件所屬資料夾識別碼。</td></tr>
@@ -856,9 +872,12 @@ DMS_NEXT_PORT=3000</code></pre>
     <tr><td><code>GET /api/search?keyword=...&amp;page=...&amp;page_size=...</code></td><td><code>app/api/search/route.ts</code></td><td>透過 <code>searchService.ts</code> 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋</td></tr>
     <tr><td><code>GET /api/documents/download?version_id=...</code></td><td><code>app/api/documents/download/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 讀取實體檔案並傳送下載串流</td></tr>
     <tr><td><code>GET /api/documents/preview?version_id=...</code></td><td><code>app/api/documents/preview/route.ts</code></td><td>透過 <code>documentService.ts</code> 與 <code>fileStorage.ts</code> 取得預覽串流，PDF 檔案則動態加入浮水印</td></tr>
+    <tr><td><code>GET /api/dashboard</code></td><td><code>app/api/dashboard/route.ts</code></td><td>透過 <code>dashboardService.ts</code> 分區查詢公告、近期發佈的文件、預約發佈提醒及系統異常摘要</td></tr>
+    <tr><td><code>POST /api/dashboard/announcements/read</code></td><td><code>app/api/dashboard/announcements/read/route.ts</code></td><td>驗證公告有效性、對象及版次後，冪等寫入公告已讀紀錄</td></tr>
     <tr><td><code>GET /api/system/audit</code></td><td><code>app/api/system/audit/route.ts</code></td><td>透過 <code>systemService.ts</code> 查詢及分頁顯示 <code>dms_log</code></td></tr>
     <tr><td><code>GET /api/system/audit/export</code></td><td><code>app/api/system/audit/export/route.ts</code></td><td>匯出目前條件的稽核 CSV 並記錄匯出事件</td></tr>
     <tr><td><code>GET</code>、<code>POST</code>、<code>DELETE /api/system/settings/admins</code></td><td><code>app/api/system/settings/admins/route.ts</code></td><td>查詢、指定或撤銷系統管理員</td></tr>
+    <tr><td><code>GET</code>、<code>POST</code>、<code>PUT</code>、<code>DELETE /api/system/announcements</code></td><td><code>app/api/system/announcements/route.ts</code></td><td>查詢、建立、修改、發佈、排程或封存公告；限系統管理員使用</td></tr>
     <tr><td><code>GET /api/system/permissions</code></td><td><code>app/api/system/permissions/route.ts</code></td><td>查詢第一層資料夾權限總覽</td></tr>
     <tr><td><code>GET /api/system/status</code></td><td><code>app/api/system/status/route.ts</code></td><td>查詢應用程式、資料庫、儲存空間與資料統計</td></tr>
     <tr><td><code>GET</code>、<code>POST /api/system/recycle</code></td><td><code>app/api/system/recycle/route.ts</code></td><td>查詢、還原、永久刪除封存批次及重試檔案清理</td></tr>
@@ -915,8 +934,11 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* <strong>開啟時焦點</strong>：<code>Modal</code> 開啟後，焦點自動位於第一個可見且可編輯的輸入框。</p>
 <p>* <strong>Enter 導航</strong>：</p>
 <p>* 在非最後一個可編輯輸入框按下 <code>Enter</code>，系統阻止預設提交，並將焦點移至下一個可編輯輸入框。</p>
-<p>* 僅在最後一個可編輯輸入框按下 <code>Enter</code> 時，才觸發 <code>Modal</code> 底部操作區中第一個符合 <code>.btn-primary</code> 或 <code>.btn-danger</code> 且未停用的主要按鈕。</p>
-<p>* 中文輸入法組字期間的 <code>Enter</code> 不得觸發欄位導航或提交。</p>
+<ul>
+  <li>僅在最後一個可編輯輸入框按下 <code>Enter</code> 時，才觸發 <code>Modal</code> 底部操作區中第一個符合 <code>.btn-primary</code> 或 <code>.btn-danger</code> 且未停用的主要按鈕。</li>
+  <li>明確標示為多行內容的文字區域可使用 <code>Shift + Enter</code> 插入換行；單獨按下 <code>Enter</code> 仍依上述欄位導航規則處理。</li>
+  <li>中文輸入法組字期間的 <code>Enter</code> 不得觸發欄位導航或提交。</li>
+</ul>
 <p>* 隱藏、唯讀、停用、核取方塊、選項按鈕及檔案欄位不列入鍵盤導航順序。</p>
 <p>* <strong>必填欄位驗證</strong>：</p>
 <p>* 使用者提交輸入畫面時，若必填欄位未填寫，系統必須顯示明確的錯誤訊息框，不得僅以停用主要按鈕或無訊息返回阻擋操作。</p>
@@ -961,13 +983,40 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>要同時保存本機並同步 GitHub (遠端程式碼代管服務) 時，直接執行：</p>
 <pre><code class="language-bat">_github.bat "本次修改摘要"</code></pre>
 <p><code>_github.bat</code> 已會自動處理本機 commit (提交)，因此日常同步遠端時可直接使用 <code>_github.bat</code>。</p>
-<h2>8. 系統管理功能區</h2>
-<h3>8.1. 導覽與權限</h3>
-<p>* 左側樹狀選單在「文件庫」下方提供第二個 root「系統管理」。登入角色為 <code>ADMIN</code> 的系統管理員，以及具有至少一項目前有效資料夾管理員或協同管理員指派的使用者可見。</p>
+<h2>8. 登入後儀表板</h2>
+<h3>8.1. 導覽與更新</h3>
+<ul>
+  <li>使用者登入成功或還原有效 Session 後，固定先進入「儀表板」。左側主導覽依序為「儀表板」、「文件庫」、「系統管理」；既有系統管理子選單順序不變。</li>
+  <li>儀表板在首次進入、手動重新整理、公告標示已讀及管理員完成公告異動後更新。第一版不使用定時輪詢。</li>
+  <li>公告、近期發佈的文件、預約發佈提醒及系統異常摘要採分區載入。單一區塊查詢失敗時，其他成功區塊仍需顯示，且不得阻止使用者切換至文件庫。</li>
+  <li><code>GET /api/dashboard</code> 與公告已讀 API 必須驗證有效 Session，並設定 <code>Cache-Control: no-store</code>。JSON API 使用完整英文名稱，不回傳 <code>dan_</code> 或 <code>danr_</code> 資料庫縮寫欄位。</li>
+</ul>
+<h3>8.2. 公告區</h3>
+<ul>
+  <li>儀表板顯示排序後前 5 筆有效公告，並提供「查看全部公告」。排序依序為重要程度、未讀狀態及發佈時間；緊急公告置頂，但不得阻擋其他操作。</li>
+  <li>公告重要程度分為「一般」、「重要」、「緊急」。內容為純文字，保留換行，不接受 HTML；標題上限 120 字，內容上限 2000 字。</li>
+  <li>公告對象可選全體使用者、系統管理員、資料夾管理員及協同管理員。「全體使用者」與兩種角色條件互斥；系統管理員與資料夾管理員條件可同時選取。</li>
+  <li>使用者開啟公告後，必須主動選取「標示為已讀」。已讀紀錄以公告識別碼、公告版次及使用者帳號冪等寫入；公告改版後，新版重新顯示為未讀。</li>
+  <li>角色公告及公告已讀 API 依查詢當下的系統管理員身分或有效資料夾管理指派判斷。跨公告對象呼叫已讀 API 回傳 HTTP <code>403</code>；公告版次不一致回傳 HTTP <code>409</code>。</li>
+</ul>
+<h3>8.3. 近期發佈的文件與角色專屬區塊</h3>
+<ul>
+  <li>「近期發佈的文件」以版本生效時間判斷，顯示目前仍有效且於近 30 天內生效的文件版本總數與最新 10 筆。每筆內容包含文件編號、名稱、版本、發佈日期及資料夾路徑；發佈日期不顯示時間，並與後方的檔案所在路徑顯示於同一行。未編版號時以版本序號顯示「第 N 版」，文件圖示依已發佈檔案的副檔名顯示，規則與文件清單一致。</li>
+  <li>近期發佈的文件必須在伺服器端依目前使用者的資料夾 ACL、文件機敏等級、文件狀態、版本狀態及資料夾狀態過濾，不得先載入全域文件再由前端過濾。</li>
+  <li>可預覽格式提供「檢視」，沿用既有預覽 API；「前往文件」切換至文件庫、開啟所在資料夾並短暫標示目標文件。不可預覽格式不從儀表板自動下載。</li>
+  <li>具有目前有效資料夾管理員或協同管理員指派的使用者，可在「預約發佈提醒」看到目前管理範圍內，未來 30 天將發佈的版本總數與前 10 筆。技術上仍以版本生效時間判斷；多個管理範圍重疊時，同一文件版本不得重複。</li>
+  <li>系統管理員可看到資料庫連線、儲存空間讀寫、必要設定、連線池等待、待清理工作及失敗工作的異常摘要。摘要不得回傳儲存根目錄、資料庫版本、原始錯誤堆疊或其他敏感技術資訊；點擊異常後前往「系統狀態」或「資源回收區」。</li>
+  <li>系統管理員若同時具有有效資料夾管理指派，也顯示預約版本區塊。系統管理員身分本身不等同資料夾管理身分，亦不得因此取得機密文件。</li>
+</ul>
+<h2>9. 系統管理功能區</h2>
+<h3>9.1. 導覽與權限</h3>
+<ul>
+  <li>左側主導覽依序提供「儀表板」、「文件庫」及「系統管理」。「系統管理」只在登入角色為 <code>ADMIN</code>，或使用者具有至少一項目前有效資料夾管理員或協同管理員指派時顯示。</li>
+</ul>
 <p>* 系統管理員展開「系統管理」後，依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。資料夾管理員及協同管理員只顯示「系統稽核紀錄」。</p>
 <p>* 系統管理頁面開啟時不得載入文件清單；返回文件庫時保留原資料夾位置。</p>
 <p>* <code>/api/system/audit</code> 與 <code>/api/system/audit/export</code> 必須在後端驗證目前登入者為系統管理員、資料夾管理員或協同管理員；其他 <code>/api/system/*</code> API 仍只允許 <code>ADMIN</code> 使用。未具相應權限時回傳 HTTP <code>403</code>。</p>
-<h3>8.2. 系統稽核紀錄</h3>
+<h3>9.2. 系統稽核紀錄</h3>
 <p>* 查詢來源固定為現行 <code>dms_log</code>，不合併早期保留的 <code>dms_audit_log</code>。</p>
 <p>* 系統管理員可查詢全部稽核紀錄。資料夾管理員及協同管理員只能查詢目前有效管理節點及其全部子資料夾的 <code>DOCUMENT</code>、<code>VERSION</code> 文件事件。</p>
 <p>* 管理範圍於每次列表、總筆數、篩選選項、明細及 CSV 匯出時，依目前有效的 <code>dms_folder_managers</code> 指派與事件 <code>df_fid</code> 重新判斷，不得依賴前端隱藏或 <code>dl_managed_df_fid</code> 快照。</p>
@@ -984,19 +1033,27 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 操作者欄位固定使用「姓名 + 半形空格 + 員工編號」格式；無登入身分的系統事件以「系統 無員工編號」顯示。</p>
 <p>* 明細另顯示操作者角色、結果原因、事件來源 IP、用戶端識別資訊、請求追蹤識別碼、關聯識別碼、異動前後資料及其他技術資料。</p>
 <p>* 登入失敗必須保存使用者嘗試登入的帳號與事件來源，但不得保存密碼。</p>
-<h3>8.3. 系統設定</h3>
-<p>* 系統設定為後續系統層級設定的統一入口，目前只提供「系統管理員」設定，不顯示空白或尚未實作的分類。</p>
-<p>* 系統管理員以員工編號指定，後端必須驗證員工存在且在職。</p>
+<h3>9.3. 系統設定</h3>
+<ul>
+  <li>系統設定為系統層級設定的統一入口，提供「系統管理員」與「公告管理」，不顯示空白或尚未實作的分類。</li>
+  <li>系統管理員以員工編號指定，後端必須驗證員工存在且在職。</li>
+</ul>
 <p>* 撤銷管理員採 <code>dms_admins.da_dc = 'Y'</code>，不得物理刪除紀錄。</p>
 <p>* 系統管理員不得撤銷自己，也不得撤銷最後 1 位有效管理員。</p>
-<p>* 指定與撤銷分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>，保存異動前後資料。</p>
-<p>* 管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。</p>
-<h3>8.4. 權限總覽與系統狀態</h3>
+<ul>
+  <li>指定與撤銷分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>，保存異動前後資料。</li>
+  <li>管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。</li>
+  <li>公告管理支援草稿、立即發佈、預約發佈、選填下架時間、修改及手動封存；發佈與下架由查詢時間判斷，不建立背景排程。</li>
+  <li>公告狀態只能依「草稿 → 已發佈 → 已封存」前進。已封存公告唯讀，不提供實體刪除或重新發佈。</li>
+  <li>修改已發佈公告時，<code>dan_rev</code> 增加 1，舊版已讀紀錄保留。更新與封存請求必須帶入目前版次；版次不一致時回傳 HTTP <code>409</code>。</li>
+  <li>下架時間必須晚於發佈時間。當公告對象為全體使用者時，不得同時選取系統管理員或資料夾管理員對象；此規則由後端再次驗證。</li>
+</ul>
+<h3>9.4. 權限總覽與系統狀態</h3>
 <p>* 權限總覽唯讀顯示有效第一層資料夾的主要管理員、協同管理員、公開、僅限管理者或限閱狀態、授權摘要、子資料夾數與文件數。</p>
 <p>* 權限總覽提供篩選及「前往資料夾」，實際權限異動仍由文件庫中的資料夾管理畫面處理。</p>
 <p>* 系統狀態顯示應用程式、PostgreSQL、連線池、儲存空間、必要環境設定、資料統計及待清理工作數量。</p>
 <p>* 系統狀態不得回傳資料庫密碼、Session 密鑰或完整連線字串，只能回傳設定是否安全或完整。</p>
-<h3>8.5. 資源回收區</h3>
+<h3>9.5. 資源回收區</h3>
 <p>* 資源回收區以根資料夾的 <code>df_arcat</code> 識別同一次遞迴封存批次，只顯示批次根節點。</p>
 <p>* 還原只恢復同批資料夾，以及 <code>dd_obs_src = 2</code> 且封存時間相符的文件；手動廢止文件不得恢復。</p>
 <p>* 封存滿 90 天後才允許永久刪除，執行者必須輸入完整資料夾名稱確認。</p>
@@ -1004,12 +1061,18 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 實體檔案先移入 <code>.purge/&lt;清理工作 ID&gt;</code> 隔離區，再於資料庫交易內作廢資料並寫入 <code>FOLDER_PURGED</code>。</p>
 <p>* 資料庫提交後若隔離區刪除失敗，<code>dms_purge_job</code> 維持 <code>CLEANUP_PENDING</code>，管理員可於資源回收區重試。</p>
 <p>* 還原成功寫入 <code>FOLDER_RESTORED</code>。永久刪除完成後不得由介面還原。</p>
-<h3>8.6. 系統管理稽核事件</h3>
+<h3>9.6. 系統管理稽核事件</h3>
 <p>* <code>SYSTEM_ADMIN_ASSIGNED</code>：指定系統管理員。</p>
 <p>* <code>SYSTEM_ADMIN_REVOKED</code>：撤銷系統管理員。</p>
 <p>* <code>AUDIT_LOG_EXPORTED</code>：匯出稽核紀錄。</p>
 <p>* <code>FOLDER_RESTORED</code>：還原封存批次。</p>
-<p>* <code>FOLDER_PURGED</code>：永久作廢封存批次並啟動實體檔案清理。</p>
+<ul>
+  <li><code>FOLDER_PURGED</code>：永久作廢封存批次並啟動實體檔案清理。</li>
+  <li><code>ANNOUNCEMENT_CREATED</code>：建立公告草稿。</li>
+  <li><code>ANNOUNCEMENT_UPDATED</code>：修改公告。</li>
+  <li><code>ANNOUNCEMENT_PUBLISHED</code>：發佈或預約發佈公告。</li>
+  <li><code>ANNOUNCEMENT_ARCHIVED</code>：封存公告。</li>
+</ul>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

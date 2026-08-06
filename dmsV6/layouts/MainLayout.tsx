@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType, SystemPage } from '../types';
+import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType, MainView, SystemPage } from '../types';
 import { Sidebar } from '../components/Sidebar';
 import { FileTable } from '../components/FileTable';
 import { useDocuments } from '../hooks/useDocuments';
@@ -19,6 +19,7 @@ import { ErrorDetailModal, TestResultModal } from '../components/Modals/Feedback
 import { FolderAclModal } from '../components/Modals/FolderAclModal';
 import { FolderManagerModal } from '../components/Modals/FolderManagerModal';
 import { SystemManagement } from '../components/SystemManagement';
+import { Dashboard } from '../components/Dashboard';
 import { ACCEPTED_DOCUMENT_FILE_TYPES, DeleteScheduledVersionModal, EditDocumentModal, NewDocModal, UploadVerModal, ObsoleteDocModal, DeleteDocModal, CancelVersionModal, HistoryModal, MoveDocumentModal } from '../components/Modals/DocumentModals';
 
 interface MainLayoutProps {
@@ -75,7 +76,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 }) => {
   // --- UI 本地控制狀態 ---
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+  const [activeView, setActiveView] = useState<MainView>('dashboard');
   const [activeSystemPage, setActiveSystemPage] = useState<SystemPage | null>(null);
+  const [highlightedDocumentId, setHighlightedDocumentId] = useState<string | null>(null);
   const [isSidebarDrawer, setIsSidebarDrawer] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const sidebarOpenButtonRef = useRef<HTMLButtonElement>(null);
@@ -225,14 +228,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     ]);
   const currentFolderIsActive = currentFolderId === '' || currentFolder?.status === 1;
   const canLoadCurrentFolderDocuments = currentFolderId === '' || currentFolderIsActive;
-  const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments && activeSystemPage === null);
+  const documentsHook = useDocuments(user, currentFolderId, showToast, canLoadCurrentFolderDocuments && activeView === 'library');
   const isSearchMode = hasSearched && Boolean(submittedSearchQuery);
-  const isContentLoading = activeSystemPage === null && (
+  const isContentLoading = activeView === 'library' && (
     !hasLoadedFolders
     || isLoadingFolders
     || (!isSearchMode && documentsHook.isLoadingDocuments)
     || isSearching
   );
+
+  useEffect(() => {
+    if (!highlightedDocumentId) return;
+    const timer = window.setTimeout(() => setHighlightedDocumentId(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [highlightedDocumentId]);
 
   const clearSearch = useCallback(() => {
     searchRequestSeqRef.current += 1;
@@ -753,8 +762,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         user={user}
         folders={folders}
         currentFolderId={currentFolderId}
-        onSelectFolder={(id) => {
+        activeView={activeView}
+        onSelectDashboard={() => {
+          clearSearch();
+          setHighlightedDocumentId(null);
           setActiveSystemPage(null);
+          setActiveView('dashboard');
+          if (isSidebarDrawer) closeSidebar();
+        }}
+        onSelectFolder={(id) => {
+          setHighlightedDocumentId(null);
+          setActiveSystemPage(null);
+          setActiveView('library');
           clearSearch();
           setCurrentFolderId(id);
           if (isSidebarDrawer) closeSidebar();
@@ -764,7 +783,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         activeSystemPage={activeSystemPage}
         onSelectSystemPage={(page) => {
           clearSearch();
+          setHighlightedDocumentId(null);
           setActiveSystemPage(page);
+          setActiveView('system');
           if (isSidebarDrawer) closeSidebar();
         }}
         onLogout={onLogout}
@@ -798,7 +819,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             <span>功能選單</span>
           </button>
         )}
-        {activeSystemPage ? (
+        {activeView === 'dashboard' ? (
+          <Dashboard
+            user={user}
+            showToast={showToast}
+            onOpenDocument={(folderId, documentId) => {
+              clearSearch();
+              setActiveSystemPage(null);
+              setCurrentFolderId(folderId === '0' ? '' : folderId);
+              setHighlightedDocumentId(documentId);
+              setActiveView('library');
+            }}
+            onOpenSystemPage={(page) => {
+              clearSearch();
+              setHighlightedDocumentId(null);
+              setActiveSystemPage(page);
+              setActiveView('system');
+            }}
+          />
+        ) : activeView === 'system' && activeSystemPage ? (
           <SystemManagement
             page={activeSystemPage}
             currentUserId={user.id}
@@ -806,9 +845,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             showToast={showToast}
             refreshFolders={fetchFolders}
             onOpenFolder={(folderId) => {
+              setHighlightedDocumentId(null);
               setCurrentFolderId(folderId);
               clearSearch();
               setActiveSystemPage(null);
+              setActiveView('library');
             }}
           />
         ) : (
@@ -966,6 +1007,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
             ) : (
               <FileTable
                 items={displayedItems}
+                highlightedItemId={highlightedDocumentId || undefined}
                 onEnterFolder={(id) => {
                   clearSearch();
                   setCurrentFolderId(id);

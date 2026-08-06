@@ -173,6 +173,15 @@ const buildAuditContext = async (payload: AuditPayload, client?: PoolClient): Pr
     };
   }
 
+  if (resourceType === 'ANNOUNCEMENT') {
+    return {
+      resource_location: '系統管理 / 系統設定 / 公告管理',
+      target_type: 'ANNOUNCEMENT',
+      target_name: metadataName || `公告識別碼 ${payload.resourceId || ''}`.trim(),
+      target_version: textValue(metadata.revision) || null
+    };
+  }
+
   if (payload.documentId) {
     return {
       resource_location: folderLocation || '檔案庫',

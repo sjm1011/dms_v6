@@ -29,6 +29,8 @@
 
 本系統資料表與欄位採短表名與短欄位前綴。命名需符合既有 schema 文件風格，例如 `dms_folders` 使用 `df_` 前綴、`dms_folder_acl` 使用 `dfa_` 前綴、`dms_folder_managers` 使用 `dfm_` 前綴。
 
+系統所有中文 UI、訊息、參考文件與程式註解一律以「發佈」為唯一標準用字，不得使用其他異體；後續新增或修改功能亦適用此規則。既有英文程式識別碼與資料庫欄位名稱，例如 `published_at`、`PUBLISHED`、`pub`，不受此中文用字規則影響。
+
 文件管理與版本控管核心資料表命名如下：
 
 | 資料表 | 用途 | 欄位前綴 | 主鍵欄位 |
@@ -39,6 +41,8 @@
 | `dms_ver_rev` | 版本修訂對照表 | `dvr_` | `dvr_id` |
 | `dms_log` | 系統稽核紀錄 | `dl_` | `dl_id` |
 | `dms_purge_job` | 實體檔案清理工作 | `dpj_` | `dpj_id` |
+| `dms_ann` | 系統公告主檔 | `dan_` | `dan_id` |
+| `dms_ann_read` | 公告已讀紀錄 | `danr_` | `danr_id` |
 
 欄位命名原則如下：
 
@@ -48,6 +52,8 @@
 * 索引定義只使用原始欄位，不得在索引欄位或條件內使用 `UPPER()`、`LOWER()`、`BTRIM()`、`CAST()`、`::type` 或其他函數與型別轉換。需要統一大小寫或格式的資料，必須由前端在送出前完成正規化，後端再執行防呆檢核。
 * 關聯欄位若只指向單一父表，沿用父表主鍵欄位名，例如 `dms_doc_ver.dd_id`、`dms_ver_rev.ddv_id`。
 * 同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 `ddv_pub_dfi_id` (正式發佈檔案) 與 `ddv_src_dfi_id` (原始編修檔案)。
+* `da_` 已由 `dms_admins` 使用，公告主檔為避免前綴衝突，使用 `dan_`；公告已讀紀錄再增加語意字母，使用 `danr_`。
+* `dms_ann_read.dan_id` 沿用公告主檔識別碼名稱，邏輯關聯至 `dms_ann.dan_id`。
 * 欄位名稱不得包含句點。`dms_doc.dd_id` 僅代表 SQL 查詢中的「資料表名稱 + 欄位名稱」參照方式，實際欄位名稱為 `dd_id`。
 * 文件版本不設 `ddv_status` 欄位。版本狀態需由 `ddv_eff_at`、`ddv_eff_to` 與 `ddv_cancel_at` 推導。
 * 建立、更新、作廢欄位延續既有命名慣例，例如 `crtby`、`crtat`、`updby`、`updat`、`dc`、`dcby`、`dcat`。
@@ -66,6 +72,8 @@
 | 廢止 | `obs` | `dd_obs_at`、`dd_obs_reason` |
 | 撤回 | `cancel` | `ddv_cancel_at`、`ddv_cancel_reason` |
 | 發佈 | `pub` | `ddv_pub_dfi_id` |
+| 公告 | `ann` 或 `dan` 前綴 | `dms_ann`、`dan_id` |
+| 公告已讀 | `ann_read` 或 `danr` 前綴 | `dms_ann_read`、`danr_id` |
 | 原始檔 | `src` | `ddv_src_dfi_id` |
 | 作廢 | `dc` | `dvr_dc` |
 
@@ -79,6 +87,8 @@
 | `dms_ver_rev` | `dvr_id`、`ddv_id`、`dvr_base_ddv_id`、`dfi_id`、`dvr_note`、`dvr_dc`、`dvr_crtby`、`dvr_crtat`、`dvr_dcby`、`dvr_dcat` |
 | `dms_log` | `dl_id`、`dl_event_at`、`dl_actor_uid`、`dl_actor_name`、`dl_actor_role`、`dl_action`、`dl_resource_type`、`dl_resource_id`、`dl_managed_df_fid`、`df_fid`、`dd_id`、`ddv_id`、`dl_result`、`dl_ip_address`、`dl_user_agent`、`dl_request_id`、`dl_reason`、`dl_before_data`、`dl_after_data`、`dl_metadata` |
 | `dms_purge_job` | `dpj_id`、`df_fid`、`dpj_status`、`dpj_manifest`、`dpj_requested_by`、`dpj_requested_at`、`dpj_completed_at`、`dpj_retry_count`、`dpj_error` |
+| `dms_ann` | `dan_id`、`dan_title`、`dan_body`、`dan_priority`、`dan_status`、`dan_rev`、`dan_aud_all`、`dan_aud_admin`、`dan_aud_mgr`、`dan_pub_at`、`dan_exp_at`、`dan_crtby`、`dan_crtat`、`dan_updby`、`dan_updat` |
+| `dms_ann_read` | `danr_id`、`dan_id`、`danr_rev`、`danr_uid`、`danr_read_at` |
 
 第 5 節稽核資料表採同一命名原則。全域稽核表使用 `dms_log`。既有 `dms_audit_log` 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 `dms_doc_access_log`。
 
@@ -171,7 +181,7 @@
 * 當管理員對某一正常狀態（`1`）的資料夾進行封存時，系統將執行遞迴封存，一併將其下所有子資料夾之狀態更新為 `2`。
 * **文件聯動廢止**：被封存資料夾及其子資料夾下的所有文件，其文件主檔狀態將被自動更新為 `Obsolete` (已廢止)，並於文件主檔註記廢止時間與廢止原因。文件版本的有效期間與撤回紀錄不因資料夾封存而改寫，以確保版本歷史維持原始紀錄。
 * **文件庫顯示規則**：已封存資料夾不得顯示於文件庫的資料夾樹、資料夾清單與一般文件瀏覽流程中。已封存資料夾與其文件保留於資料庫及檔案儲存中，改由「資源回收區」檢視。
-* **還原與永久刪除**：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 8.5 節規則永久作廢資料並刪除實體檔案。
+* **還原與永久刪除**：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 9.5 節規則永久作廢資料並刪除實體檔案。
 
 ---
 
@@ -536,7 +546,7 @@ Word (文字文件)、Excel (試算表)、PowerPoint (簡報) 與其他無法由
 
 * 系統提供跨資料夾文件關鍵字搜尋，不使用前端目前清單篩選，也不搜尋符合條件的資料夾。
 * 搜尋範圍固定為目前帳號可見的所有資料夾，畫面不提供搜尋範圍選項；搜尋結果亦包含文件庫根目錄中目前帳號可見的文件。
-* 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發布檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。
+* 關鍵字比對文件編號、文件名稱、目前可見版本的版本號、異動說明及正式發佈檔名。第一階段不解析 PDF、Office、圖檔或其他實體檔案內容，也不提供進階條件篩選。
 * 搜尋必須由使用者按下 `Enter` 或「搜尋」按鈕後執行，不得於每次輸入字元時送出跨資料夾查詢。
 * 一般使用者只可搜尋有效文件的目前有效版本。對文件所屬資料夾具有管理權的使用者，可同時搜尋及看到該管理範圍內尚未生效的預約版本；不得看到其他資料夾的預約、歷史、撤回或廢止資料。
 * 資料夾可見性、資料夾 ACL、管理身分及版本可見性必須由後端依目前 session 逐筆判斷。前端不得先取得無權限資料後再自行過濾。
@@ -626,6 +636,7 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 * 資料夾事件：`FOLDER_CREATED` (建立資料夾)、`FOLDER_UPDATED` (修改資料夾)、`FOLDER_ARCHIVED` (封存資料夾)、`FOLDER_DELETED` (作廢資料夾)。
 * 權限事件：`FOLDER_MANAGER_UPDATED` (資料夾管理員異動)、`FOLDER_CO_MANAGER_UPDATED` (協同管理員異動)、`FOLDER_ACL_UPDATED` (資料夾存取控制清單異動)。
 * 文件事件：`DOCUMENT_CREATED` (建立文件)、`DOCUMENT_VERSION_CREATED` (上傳新版文件)、`DOCUMENT_UPDATED` (修改文件描述)、`DOCUMENT_VERSION_CANCELLED` (撤回新版文件)、`DOCUMENT_VERSION_DELETED` (刪除預約版本)、`DOCUMENT_MOVED` (移動文件)、`DOCUMENT_DELETED` (刪除文件)、`DOCUMENT_OBSOLETED` (廢止文件)。
+* 公告事件：`ANNOUNCEMENT_CREATED` (建立公告)、`ANNOUNCEMENT_UPDATED` (修改公告)、`ANNOUNCEMENT_PUBLISHED` (發佈公告)、`ANNOUNCEMENT_ARCHIVED` (封存公告)。公告已讀只寫入 `dms_ann_read`，不逐筆寫入 `dms_log`。
 
 ### 5.3. 稽核資料欄位
 
@@ -639,7 +650,7 @@ DMS 內目前已實作的全域稽核紀錄涵蓋文件版本生命週期、登�
 | `dl_actor_name` (操作者姓名) | 執行動作的使用者姓名。 |
 | `dl_actor_role` (操作者角色) | 執行動作當下的登入角色，僅記錄 `ADMIN` (系統管理員) 或 `USER` (一般使用者)。資料夾管理員屬於計算型管理身分，不寫入為登入角色。 |
 | `dl_action` (動作代碼) | 本次事件類型，例如 `DOCUMENT_VERSION_CANCELLED` (撤回新版文件)。 |
-| `dl_resource_type` (資源類型) | 被操作的資源類型，例如 `AUTH` (驗證)、`FOLDER` (資料夾)、`DOCUMENT` (文件主檔)、`VERSION` (文件版本)、`ACL` (存取控制清單)。 |
+| `dl_resource_type` (資源類型) | 被操作的資源類型，例如 `AUTH` (驗證)、`FOLDER` (資料夾)、`DOCUMENT` (文件主檔)、`VERSION` (文件版本)、`ACL` (存取控制清單)、`ANNOUNCEMENT` (公告)。 |
 | `dl_resource_id` (資源識別碼) | 被操作資源的主要識別碼。 |
 | `dl_managed_df_fid` (管理資料夾節點識別碼) | 事件所屬管理資料夾節點識別碼，便於依權限範圍查詢。 |
 | `df_fid` (資料夾識別碼) | 事件所屬資料夾識別碼。 |
@@ -815,9 +826,12 @@ DMS_NEXT_PORT=3000
 | `GET /api/search?keyword=...&page=...&page_size=...` | `app/api/search/route.ts` | 透過 `searchService.ts` 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋 |
 | `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
 | `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
+| `GET /api/dashboard` | `app/api/dashboard/route.ts` | 透過 `dashboardService.ts` 分區查詢公告、近期發佈的文件、預約發佈提醒及系統異常摘要 |
+| `POST /api/dashboard/announcements/read` | `app/api/dashboard/announcements/read/route.ts` | 驗證公告有效性、對象及版次後，冪等寫入公告已讀紀錄 |
 | `GET /api/system/audit` | `app/api/system/audit/route.ts` | 透過 `systemService.ts` 查詢及分頁顯示 `dms_log` |
 | `GET /api/system/audit/export` | `app/api/system/audit/export/route.ts` | 匯出目前條件的稽核 CSV 並記錄匯出事件 |
 | `GET`、`POST`、`DELETE /api/system/settings/admins` | `app/api/system/settings/admins/route.ts` | 查詢、指定或撤銷系統管理員 |
+| `GET`、`POST`、`PUT`、`DELETE /api/system/announcements` | `app/api/system/announcements/route.ts` | 查詢、建立、修改、發佈、排程或封存公告；限系統管理員使用 |
 | `GET /api/system/permissions` | `app/api/system/permissions/route.ts` | 查詢第一層資料夾權限總覽 |
 | `GET /api/system/status` | `app/api/system/status/route.ts` | 查詢應用程式、資料庫、儲存空間與資料統計 |
 | `GET`、`POST /api/system/recycle` | `app/api/system/recycle/route.ts` | 查詢、還原、永久刪除封存批次及重試檔案清理 |
@@ -885,6 +899,7 @@ DMS_NEXT_PORT=3000
 * **Enter 導航**：
     * 在非最後一個可編輯輸入框按下 `Enter`，系統阻止預設提交，並將焦點移至下一個可編輯輸入框。
     * 僅在最後一個可編輯輸入框按下 `Enter` 時，才觸發 `Modal` 底部操作區中第一個符合 `.btn-primary` 或 `.btn-danger` 且未停用的主要按鈕。
+    * 明確標示為多行內容的文字區域可使用 `Shift + Enter` 插入換行；單獨按下 `Enter` 仍依上述欄位導航規則處理。
     * 中文輸入法組字期間的 `Enter` 不得觸發欄位導航或提交。
     * 隱藏、唯讀、停用、核取方塊、選項按鈕及檔案欄位不列入鍵盤導航順序。
 * **必填欄位驗證**：
@@ -972,16 +987,42 @@ _github.bat "本次修改摘要"
 
 `_github.bat` 已會自動處理本機 commit (提交)，因此日常同步遠端時可直接使用 `_github.bat`。
 
-## 8. 系統管理功能區
+## 8. 登入後儀表板
 
-### 8.1. 導覽與權限
+### 8.1. 導覽與更新
 
-* 左側樹狀選單在「文件庫」下方提供第二個 root「系統管理」。登入角色為 `ADMIN` 的系統管理員，以及具有至少一項目前有效資料夾管理員或協同管理員指派的使用者可見。
+* 使用者登入成功或還原有效 Session 後，固定先進入「儀表板」。左側主導覽依序為「儀表板」、「文件庫」、「系統管理」；既有系統管理子選單順序不變。
+* 儀表板在首次進入、手動重新整理、公告標示已讀及管理員完成公告異動後更新。第一版不使用定時輪詢。
+* 公告、近期發佈的文件、預約發佈提醒及系統異常摘要採分區載入。單一區塊查詢失敗時，其他成功區塊仍需顯示，且不得阻止使用者切換至文件庫。
+* `GET /api/dashboard` 與公告已讀 API 必須驗證有效 Session，並設定 `Cache-Control: no-store`。JSON API 使用完整英文名稱，不回傳 `dan_` 或 `danr_` 資料庫縮寫欄位。
+
+### 8.2. 公告區
+
+* 儀表板顯示排序後前 5 筆有效公告，並提供「查看全部公告」。排序依序為重要程度、未讀狀態及發佈時間；緊急公告置頂，但不得阻擋其他操作。
+* 公告重要程度分為「一般」、「重要」、「緊急」。內容為純文字，保留換行，不接受 HTML；標題上限 120 字，內容上限 2000 字。
+* 公告對象可選全體使用者、系統管理員、資料夾管理員及協同管理員。「全體使用者」與兩種角色條件互斥；系統管理員與資料夾管理員條件可同時選取。
+* 使用者開啟公告後，必須主動選取「標示為已讀」。已讀紀錄以公告識別碼、公告版次及使用者帳號冪等寫入；公告改版後，新版重新顯示為未讀。
+* 角色公告及公告已讀 API 依查詢當下的系統管理員身分或有效資料夾管理指派判斷。跨公告對象呼叫已讀 API 回傳 HTTP `403`；公告版次不一致回傳 HTTP `409`。
+
+### 8.3. 近期發佈的文件與角色專屬區塊
+
+* 「近期發佈的文件」以版本生效時間判斷，顯示目前仍有效且於近 30 天內生效的文件版本總數與最新 10 筆。每筆內容包含文件編號、名稱、版本、發佈日期及資料夾路徑；發佈日期不顯示時間，並與後方的檔案所在路徑顯示於同一行。未編版號時以版本序號顯示「第 N 版」，文件圖示依已發佈檔案的副檔名顯示，規則與文件清單一致。
+* 近期發佈的文件必須在伺服器端依目前使用者的資料夾 ACL、文件機敏等級、文件狀態、版本狀態及資料夾狀態過濾，不得先載入全域文件再由前端過濾。
+* 可預覽格式提供「檢視」，沿用既有預覽 API；「前往文件」切換至文件庫、開啟所在資料夾並短暫標示目標文件。不可預覽格式不從儀表板自動下載。
+* 具有目前有效資料夾管理員或協同管理員指派的使用者，可在「預約發佈提醒」看到目前管理範圍內，未來 30 天將發佈的版本總數與前 10 筆。技術上仍以版本生效時間判斷；多個管理範圍重疊時，同一文件版本不得重複。
+* 系統管理員可看到資料庫連線、儲存空間讀寫、必要設定、連線池等待、待清理工作及失敗工作的異常摘要。摘要不得回傳儲存根目錄、資料庫版本、原始錯誤堆疊或其他敏感技術資訊；點擊異常後前往「系統狀態」或「資源回收區」。
+* 系統管理員若同時具有有效資料夾管理指派，也顯示預約版本區塊。系統管理員身分本身不等同資料夾管理身分，亦不得因此取得機密文件。
+
+## 9. 系統管理功能區
+
+### 9.1. 導覽與權限
+
+* 左側主導覽依序提供「儀表板」、「文件庫」及「系統管理」。「系統管理」只在登入角色為 `ADMIN`，或使用者具有至少一項目前有效資料夾管理員或協同管理員指派時顯示。
 * 系統管理員展開「系統管理」後，依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。資料夾管理員及協同管理員只顯示「系統稽核紀錄」。
 * 系統管理頁面開啟時不得載入文件清單；返回文件庫時保留原資料夾位置。
 * `/api/system/audit` 與 `/api/system/audit/export` 必須在後端驗證目前登入者為系統管理員、資料夾管理員或協同管理員；其他 `/api/system/*` API 仍只允許 `ADMIN` 使用。未具相應權限時回傳 HTTP `403`。
 
-### 8.2. 系統稽核紀錄
+### 9.2. 系統稽核紀錄
 
 * 查詢來源固定為現行 `dms_log`，不合併早期保留的 `dms_audit_log`。
 * 系統管理員可查詢全部稽核紀錄。資料夾管理員及協同管理員只能查詢目前有效管理節點及其全部子資料夾的 `DOCUMENT`、`VERSION` 文件事件。
@@ -1000,23 +1041,27 @@ _github.bat "本次修改摘要"
 * 明細另顯示操作者角色、結果原因、事件來源 IP、用戶端識別資訊、請求追蹤識別碼、關聯識別碼、異動前後資料及其他技術資料。
 * 登入失敗必須保存使用者嘗試登入的帳號與事件來源，但不得保存密碼。
 
-### 8.3. 系統設定
+### 9.3. 系統設定
 
-* 系統設定為後續系統層級設定的統一入口，目前只提供「系統管理員」設定，不顯示空白或尚未實作的分類。
+* 系統設定為系統層級設定的統一入口，提供「系統管理員」與「公告管理」，不顯示空白或尚未實作的分類。
 * 系統管理員以員工編號指定，後端必須驗證員工存在且在職。
 * 撤銷管理員採 `dms_admins.da_dc = 'Y'`，不得物理刪除紀錄。
 * 系統管理員不得撤銷自己，也不得撤銷最後 1 位有效管理員。
 * 指定與撤銷分別寫入 `SYSTEM_ADMIN_ASSIGNED`、`SYSTEM_ADMIN_REVOKED`，保存異動前後資料。
 * 管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。
+* 公告管理支援草稿、立即發佈、預約發佈、選填下架時間、修改及手動封存；發佈與下架由查詢時間判斷，不建立背景排程。
+* 公告狀態只能依「草稿 → 已發佈 → 已封存」前進。已封存公告唯讀，不提供實體刪除或重新發佈。
+* 修改已發佈公告時，`dan_rev` 增加 1，舊版已讀紀錄保留。更新與封存請求必須帶入目前版次；版次不一致時回傳 HTTP `409`。
+* 下架時間必須晚於發佈時間。當公告對象為全體使用者時，不得同時選取系統管理員或資料夾管理員對象；此規則由後端再次驗證。
 
-### 8.4. 權限總覽與系統狀態
+### 9.4. 權限總覽與系統狀態
 
 * 權限總覽唯讀顯示有效第一層資料夾的主要管理員、協同管理員、公開、僅限管理者或限閱狀態、授權摘要、子資料夾數與文件數。
 * 權限總覽提供篩選及「前往資料夾」，實際權限異動仍由文件庫中的資料夾管理畫面處理。
 * 系統狀態顯示應用程式、PostgreSQL、連線池、儲存空間、必要環境設定、資料統計及待清理工作數量。
 * 系統狀態不得回傳資料庫密碼、Session 密鑰或完整連線字串，只能回傳設定是否安全或完整。
 
-### 8.5. 資源回收區
+### 9.5. 資源回收區
 
 * 資源回收區以根資料夾的 `df_arcat` 識別同一次遞迴封存批次，只顯示批次根節點。
 * 還原只恢復同批資料夾，以及 `dd_obs_src = 2` 且封存時間相符的文件；手動廢止文件不得恢復。
@@ -1026,10 +1071,14 @@ _github.bat "本次修改摘要"
 * 資料庫提交後若隔離區刪除失敗，`dms_purge_job` 維持 `CLEANUP_PENDING`，管理員可於資源回收區重試。
 * 還原成功寫入 `FOLDER_RESTORED`。永久刪除完成後不得由介面還原。
 
-### 8.6. 系統管理稽核事件
+### 9.6. 系統管理稽核事件
 
 * `SYSTEM_ADMIN_ASSIGNED`：指定系統管理員。
 * `SYSTEM_ADMIN_REVOKED`：撤銷系統管理員。
 * `AUDIT_LOG_EXPORTED`：匯出稽核紀錄。
 * `FOLDER_RESTORED`：還原封存批次。
 * `FOLDER_PURGED`：永久作廢封存批次並啟動實體檔案清理。
+* `ANNOUNCEMENT_CREATED`：建立公告草稿。
+* `ANNOUNCEMENT_UPDATED`：修改公告。
+* `ANNOUNCEMENT_PUBLISHED`：發佈或預約發佈公告。
+* `ANNOUNCEMENT_ARCHIVED`：封存公告。

@@ -10,6 +10,7 @@ import {
   DeleteIcon,
   HistoryIcon
 } from './Icons';
+import { DocumentTypeIcon } from './DocumentTypeIcon';
 
 const KeyIcon = ({ size = 18, style }: { size?: number, style?: React.CSSProperties }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', ...style }}>
@@ -40,58 +41,6 @@ const RelatedDocumentIcon = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
-type DocumentIconKind = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'image' | 'document';
-type DocumentIconSize = 18 | 24;
-
-const DOCUMENT_ICON_KIND_BY_EXTENSION: Record<string, DocumentIconKind> = {
-  pdf: 'pdf',
-  doc: 'word',
-  docx: 'word',
-  xls: 'excel',
-  xlsx: 'excel',
-  ppt: 'powerpoint',
-  pptx: 'powerpoint',
-  jpg: 'image',
-  jpeg: 'image',
-  png: 'image',
-  gif: 'image',
-  tif: 'image',
-  tiff: 'image',
-  webp: 'image'
-};
-
-const getDocumentIconKind = (item: DMSItem): DocumentIconKind => {
-  const extension = item.file_name?.match(/\.([^.]+)$/)?.[1]?.toLowerCase();
-  if (extension && DOCUMENT_ICON_KIND_BY_EXTENSION[extension]) {
-    return DOCUMENT_ICON_KIND_BY_EXTENSION[extension];
-  }
-
-  const mime = item.mime?.split(';', 1)[0].trim().toLowerCase() || '';
-  if (mime === 'application/pdf' || item.is_pdf) return 'pdf';
-  if (mime === 'application/msword' || mime.includes('wordprocessingml')) return 'word';
-  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml')) return 'excel';
-  if (mime === 'application/vnd.ms-powerpoint' || mime.includes('presentationml')) return 'powerpoint';
-  if (mime.startsWith('image/')) return 'image';
-
-  return 'document';
-};
-
-const DocumentTypeIcon = ({ item, size }: { item: DMSItem; size: DocumentIconSize }) => {
-  const iconKind = getDocumentIconKind(item);
-
-  return (
-    <img
-      className="document-type-icon"
-      src={`/icons/document-icons/generated/${iconKind}-${size}.png`}
-      width={size}
-      height={size}
-      alt=""
-      aria-hidden="true"
-      draggable={false}
-    />
-  );
-};
-
 interface FileTableProps {
   items: DMSItem[];
   onEnterFolder: (id: string) => void;
@@ -115,6 +64,7 @@ interface FileTableProps {
   showFolderPath?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  highlightedItemId?: string;
 }
 
 type VersionPairConnectorPlacement = {
@@ -146,7 +96,8 @@ export const FileTable = React.memo<FileTableProps>(({
   onOpenContainingFolder,
   showFolderPath = false,
   emptyTitle = '此目錄下尚無項目',
-  emptyDescription = '具備管理權限時，可以建立子資料夾或上傳正式文件。'
+  emptyDescription = '具備管理權限時，可以建立子資料夾或上傳正式文件。',
+  highlightedItemId
 }) => {
   const [openActionId, setOpenActionId] = React.useState<string | null>(null);
   const [actionMenuPlacement, setActionMenuPlacement] = React.useState<React.CSSProperties | null>(null);
@@ -215,6 +166,14 @@ export const FileTable = React.memo<FileTableProps>(({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [openActionId]);
+
+  React.useEffect(() => {
+    if (!highlightedItemId || !tableWrapperRef.current) return;
+    const target = Array.from(
+      tableWrapperRef.current.querySelectorAll<HTMLTableRowElement>('tr[data-item-id][data-item-type="document"]')
+    ).find(row => row.dataset.itemId === highlightedItemId);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightedItemId, items]);
 
   type ActionMenuItem = {
     key: string;
@@ -782,10 +741,15 @@ export const FileTable = React.memo<FileTableProps>(({
             if (isActionMenuOpen) {
               rowClassNames.push('context-menu-active');
             }
+            if (item.type === 'document' && highlightedItemId === String(item.id)) {
+              rowClassNames.push('dashboard-target-highlight');
+            }
 
             return (
               <tr
                 key={`${item.type}-${item.id}-${item.ver_id || ''}`}
+                data-item-id={item.id}
+                data-item-type={item.type}
                 className={rowClassNames.join(' ')}
                 onClick={() => handleRowClick(item)}
                 onContextMenu={(event) => {

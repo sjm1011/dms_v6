@@ -220,7 +220,7 @@
 <h2>1. 資料表說明</h2>
 <p>* <strong>表名稱</strong>：<code>dms_doc_ver</code></p>
 <p>* <strong>schema 檔名</strong>：<code>schema_dms_doc_ver.md</code>、<code>schema_dms_doc_ver.html</code></p>
-<p>* <strong>用途</strong>：保存文件每一次正式發布版本的版本號、修訂日期、生效期間、正式發布檔案、PDF 原始編修檔案與撤回紀錄。</p>
+<p>* <strong>用途</strong>：保存文件每一次正式發佈版本的版本號、修訂日期、生效期間、正式發佈檔案、PDF 原始編修檔案與撤回紀錄。</p>
 <h3>欄位規劃</h3>
 <table>
   <thead>
@@ -235,7 +235,7 @@
     <tr><td><code>ddv_eff_at</code></td><td>TIMESTAMP</td><td>Not Null</td><td>生效時間。</td></tr>
     <tr><td><code>ddv_eff_to</code></td><td>TIMESTAMP</td><td>Nullable</td><td>結束時間，由系統於新版建立時寫入。</td></tr>
     <tr><td><code>ddv_chg_note</code></td><td>TEXT</td><td>Not Null</td><td>異動說明。</td></tr>
-    <tr><td><code>ddv_pub_dfi_id</code></td><td>INTEGER</td><td>Not Null</td><td>正式發布檔案 ID，邏輯對應 <code>dms_file.dfi_id</code>。</td></tr>
+    <tr><td><code>ddv_pub_dfi_id</code></td><td>INTEGER</td><td>Not Null</td><td>正式發佈檔案 ID，邏輯對應 <code>dms_file.dfi_id</code>。</td></tr>
     <tr><td><code>ddv_src_dfi_id</code></td><td>INTEGER</td><td>Nullable</td><td>PDF 原始編修檔案 ID，邏輯對應 <code>dms_file.dfi_id</code>。</td></tr>
     <tr><td><code>ddv_cancel_at</code></td><td>TIMESTAMP</td><td>Nullable</td><td>撤回時間。</td></tr>
     <tr><td><code>ddv_cancel_by</code></td><td>VARCHAR(50)</td><td>Nullable</td><td>撤回人員帳號。</td></tr>
@@ -301,7 +301,7 @@ COMMENT ON COLUMN dms_doc_ver.ddv_rev_date IS '修訂日期';
 COMMENT ON COLUMN dms_doc_ver.ddv_eff_at IS '生效時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_eff_to IS '結束時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_chg_note IS '異動說明';
-COMMENT ON COLUMN dms_doc_ver.ddv_pub_dfi_id IS '正式發布檔案 ID';
+COMMENT ON COLUMN dms_doc_ver.ddv_pub_dfi_id IS '正式發佈檔案 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_src_dfi_id IS 'PDF 原始編修檔案 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_cancel_at IS '撤回時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_cancel_by IS '撤回人員帳號';
@@ -341,7 +341,7 @@ COMMENT ON COLUMN dms_doc_ver.ddv_updat IS '最後異動時間';</code></pre>
 <p>* 上傳新版本時，需於同一交易內更新前一個未撤回版本的 <code>ddv_eff_to</code>。</p>
 <p>* 撤回最新版本時，需於同一交易內寫入被撤回版本的撤回欄位，並清空前一版本的 <code>ddv_eff_to</code>。</p>
 <p>* <code>ddv_pub_dfi_id</code> 必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 1</code>。</p>
-<p>* <code>ddv_src_dfi_id</code> 若有值，必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 2</code>，且僅 PDF 正式發布檔案可掛原始編修檔。</p>
+<p>* <code>ddv_src_dfi_id</code> 若有值，必須存在於 <code>dms_file.dfi_id</code>，並符合 <code>dfi_role = 2</code>，且僅 PDF 正式發佈檔案可掛原始編修檔。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

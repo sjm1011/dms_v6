@@ -216,7 +216,7 @@ ON dms_file(dfi_role, dfi_status);
 
 COMMENT ON TABLE dms_file IS '檔案後設資料';
 COMMENT ON COLUMN dms_file.dfi_id IS '檔案唯一識別碼';
-COMMENT ON COLUMN dms_file.dfi_role IS '檔案角色。1：正式發布檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文';
+COMMENT ON COLUMN dms_file.dfi_role IS '檔案角色。1：正式發佈檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文';
 COMMENT ON COLUMN dms_file.dfi_name IS '原始檔名';
 COMMENT ON COLUMN dms_file.dfi_path IS '實體儲存路徑';
 COMMENT ON COLUMN dms_file.dfi_ext IS '副檔名';
@@ -278,7 +278,7 @@ COMMENT ON COLUMN dms_doc_ver.ddv_rev_date IS '修訂日期';
 COMMENT ON COLUMN dms_doc_ver.ddv_eff_at IS '生效時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_eff_to IS '結束時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_chg_note IS '異動說明';
-COMMENT ON COLUMN dms_doc_ver.ddv_pub_dfi_id IS '正式發布檔案 ID';
+COMMENT ON COLUMN dms_doc_ver.ddv_pub_dfi_id IS '正式發佈檔案 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_src_dfi_id IS 'PDF 原始編修檔案 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_cancel_at IS '撤回時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_cancel_by IS '撤回人員帳號';
@@ -429,5 +429,78 @@ COMMENT ON COLUMN dms_purge_job.dpj_requested_at IS '建立時間';
 COMMENT ON COLUMN dms_purge_job.dpj_completed_at IS '清理完成時間';
 COMMENT ON COLUMN dms_purge_job.dpj_retry_count IS '清理重試次數';
 COMMENT ON COLUMN dms_purge_job.dpj_error IS '最近一次失敗原因';
+
+-- ============================================================================
+-- dms_ann
+-- ============================================================================
+
+CREATE TABLE dms_ann (
+    dan_id SERIAL NOT NULL,
+    dan_title VARCHAR(120) NOT NULL,
+    dan_body TEXT NOT NULL,
+    dan_priority SMALLINT NOT NULL DEFAULT 1,
+    dan_status SMALLINT NOT NULL DEFAULT 0,
+    dan_rev INTEGER NOT NULL DEFAULT 1,
+    dan_aud_all VARCHAR(1) NOT NULL DEFAULT 'Y',
+    dan_aud_admin VARCHAR(1) NOT NULL DEFAULT 'N',
+    dan_aud_mgr VARCHAR(1) NOT NULL DEFAULT 'N',
+    dan_pub_at TIMESTAMP,
+    dan_exp_at TIMESTAMP,
+    dan_crtby VARCHAR(50) NOT NULL,
+    dan_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dan_updby VARCHAR(50),
+    dan_updat TIMESTAMP
+);
+
+CREATE INDEX idx_dms_ann_status_time
+ON dms_ann(dan_status, dan_pub_at, dan_exp_at);
+
+CREATE INDEX idx_dms_ann_updat
+ON dms_ann(dan_updat);
+
+COMMENT ON TABLE dms_ann IS '系統公告主檔';
+COMMENT ON COLUMN dms_ann.dan_id IS '公告識別碼';
+COMMENT ON COLUMN dms_ann.dan_title IS '公告標題';
+COMMENT ON COLUMN dms_ann.dan_body IS '公告純文字內容';
+COMMENT ON COLUMN dms_ann.dan_priority IS '重要程度。1：一般，2：重要，3：緊急';
+COMMENT ON COLUMN dms_ann.dan_status IS '公告狀態。0：草稿，1：已發佈，2：已封存';
+COMMENT ON COLUMN dms_ann.dan_rev IS '公告版次';
+COMMENT ON COLUMN dms_ann.dan_aud_all IS '是否提供全體使用者。Y：是，N：否';
+COMMENT ON COLUMN dms_ann.dan_aud_admin IS '是否提供系統管理員。Y：是，N：否';
+COMMENT ON COLUMN dms_ann.dan_aud_mgr IS '是否提供資料夾管理員及協同管理員。Y：是，N：否';
+COMMENT ON COLUMN dms_ann.dan_pub_at IS '發佈或預約發佈時間';
+COMMENT ON COLUMN dms_ann.dan_exp_at IS '下架時間';
+COMMENT ON COLUMN dms_ann.dan_crtby IS '建立者帳號';
+COMMENT ON COLUMN dms_ann.dan_crtat IS '建立時間';
+COMMENT ON COLUMN dms_ann.dan_updby IS '最後異動者帳號';
+COMMENT ON COLUMN dms_ann.dan_updat IS '最後異動時間';
+
+-- ============================================================================
+-- dms_ann_read
+-- ============================================================================
+
+CREATE TABLE dms_ann_read (
+    danr_id SERIAL NOT NULL,
+    dan_id INTEGER NOT NULL,
+    danr_rev INTEGER NOT NULL,
+    danr_uid VARCHAR(50) NOT NULL,
+    danr_read_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_dms_ann_read_ann
+ON dms_ann_read(dan_id, danr_rev);
+
+CREATE INDEX idx_dms_ann_read_uid
+ON dms_ann_read(danr_uid, danr_read_at);
+
+CREATE UNIQUE INDEX uidx_dms_ann_read_identity
+ON dms_ann_read(dan_id, danr_rev, danr_uid);
+
+COMMENT ON TABLE dms_ann_read IS '使用者公告已讀紀錄';
+COMMENT ON COLUMN dms_ann_read.danr_id IS '已讀紀錄識別碼';
+COMMENT ON COLUMN dms_ann_read.dan_id IS '公告識別碼';
+COMMENT ON COLUMN dms_ann_read.danr_rev IS '使用者已讀的公告版次';
+COMMENT ON COLUMN dms_ann_read.danr_uid IS '使用者帳號';
+COMMENT ON COLUMN dms_ann_read.danr_read_at IS '已讀時間';
 
 COMMIT;

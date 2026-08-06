@@ -12,14 +12,14 @@
 
 * **表名稱**：`dms_file`
 * **schema 檔名**：`schema_dms_file.md`、`schema_dms_file.html`
-* **用途**：集中保存正式發布檔案、PDF 原始編修檔案、修訂對照表與廢止公文的檔案後設資料。
+* **用途**：集中保存正式發佈檔案、PDF 原始編修檔案、修訂對照表與廢止公文的檔案後設資料。
 
 ### 欄位規劃
 
 | 欄位名稱 | 資料型態 | 屬性 | 說明 |
 | :--- | :--- | :--- | :--- |
 | `dfi_id` | SERIAL (INT) | Primary Key | 檔案唯一識別碼。 |
-| `dfi_role` | SMALLINT | Not Null | 檔案角色。1：正式發布檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文。 |
+| `dfi_role` | SMALLINT | Not Null | 檔案角色。1：正式發佈檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文。 |
 | `dfi_name` | VARCHAR(255) | Not Null | 原始檔名。 |
 | `dfi_path` | VARCHAR(1000) | Not Null | 實體儲存路徑。 |
 | `dfi_ext` | VARCHAR(20) | Not Null | 副檔名，建議以小寫保存。 |
@@ -66,7 +66,7 @@ ON dms_file(dfi_role, dfi_status);
 ```sql
 COMMENT ON TABLE dms_file IS '檔案後設資料';
 COMMENT ON COLUMN dms_file.dfi_id IS '檔案唯一識別碼';
-COMMENT ON COLUMN dms_file.dfi_role IS '檔案角色。1：正式發布檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文';
+COMMENT ON COLUMN dms_file.dfi_role IS '檔案角色。1：正式發佈檔案，2：PDF 原始編修檔案，3：修訂對照表，4：廢止公文';
 COMMENT ON COLUMN dms_file.dfi_name IS '原始檔名';
 COMMENT ON COLUMN dms_file.dfi_path IS '實體儲存路徑';
 COMMENT ON COLUMN dms_file.dfi_ext IS '副檔名';
@@ -112,7 +112,7 @@ SELECT dfi_id,
 ## 5. 後端檢核規則
 
 * 上傳檔案時，副檔名與 MIME Type 必須同時符合第 4.5 節白名單。
-* `dfi_role = 1` 用於正式發布檔案。
+* `dfi_role = 1` 用於正式發佈檔案。
 * `dfi_role = 2` 用於 PDF 原始編修檔案。
 * `dfi_role = 3` 用於修訂對照表檔案。
 * `dfi_role = 4` 用於廢止公文檔案。

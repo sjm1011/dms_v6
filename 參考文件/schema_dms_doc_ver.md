@@ -12,7 +12,7 @@
 
 * **表名稱**：`dms_doc_ver`
 * **schema 檔名**：`schema_dms_doc_ver.md`、`schema_dms_doc_ver.html`
-* **用途**：保存文件每一次正式發布版本的版本號、修訂日期、生效期間、正式發布檔案、PDF 原始編修檔案與撤回紀錄。
+* **用途**：保存文件每一次正式發佈版本的版本號、修訂日期、生效期間、正式發佈檔案、PDF 原始編修檔案與撤回紀錄。
 
 ### 欄位規劃
 
@@ -26,7 +26,7 @@
 | `ddv_eff_at` | TIMESTAMP | Not Null | 生效時間。 |
 | `ddv_eff_to` | TIMESTAMP | Nullable | 結束時間，由系統於新版建立時寫入。 |
 | `ddv_chg_note` | TEXT | Not Null | 異動說明。 |
-| `ddv_pub_dfi_id` | INTEGER | Not Null | 正式發布檔案 ID，邏輯對應 `dms_file.dfi_id`。 |
+| `ddv_pub_dfi_id` | INTEGER | Not Null | 正式發佈檔案 ID，邏輯對應 `dms_file.dfi_id`。 |
 | `ddv_src_dfi_id` | INTEGER | Nullable | PDF 原始編修檔案 ID，邏輯對應 `dms_file.dfi_id`。 |
 | `ddv_cancel_at` | TIMESTAMP | Nullable | 撤回時間。 |
 | `ddv_cancel_by` | VARCHAR(50) | Nullable | 撤回人員帳號。 |
@@ -94,7 +94,7 @@ COMMENT ON COLUMN dms_doc_ver.ddv_rev_date IS '修訂日期';
 COMMENT ON COLUMN dms_doc_ver.ddv_eff_at IS '生效時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_eff_to IS '結束時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_chg_note IS '異動說明';
-COMMENT ON COLUMN dms_doc_ver.ddv_pub_dfi_id IS '正式發布檔案 ID';
+COMMENT ON COLUMN dms_doc_ver.ddv_pub_dfi_id IS '正式發佈檔案 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_src_dfi_id IS 'PDF 原始編修檔案 ID';
 COMMENT ON COLUMN dms_doc_ver.ddv_cancel_at IS '撤回時間';
 COMMENT ON COLUMN dms_doc_ver.ddv_cancel_by IS '撤回人員帳號';
@@ -143,4 +143,4 @@ SELECT d.dd_id,
 * 上傳新版本時，需於同一交易內更新前一個未撤回版本的 `ddv_eff_to`。
 * 撤回最新版本時，需於同一交易內寫入被撤回版本的撤回欄位，並清空前一版本的 `ddv_eff_to`。
 * `ddv_pub_dfi_id` 必須存在於 `dms_file.dfi_id`，並符合 `dfi_role = 1`。
-* `ddv_src_dfi_id` 若有值，必須存在於 `dms_file.dfi_id`，並符合 `dfi_role = 2`，且僅 PDF 正式發布檔案可掛原始編修檔。
+* `ddv_src_dfi_id` 若有值，必須存在於 `dms_file.dfi_id`，並符合 `dfi_role = 2`，且僅 PDF 正式發佈檔案可掛原始編修檔。

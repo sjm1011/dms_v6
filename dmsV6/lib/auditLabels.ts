@@ -24,6 +24,10 @@ const actionLabels: Record<string, string> = {
   DOCUMENT_DELETED: '刪除文件',
   SYSTEM_ADMIN_ASSIGNED: '指定系統管理員',
   SYSTEM_ADMIN_REVOKED: '撤銷系統管理員',
+  ANNOUNCEMENT_CREATED: '建立公告',
+  ANNOUNCEMENT_UPDATED: '修改公告',
+  ANNOUNCEMENT_PUBLISHED: '發佈公告',
+  ANNOUNCEMENT_ARCHIVED: '封存公告',
   AUDIT_LOG_EXPORTED: '匯出稽核紀錄'
 };
 
@@ -34,6 +38,7 @@ const resourceLabels: Record<string, string> = {
   DOCUMENT: '文件',
   VERSION: '文件版本',
   ADMIN: '系統管理員',
+  ANNOUNCEMENT: '系統公告',
   AUDIT: '稽核紀錄'
 };
 
