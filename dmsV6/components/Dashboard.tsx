@@ -83,7 +83,7 @@ const DocumentList: React.FC<{
             </div>
             {recentPresentation ? (
               <p className="dashboard-document-meta">
-                <span>發佈日期：{formatDate(item.effective_at)}</span>
+                <span>發行日期：{formatDate(item.effective_at)}</span>
                 <span className="dashboard-document-path">{item.folder_path}</span>
               </p>
             ) : (

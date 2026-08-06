@@ -2941,7 +2941,7 @@ button.folder-header-access-badge {
 
 .announcement-editor-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 15px;
 }
 
@@ -2964,9 +2964,10 @@ button.folder-header-access-badge {
 .announcement-audience {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 18px;
+  align-items: center;
+  gap: 6px 14px;
   margin: 0;
-  padding: 14px;
+  padding: 8px 12px 10px;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
 }
@@ -2977,14 +2978,25 @@ button.folder-header-access-badge {
 }
 
 .announcement-audience label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  min-height: 20px;
+  line-height: 20px;
   color: var(--text-secondary);
 }
 
 .announcement-audience input {
-  width: auto;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.announcement-audience > small {
+  flex-basis: 100%;
 }
 
 .announcement-revision-note {
