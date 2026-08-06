@@ -1,16 +1,13 @@
 import { NextRequest } from 'next/server';
 import { requireSession } from '../../../lib/server/auth';
-import { fail, ok, parseJsonBody, serverError } from '../../../lib/server/http';
+import { fail, ok, parseJsonBody, systemRouteError } from '../../../lib/server/http';
 import {
   cancelLatestVersion,
-  createDocument,
   deleteFirstVersionDocument,
   deleteScheduledVersion,
   editDocument,
   listDocuments,
-  moveDocument,
-  obsoleteDocument,
-  uploadVersion
+  moveDocument
 } from '../../../lib/server/documentService';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +19,7 @@ export const GET = async (request: NextRequest) => {
 
     return ok(await listDocuments(session.user, folderId));
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };
 
@@ -31,16 +28,8 @@ export const POST = async (request: NextRequest) => {
     const session = requireSession(request);
     const body = await parseJsonBody<any>(request);
 
-    if (body.action === 'create') {
-      return ok(await createDocument(session.user, body), 201);
-    }
-
-    if (body.action === 'upload_version') {
-      await uploadVersion(session.user, body);
-      return ok(null);
-    }
-
     if (body.action === 'edit_document') {
+      if (body.source_file) return fail('原始編修檔必須使用檔案上傳端點。', 415);
       await editDocument(session.user, body);
       return ok(null);
     }
@@ -50,9 +39,8 @@ export const POST = async (request: NextRequest) => {
       return ok(null);
     }
 
-    if (body.action === 'obsolete') {
-      await obsoleteDocument(session.user, Number(body.doc_id), body.reason || '', body.file);
-      return ok(null);
+    if (body.action === 'create' || body.action === 'upload_version' || body.action === 'obsolete') {
+      return fail('此操作必須使用檔案上傳端點。', 415);
     }
 
     if (body.action === 'delete_document') {
@@ -79,6 +67,6 @@ export const POST = async (request: NextRequest) => {
 
     return fail('不支援的文件操作。', 400);
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };

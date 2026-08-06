@@ -20,6 +20,12 @@ export const fail = (error: string, status = 400, data: unknown = null) =>
     { status }
   );
 
+export class HttpStatusError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 export const serverError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -37,6 +43,7 @@ const forbiddenMessages = new Set([
 ]);
 
 export const authOrServerError = (error: unknown) => {
+  if (error instanceof HttpStatusError) return fail(error.message, error.status);
   if (error instanceof Error && unauthorizedMessages.has(error.message)) {
     return fail(error.message, 401);
   }
@@ -49,6 +56,7 @@ export const authOrServerError = (error: unknown) => {
 };
 
 export const systemRouteError = (error: unknown) => {
+  if (error instanceof HttpStatusError) return fail(error.message, error.status);
   if (error instanceof Error && unauthorizedMessages.has(error.message)) {
     return fail(error.message, 401);
   }
@@ -58,10 +66,36 @@ export const systemRouteError = (error: unknown) => {
   return fail(error instanceof Error ? error.message : String(error), 400);
 };
 
-export const parseJsonBody = async <T>(request: Request): Promise<T> => {
+export const parseJsonBody = async <T>(request: Request, maxBytes = 1024 * 1024): Promise<T> => {
+  const contentLength = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new HttpStatusError('JSON 請求內容超過 1 MiB 限制。', 413);
+  }
+
   try {
-    return (await request.json()) as T;
-  } catch {
+    if (!request.body) throw new Error('empty');
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        throw new HttpStatusError('JSON 請求內容超過 1 MiB 限制。', 413);
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    chunks.forEach((chunk) => {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    });
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as T;
+  } catch (error) {
+    if (error instanceof HttpStatusError) throw error;
     throw new Error('JSON 格式錯誤。');
   }
 };

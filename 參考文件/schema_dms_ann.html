@@ -272,8 +272,12 @@ CREATE INDEX IF NOT EXISTS idx_dms_ann_status_time
 ON dms_ann(dan_status, dan_pub_at, dan_exp_at);
 
 CREATE INDEX IF NOT EXISTS idx_dms_ann_updat
-ON dms_ann(dan_updat);</code></pre>
+ON dms_ann(dan_updat);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_dms_ann_id
+ON dms_ann(dan_id);</code></pre>
 </div>
+<p>唯一索引 <code>uidx_dms_ann_id</code> 保證公告識別碼不可重複；依專案規則不建立 <code>PRIMARY KEY</code> 或額外 <code>CONSTRAINT</code>。</p>
 <p>索引只使用原始欄位，不使用函數或型別轉換。</p>
 <p>---</p>
 <h2>3. 後端檢核規則</h2>

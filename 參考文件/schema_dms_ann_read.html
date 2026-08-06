@@ -255,9 +255,13 @@ CREATE INDEX IF NOT EXISTS idx_dms_ann_read_uid
 ON dms_ann_read(danr_uid, danr_read_at);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uidx_dms_ann_read_identity
-ON dms_ann_read(dan_id, danr_rev, danr_uid);</code></pre>
+ON dms_ann_read(dan_id, danr_rev, danr_uid);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_dms_ann_read_id
+ON dms_ann_read(danr_id);</code></pre>
 </div>
 <p>唯一索引 <code>uidx_dms_ann_read_identity</code> 使同一使用者對同一公告版次的已讀寫入具備冪等性。索引只使用原始欄位，不使用函數或型別轉換。</p>
+<p>唯一索引 <code>uidx_dms_ann_read_id</code> 保證已讀紀錄識別碼不可重複；依專案規則不建立 <code>PRIMARY KEY</code> 或額外 <code>CONSTRAINT</code>。</p>
 <p>---</p>
 <h2>3. 後端檢核規則</h2>
 <ul>

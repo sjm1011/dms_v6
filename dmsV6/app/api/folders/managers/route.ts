@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { requireSession } from '../../../../lib/server/auth';
-import { fail, ok, parseJsonBody, serverError } from '../../../../lib/server/http';
+import { fail, ok, parseJsonBody, systemRouteError } from '../../../../lib/server/http';
 import { getFolderManagerInfo, updateFolderManagers } from '../../../../lib/server/folderService';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ export const GET = async (request: NextRequest) => {
       return fail(error.message, 403);
     }
 
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };
 
@@ -44,6 +44,6 @@ export const PUT = async (request: NextRequest) => {
     );
     return ok(null);
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };

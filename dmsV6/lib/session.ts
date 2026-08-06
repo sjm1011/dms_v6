@@ -13,11 +13,29 @@ export interface SessionPayload {
 const DEFAULT_SESSION_COOKIE_NAME = 'dms_session';
 const DEFAULT_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60;
 const DEFAULT_SESSION_SECRET = 'dms-next-dev-session-secret';
+const PUBLIC_EXAMPLE_SESSION_SECRET = 'A9228A44-EE18-4713-97C7-FC92A76CB27B';
 
 export const getSessionCookieName = () =>
   process.env.SESSION_COOKIE_NAME || DEFAULT_SESSION_COOKIE_NAME;
 
-const getSessionSecret = () => process.env.SESSION_SECRET || DEFAULT_SESSION_SECRET;
+export const assertProductionSessionConfiguration = () => {
+  if (process.env.NODE_ENV !== 'production') return;
+  const secret = (process.env.SESSION_SECRET || '').trim();
+  if (
+    secret.length < 32
+    || secret === DEFAULT_SESSION_SECRET
+    || secret === PUBLIC_EXAMPLE_SESSION_SECRET
+    || secret.includes('請改成')
+    || secret.includes('至少32字元')
+  ) {
+    throw new Error('正式環境的 SESSION_SECRET 未設定為至少 32 字元的專用隨機字串。');
+  }
+};
+
+const getSessionSecret = () => {
+  assertProductionSessionConfiguration();
+  return process.env.SESSION_SECRET?.trim() || DEFAULT_SESSION_SECRET;
+};
 
 const getSessionMaxAgeSeconds = () => {
   const value = Number(process.env.SESSION_MAX_AGE_SECONDS || DEFAULT_SESSION_MAX_AGE_SECONDS);

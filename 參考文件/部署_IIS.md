@@ -76,6 +76,8 @@ SESSION_COOKIE_SECURE=false
 
 此檔案包含資料庫密碼與 `SESSION_SECRET`，只允許系統管理員及 Node.js 服務帳號讀取，不可放入 IIS 網站目錄 `C:\DMS\iis-root`，也不可提交至 Git。
 
+`SESSION_SECRET` 必須是至少 32 字元且只供該正式環境使用的隨機字串。未設定、長度不足、沿用公開範例或保留文件占位文字時，Node.js 會在接受請求前拒絕啟動；不得以開發環境預設值繞過檢查。
+
 資料庫連線可使用上述 `PGHOST`、`PGPORT`、`PGDATABASE`、`PGUSER`、`PGPASSWORD` 分項格式，也可改用單一 `DATABASE_URL`；兩種格式擇一即可。
 
 下列 3 個項目是 Node.js 服務的啟動環境變數，不屬於 `.env.example` 的應用程式設定結構。請在 NSSM、WinSW 或採用的 Windows Service Wrapper 內設定：
@@ -138,14 +140,14 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test
     <proxy preserveHostHeader="true" reverseRewriteHostInResponseHeaders="false" />
     <security>
       <requestFiltering>
-        <requestLimits maxAllowedContentLength="1073741824" />
+        <requestLimits maxAllowedContentLength="230686720" />
       </requestFiltering>
     </security>
   </system.webServer>
 </configuration>
 ```
 
-`maxAllowedContentLength` 範例為 `1 GB`。此值必須依組織允許的單檔上傳上限調整。
+`maxAllowedContentLength` 固定為 `230686720` bytes（220 MiB），供每次最多 2 個、每個最多 100 MB 的 multipart 串流檔案與中繼資料使用。若前方另有 Proxy 或資安設備，限制不得低於此值。
 
 ## 8. 驗證
 

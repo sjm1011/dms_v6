@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { requireSession } from '../../../../lib/server/auth';
-import { fail, ok, parseJsonBody, serverError } from '../../../../lib/server/http';
+import { ok, parseJsonBody, systemRouteError } from '../../../../lib/server/http';
 import { getFolderAcl, updateFolderAcl } from '../../../../lib/server/folderService';
 import type { FolderAccessType } from '../../../../types';
 
@@ -15,7 +15,7 @@ export const GET = async (request: NextRequest) => {
     response.headers.set('Cache-Control', 'no-store');
     return response;
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };
 
@@ -39,6 +39,6 @@ export const POST = async (request: NextRequest) => {
 
     return ok(null);
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };

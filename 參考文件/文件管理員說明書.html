@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>文件管理員說明書</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS 文件管理系統：文件管理員說明書</h1>
+<p>本說明書提供被指派管理特定資料夾及文件的人員使用。</p>
+<p>本系統沒有獨立的「文件管理員」登入角色。本說明書所稱「文件管理員」，是「資料夾管理員」與「協同管理員」的統稱。一般查閱操作請參考<a href="一般使用者說明書.md">一般使用者說明書</a>；全站管理操作請參考<a href="系統管理員說明書.md">系統管理員說明書</a>。</p>
+<p>---</p>
+<h2>快速導覽</h2>
+<table>
+  <thead>
+    <tr><th>我要做什麼</th><th>請閱讀</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>確認自己的身分與管理範圍</td><td><a href="#1-管理身分與主畫面">1. 管理身分與主畫面</a></td></tr>
+    <tr><td>建立、修改或封存資料夾</td><td><a href="#2-管理資料夾">2. 管理資料夾</a></td></tr>
+    <tr><td>設定限閱名單或協同管理員</td><td><a href="#3-管理權限與協同管理員">3. 管理權限與協同管理員</a></td></tr>
+    <tr><td>建立或修改文件</td><td><a href="#4-建立與修改文件">4. 建立與修改文件</a></td></tr>
+    <tr><td>上傳新版、撤回或刪除預約版本</td><td><a href="#5-管理文件版本">5. 管理文件版本</a></td></tr>
+    <tr><td>刪除、廢止或移動文件</td><td><a href="#6-管理文件生命週期">6. 管理文件生命週期</a></td></tr>
+    <tr><td>建立或管理相關文件</td><td><a href="#7-管理相關文件">7. 管理相關文件</a></td></tr>
+    <tr><td>預覽、下載或查詢稽核紀錄</td><td><a href="#8-查閱與稽核">8. 查閱與稽核</a></td></tr>
+    <tr><td>排除常見問題</td><td><a href="#9-常見狀況">9. 常見狀況</a></td></tr>
+  </tbody>
+</table>
+<h2>1. 管理身分與主畫面</h2>
+<h3>1.1. 管理身分差異</h3>
+<table>
+  <thead>
+    <tr><th>身分</th><th>管理範圍</th><th>主要限制</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>資料夾管理員</td><td>被指派的第一層資料夾及其全部子資料夾</td><td>可以指派或撤銷協同管理員，不能指派其他資料夾的管理員。</td></tr>
+    <tr><td>協同管理員</td><td>從被指派的資料夾開始，包含其全部子資料夾</td><td>不能指派、更換或撤銷資料夾管理員，也不能異動協同管理員。</td></tr>
+  </tbody>
+</table>
+<p>兩種身分都可以在有效管理範圍內：</p>
+<ul>
+  <li>建立及修改子資料夾。</li>
+  <li>設定資料夾開放方式。</li>
+  <li>建立及維護文件。</li>
+  <li>查看版本歷史及尚未生效的版本。</li>
+  <li>查詢及匯出文件操作紀錄。</li>
+</ul>
+<p>同一位使用者可以同時是系統管理員、資料夾管理員或協同管理員。系統會依目前所在資料夾及有效指派決定可用功能。</p>
+<p>&gt; 重要提醒：系統管理員的全站權限不等同資料夾管理身分。機密文件只提供目前有效的資料夾管理員或協同管理員查閱及管理。</p>
+<h3>1.2. 登入與儀表板</h3>
+<ol>
+  <li>開啟 DMS 網址。</li>
+  <li>輸入「使用者帳號」及「密碼」。</li>
+  <li>按一下「登入系統」。</li>
+</ol>
+<p>登入成功後會先顯示「儀表板」。除了公告及「近期發佈的文件」，「預約發佈提醒」還會顯示目前管理範圍內，未來 30 天將發佈的版本總數與前 10 筆。</p>
+<ul>
+  <li>同時具有多個或重疊管理範圍時，同一版本只顯示 1 次。</li>
+  <li>管理權撤銷後，該範圍會立即停止顯示。</li>
+  <li>按一下「前往文件」可切換至文件庫、開啟所在資料夾並短暫標示目標文件。</li>
+  <li>儀表板不會自動下載檔案。</li>
+  <li>公告閱讀完成後，請主動按一下「標示為已讀」。</li>
+</ul>
+<h3>1.3. 確認管理範圍</h3>
+<p>資料夾名稱後方會顯示目前帳號的管理身分：</p>
+<ul>
+  <li>金色盾牌：您是該資料夾的資料夾管理員。</li>
+  <li>藍色雙人圖示：您是該資料夾或上層資料夾指派的協同管理員。</li>
+</ul>
+<p>將滑鼠移到圖示上方，可查看身分提示。進入管理範圍後，畫面上方會顯示資料夾管理員及協同管理員姓名。</p>
+<p>文件名稱後方不會顯示管理身分圖示。系統管理員若未被正式指派，也不會因全站管理權顯示圖示。</p>
+<h3>1.4. 操作選單與輸入畫面</h3>
+<p>資料夾及文件右側的操作選單會依管理範圍、資料狀態及文件機敏等級顯示。功能未出現時，請確認：</p>
+<ol>
+  <li>目前位置是否在您的管理範圍。</li>
+  <li>文件是否已廢止。</li>
+  <li>文件是否為預約版本。</li>
+  <li>移動文件時，是否同時具備來源及目的資料夾的管理權。</li>
+</ol>
+<p>輸入畫面的共同操作方式：</p>
+<ul>
+  <li>開啟後，游標會停在第一個可輸入欄位。</li>
+  <li>在非最後一個輸入欄位按下 <code>Enter</code>，游標會移到下一個欄位。</li>
+  <li>在最後一個輸入欄位按下 <code>Enter</code>，才會執行主要確認按鈕。</li>
+  <li>使用中文輸入法選字時，按下 <code>Enter</code> 不會送出表單。</li>
+  <li>必填欄位未完成時，系統會顯示訊息，並將游標移回需要補填的欄位。</li>
+  <li>權限設定等重要畫面不能按一下背景區域關閉，請使用「取消」或完成儲存。</li>
+</ul>
+<h2>2. 管理資料夾</h2>
+<h3>2.1. 資料夾開放方式</h3>
+<table>
+  <thead>
+    <tr><th>狀態</th><th>可以進入的人員</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>公開</td><td>所有已登入同仁。</td></tr>
+    <tr><td>限閱</td><td>被授權的部門、同仁、系統管理員及有效管理員。</td></tr>
+    <tr><td>僅限管理者</td><td>系統管理員、資料夾管理員及協同管理員。</td></tr>
+  </tbody>
+</table>
+<p>新增資料夾時，系統會先以「僅限管理者」儲存，避免尚未完成設定就對一般使用者開放。</p>
+<p>上層資料夾為「限閱」或「僅限管理者」時，子資料夾會繼承相同限制，不能自行放寬。</p>
+<h3>2.2. 建立子資料夾</h3>
+<h4>操作前確認</h4>
+<ul>
+  <li>目前位置位於您的管理範圍。</li>
+  <li>文件管理員不能在文件庫根目錄建立第一層資料夾。第一層資料夾只能由系統管理員建立。</li>
+</ul>
+<h4>操作步驟</h4>
+<ol>
+  <li>進入要建立子資料夾的位置。</li>
+  <li>按一下「新增資料夾」。</li>
+  <li>輸入資料夾名稱。</li>
+  <li>按一下確認按鈕。</li>
+  <li>建立完成後，系統會立即開啟「屬性設定」。</li>
+  <li>選擇「公開」、「限閱」或「僅限管理者」。</li>
+</ol>
+<h4>完成結果</h4>
+<p>新資料夾會顯示在目前位置，並依設定的開放方式決定可進入人員。</p>
+<h3>2.3. 修改資料夾名稱</h3>
+<ol>
+  <li>開啟目標資料夾的操作選單。</li>
+  <li>按一下「修改資料夾」。</li>
+  <li>修改名稱。</li>
+  <li>儲存變更。</li>
+</ol>
+<p>此功能只修改資料夾名稱，不會移動資料夾位置。</p>
+<h3>2.4. 刪除空資料夾</h3>
+<h4>操作前確認</h4>
+<p>資料夾內沒有有效文件，也沒有正常狀態的子資料夾。</p>
+<h4>操作步驟</h4>
+<ol>
+  <li>開啟資料夾操作選單。</li>
+  <li>按一下「刪除（作廢）」。</li>
+  <li>確認資料夾名稱及警告內容。</li>
+  <li>按一下「確認刪除（作廢）」。</li>
+</ol>
+<h4>完成結果</h4>
+<p>資料夾會從一般文件庫移除，系統仍會保留操作紀錄。</p>
+<h3>2.5. 封存非空資料夾</h3>
+<h4>操作步驟</h4>
+<ol>
+  <li>開啟資料夾操作選單。</li>
+  <li>按一下「封存資料夾」。</li>
+  <li>閱讀封存影響。</li>
+  <li>按一下「確認封存」。</li>
+</ol>
+<h4>完成結果</h4>
+<ul>
+  <li>目前資料夾及全部子資料夾會一併封存。</li>
+  <li>資料夾下的文件會自動廢止。</li>
+  <li>封存內容會從一般文件庫移除。</li>
+  <li>實體檔案及歷史紀錄仍會保留。</li>
+  <li>系統管理員可以在資源回收區還原。</li>
+</ul>
+<p>&gt; 重要提醒：封存會影響整個資料夾及全部內容。執行前必須確認目標資料夾、子資料夾及文件範圍。</p>
+<h2>3. 管理權限與協同管理員</h2>
+<h3>3.1. 設定資料夾屬性</h3>
+<ol>
+  <li>開啟目標資料夾的操作選單。</li>
+  <li>按一下「屬性設定」。</li>
+  <li>選擇開放方式。</li>
+  <li>選擇「限閱」時，至少授權 1 個部門或 1 位同仁。</li>
+  <li>確認所有同仁姓名驗證成功。</li>
+  <li>按一下「確定儲存」。</li>
+</ol>
+<p>輸入特定同仁時，輸入員工編號後按下 <code>Enter</code> 或離開欄位，系統會顯示姓名。查無同仁或尚未完成驗證時，系統會阻擋儲存。</p>
+<p>繼承上層限制的資料夾只提供查看，不能自行變更。</p>
+<h3>3.2. 指派或撤銷協同管理員</h3>
+<h4>操作前確認</h4>
+<p>只有系統管理員及該第一層資料夾的資料夾管理員可以執行。協同管理員只能查看目前有效的管理員姓名。</p>
+<h4>操作步驟</h4>
+<ol>
+  <li>進入要設定協同管理員的資料夾。</li>
+  <li>按一下畫面上方的「協同管理員」。</li>
+  <li>輸入一位或多位同仁的員工編號。</li>
+  <li>確認每一筆都顯示正確姓名。</li>
+  <li>移除不再需要的直接指派人員。</li>
+  <li>儲存設定。</li>
+</ol>
+<h4>完成結果</h4>
+<p>此畫面只修改目前資料夾直接指派的人員，不會移除從上層資料夾繼承的協同管理員。</p>
+<p>管理權撤銷後，該人員會立即失去這個管理範圍的管理功能及操作紀錄查詢權。</p>
+<h2>4. 建立與修改文件</h2>
+<h3>4.1. 文件機敏等級</h3>
+<table>
+  <thead>
+    <tr><th>等級</th><th>管理規則</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>一般</td><td>依資料夾的開放方式管理。</td></tr>
+    <tr><td>敏感</td><td>權限與一般文件相同，另外顯示敏感標示。</td></tr>
+    <tr><td>機密</td><td>只有目前有效的資料夾管理員或協同管理員可以查看及管理。</td></tr>
+  </tbody>
+</table>
+<p>系統管理員若未被指派為該資料夾的資料夾管理員或協同管理員，也不能存取機密文件。根目錄文件不能設定為機密。</p>
+<h3>4.2. 建立文件</h3>
+<h4>操作前確認</h4>
+<ul>
+  <li>文件已完成原有簽核或確認流程。</li>
+  <li>目前位置位於您的管理範圍。</li>
+  <li>已準備正式發佈檔案。</li>
+</ul>
+<p>「正式發佈檔案」是提供同仁查閱的正式內容，不是草稿或簽核中的文件。</p>
+<h4>操作步驟</h4>
+<ol>
+  <li>進入文件要存放的資料夾。</li>
+  <li>按一下「新增文件」。</li>
+  <li>先選擇正式發佈檔案。</li>
+  <li>確認或修改系統帶入的文件名稱。</li>
+  <li>視需要填寫文件編號及版本號。</li>
+  <li>選擇「一般」、「敏感」或「機密」。</li>
+  <li>選擇修訂日期及發行日期。</li>
+  <li>選擇常用異動說明，或輸入自訂內容。</li>
+  <li>正式發佈檔案為 PDF 時，可另外上傳「PDF 原始編修檔案」。</li>
+  <li>按一下「上傳建檔」。</li>
+</ol>
+<h4>完成結果</h4>
+<ul>
+  <li>發行日期為今天時，文件會在建檔完成後生效。</li>
+  <li>發行日期為未來日期時，文件會在指定日期開始時生效；生效前，一般使用者看不到該文件，管理人員會看到「即將生效」。</li>
+  <li>文件編號有填寫時會自動轉成大寫，且不能與其他文件重複。</li>
+</ul>
+<h4>輸入限制</h4>
+<ul>
+  <li>文件編號、文件名稱及版本號不能使用 <code>&lt; &gt; : " / \ | ? *</code>，結尾也不能使用空白或句點。</li>
+  <li>每個檔案不得超過 100 MB。</li>
+  <li>每次最多上傳正式發佈檔案與原始編修檔案共 2 個檔案。</li>
+  <li>系統會拒絕空檔案、檔案內容與副檔名不符，以及巨集、執行檔、腳本、安裝檔、捷徑或壓縮檔。</li>
+</ul>
+<p>允許的檔案格式：</p>
+<table>
+  <thead>
+    <tr><th>類型</th><th>副檔名</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>PDF</td><td><code>.pdf</code></td></tr>
+    <tr><td>Word</td><td><code>.docx</code>、<code>.doc</code></td></tr>
+    <tr><td>Excel</td><td><code>.xlsx</code>、<code>.xls</code></td></tr>
+    <tr><td>PowerPoint</td><td><code>.pptx</code>、<code>.ppt</code></td></tr>
+    <tr><td>圖檔</td><td><code>.jpg</code>、<code>.jpeg</code>、<code>.png</code>、<code>.gif</code>、<code>.tif</code>、<code>.tiff</code>、<code>.webp</code></td></tr>
+  </tbody>
+</table>
+<h3>4.3. 修改文件</h3>
+<ol>
+  <li>開啟文件操作選單。</li>
+  <li>按一下「修改文件」。</li>
+  <li>修改允許變更的欄位。</li>
+  <li>儲存變更。</li>
+</ol>
+<p>可修改內容包含文件編號、文件名稱、版本號、修訂日期、發行日期及異動說明。修改文件只會更新目前資料，不會建立新版。</p>
+<p>目前 PDF 版本尚未儲存原始編修檔案時，可以補上 1 份；已有原始編修檔案時，選檔按鈕會顯示目前檔名，並可選擇新檔替換。</p>
+<p>若目前版本已有原始編修檔案，文件操作選單會顯示「下載原始編修檔案」。下載內容依目前畫面所列版本取得，檔名會依文件編號、文件名稱、版本號及下載日期重新命名，並保留原始副檔名。</p>
+<p>預約版本只允許修改版本號、修訂日期、發行日期及異動說明，不能更換檔案、文件名稱或文件編號。</p>
+<h2>5. 管理文件版本</h2>
+<h3>5.1. 上傳新版</h3>
+<ol>
+  <li>開啟文件操作選單。</li>
+  <li>按一下「上傳新版」。</li>
+  <li>選擇新版正式發佈檔案。</li>
+  <li>視需要填寫版本號。</li>
+  <li>選擇修訂日期及發行日期。</li>
+  <li>輸入異動說明。</li>
+  <li>新版為 PDF 時，可上傳該版本的原始編修檔案。</li>
+  <li>按一下「建立新版」。</li>
+</ol>
+<p>新版排定未來生效時：</p>
+<ul>
+  <li>文件清單會先顯示目前有效版本，再於下方顯示「即將生效」版本。</li>
+  <li>兩個檔案名稱後方的箭頭連線，表示兩列屬於同一份文件的接續版本。</li>
+  <li>一般使用者在生效前仍會看到目前有效版本。</li>
+  <li>到達發行日期後，一般使用者會看到新版。</li>
+  <li>同一份文件同一時間只能有 1 個預約版本。</li>
+</ul>
+<h3>5.2. 刪除預約版本</h3>
+<ol>
+  <li>開啟預約版本的操作選單。</li>
+  <li>按一下「刪除預約版本」。</li>
+  <li>確認刪除。</li>
+</ol>
+<p>刪除後，目前有效版本會繼續生效。</p>
+<p>&gt; 重要提醒：刪除預約版本會移除該預約版本及其檔案狀態，系統仍會保留操作紀錄。</p>
+<h3>5.3. 查看版本歷史</h3>
+<ol>
+  <li>開啟文件操作選單。</li>
+  <li>按一下「版本歷史」。</li>
+  <li>查看版本號、狀態、修訂日期、點閱次數、發行日期、結束日期及可用檔案。</li>
+</ol>
+<p>管理人員可以查看尚未生效、歷史及已撤回的版本。</p>
+<h3>5.4. 撤回最新版本</h3>
+<h4>操作前確認</h4>
+<ul>
+  <li>最新版本已生效。</li>
+  <li>文件至少有前一個版本可以回復。</li>
+  <li>目前沒有尚未生效的預約版本。</li>
+</ul>
+<h4>操作步驟</h4>
+<ol>
+  <li>開啟文件操作選單。</li>
+  <li>按一下「撤回最新版本」。</li>
+  <li>輸入撤回原因。</li>
+  <li>按一下「撤回並回復前版」。</li>
+</ol>
+<h4>完成結果</h4>
+<ul>
+  <li>一般使用者會改為看到前一個版本。</li>
+  <li>被撤回版本及其檔案、異動說明與修訂紀錄會永久保留。</li>
+  <li>被撤回版本不能重新啟用。</li>
+</ul>
+<p>&gt; 重要提醒：撤回不是刪除。若要再次使用相同內容，必須重新建立新版。</p>
+<h2>6. 管理文件生命週期</h2>
+<h3>6.1. 刪除第一版文件</h3>
+<h4>操作前確認</h4>
+<p>文件目前只有第 1 版，且操作選單顯示「刪除文件」。</p>
+<h4>操作步驟</h4>
+<ol>
+  <li>開啟文件操作選單。</li>
+  <li>按一下「刪除文件」。</li>
+  <li>確認文件名稱及影響範圍。</li>
+  <li>按一下「確認刪除」。</li>
+</ol>
+<h4>完成結果</h4>
+<p>文件及第一版資料會移除，系統仍會保留操作紀錄。</p>
+<h3>6.2. 手動廢止文件</h3>
+<ol>
+  <li>開啟文件操作選單。</li>
+  <li>按一下「廢止文件」。</li>
+  <li>輸入廢止原因。</li>
+  <li>上傳廢止公文或核准文件。</li>
+  <li>按一下「確認廢止」。</li>
+</ol>
+<p>廢止後：</p>
+<ul>
+  <li>一般使用者不再看到該文件。</li>
+  <li>不能再上傳新版、預約生效或撤回版本。</li>
+  <li>如需重新發行，必須建立新文件。</li>
+</ul>
+<p>&gt; 重要提醒：廢止不是暫時隱藏。執行前應確認廢止原因及核准文件正確。</p>
+<h3>6.3. 移動文件</h3>
+<h4>操作前確認</h4>
+<ul>
+  <li>同時具備來源及目的資料夾的管理權。</li>
+  <li>來源與目的都不是文件庫根目錄。</li>
+</ul>
+<h4>操作步驟</h4>
+<ol>
+  <li>進入文件目前所在的資料夾。</li>
+  <li>開啟主文件操作選單。</li>
+  <li>按一下「移動文件」。</li>
+  <li>確認來源路徑、文件名稱及相關文件數量。</li>
+  <li>選擇目的資料夾。</li>
+  <li>按一下「確認移動」。</li>
+</ol>
+<h4>完成結果</h4>
+<ul>
+  <li>主文件、全部相關文件及所有版本會整組移動。</li>
+  <li>文件編號、版本歷史、檔案及點閱紀錄不會改變。</li>
+  <li>文件可見範圍會依目的資料夾重新計算。</li>
+  <li>機密文件不會因移動而降低機敏等級。</li>
+</ul>
+<p>根目錄文件不能移出，其他文件也不能移入根目錄。</p>
+<h2>7. 管理相關文件</h2>
+<p>相關文件是主文件下的第二層文件，例如程序書下的申請單或作業表單。相關文件有自己的文件編號、版本、發行日期及版本歷史。</p>
+<h3>7.1. 建立相關文件</h3>
+<ol>
+  <li>開啟主文件操作選單。</li>
+  <li>按一下「新增相關文件」。</li>
+  <li>選擇正式發佈檔案。</li>
+  <li>確認隸屬的主文件。</li>
+  <li>填寫文件資料。</li>
+  <li>按一下「上傳建檔」。</li>
+</ol>
+<p>相關文件會繼承主文件的機敏等級，不能自行變更。系統只允許主文件及相關文件 2 層。</p>
+<h3>7.2. 管理影響</h3>
+<ul>
+  <li>相關文件可以獨立修改、版更、撤回、刪除或廢止。</li>
+  <li>相關文件改版不會自動建立主文件新版。</li>
+  <li>廢止主文件時，全部未廢止的相關文件會一併廢止。</li>
+  <li>刪除有相關文件的主文件時，主文件、相關文件及所有版本會一併刪除。</li>
+</ul>
+<h2>8. 查閱與稽核</h2>
+<h3>8.1. 預覽與下載</h3>
+<table>
+  <thead>
+    <tr><th>檔案類型</th><th>可用操作</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>PDF</td><td>線上預覽、下載正式 PDF，並依版本下載原始編修檔案。</td></tr>
+    <tr><td>JPG、JPEG、PNG、GIF、WebP</td><td>預覽及下載。</td></tr>
+    <tr><td>TIF、TIFF</td><td>下載。</td></tr>
+    <tr><td>Word、Excel、PowerPoint</td><td>下載。</td></tr>
+    <tr><td>版本歷史</td><td>依權限下載歷史版本檔案。</td></tr>
+  </tbody>
+</table>
+<p>所有預覽及下載仍會依目前管理範圍及機密文件規則重新確認權限。</p>
+<h3>8.2. 管理範圍文件稽核紀錄</h3>
+<ol>
+  <li>展開左側「系統管理」。</li>
+  <li>按一下「系統稽核紀錄」。</li>
+  <li>進入「管理範圍文件稽核紀錄」頁面後，依日期、操作者、稽核事件、執行結果或關鍵字查詢。</li>
+  <li>視需要匯出目前查詢結果。</li>
+</ol>
+<p>查閱範圍依目前有效的管理指派計算：</p>
+<ul>
+  <li>只能查看目前管理資料夾及其全部子資料夾的文件事件。</li>
+  <li>新接任的管理員可以查看接任前的歷史文件紀錄。</li>
+  <li>管理權撤銷後，會立即失去該範圍的查詢及匯出權限。</li>
+  <li>同時管理多個資料夾時，系統會合併顯示，不會重複列出同一筆事件。</li>
+  <li>文件移動的來源或目的位於管理範圍時，都可以查到該筆事件。</li>
+</ul>
+<h2>9. 常見狀況</h2>
+<table>
+  <thead>
+    <tr><th>狀況</th><th>請確認</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>沒有出現管理功能</td><td>目前資料夾是否在管理範圍內，以及文件狀態是否允許該操作。</td></tr>
+    <tr><td>無法儲存限閱名單</td><td>是否至少有 1 個有效部門或同仁，且所有同仁欄位都已完成姓名驗證。</td></tr>
+    <tr><td>無法上傳檔案</td><td>先依畫面訊息確認單檔 100 MB 限制、請求總量、檔案格式、檔案內容與副檔名，以及必填資料是否正確。</td></tr>
+    <tr><td>系統正在處理其他上傳</td><td>每個服務執行個體同時處理 2 筆上傳；請等待至少 5 秒後重新送出。</td></tr>
+    <tr><td>無法指派協同管理員</td><td>目前帳號是否為系統管理員或該第一層資料夾的資料夾管理員。</td></tr>
+    <tr><td>無法移動文件</td><td>是否同時具備來源及目的資料夾管理權，且來源與目的都不是根目錄。</td></tr>
+  </tbody>
+</table>
+<h2>10. 高風險操作檢查</h2>
+<table>
+  <thead>
+    <tr><th>操作</th><th>執行前必須確認</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>封存資料夾</td><td>目標資料夾、全部子資料夾及文件範圍。</td></tr>
+    <tr><td>撤回版本</td><td>前一個版本會恢復為目前有效版本。</td></tr>
+    <tr><td>刪除預約版本</td><td>預約版本及其檔案狀態會移除。</td></tr>
+    <tr><td>刪除文件</td><td>文件及符合條件的版本資料會移除。</td></tr>
+    <tr><td>廢止文件</td><td>文件不再提供一般使用者查閱，也不能繼續版更。</td></tr>
+    <tr><td>移動文件</td><td>文件可見範圍會依目的資料夾重新計算。</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li>不得將機密或限閱文件提供給未獲授權的人員。</li>
+  <li>管理權及文件權限由系統即時判定，不得嘗試以修改網址繞過。</li>
+  <li>系統會記錄文件查閱、下載、權限異動及文件生命週期操作。</li>
+</ul>
+<p>---</p>
+<ul>
+  <li>文件版本：1.1</li>
+  <li>更新日期：2026-08-06</li>
+  <li>適用對象：資料夾管理員、協同管理員</li>
+  <li>內容依據：DMS 文件管理系統 V6 現行功能與系統規格</li>
+  <li>文件維護單位：待確認</li>
+  <li>問題回報管道：待確認</li>
+</ul>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

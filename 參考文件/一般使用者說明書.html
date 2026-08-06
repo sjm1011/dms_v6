@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>一般使用者說明書</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #121318;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --code-bg: #1e1e24;
+      --radius-lg: 12px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    h1, h2, h3, h4 {
+      color: #ffffff;
+      font-weight: 600;
+      margin-top: 1.8em;
+      margin-bottom: 0.8em;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-top: 0;
+      border-bottom: 2px solid var(--glass-border);
+      padding-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 1.6rem;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 8px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 1.2em;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+    }
+
+    a {
+      color: var(--accent-color);
+      text-decoration: none;
+      transition: color 0.2s ease;
+      border-bottom: 1px dashed var(--accent-color);
+    }
+
+    a:hover {
+      color: var(--accent-hover);
+      border-bottom-style: solid;
+    }
+
+    ul {
+      margin-top: 0;
+      margin-bottom: 1.5em;
+      padding-left: 24px;
+    }
+
+    li {
+      margin-bottom: 0.5em;
+      color: var(--text-primary);
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ff79c6;
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.5em;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      border: none;
+      color: #f8f8f2;
+    }
+
+    .ddl-code-block {
+      position: relative;
+      margin-bottom: 1.5em;
+    }
+
+    .ddl-code-block pre {
+      margin-bottom: 0;
+      padding-top: 48px;
+    }
+
+    .copy-ddl-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      line-height: 1;
+      padding: 8px 10px;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .copy-ddl-btn:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #ffffff;
+    }
+
+    .copy-ddl-btn.copied {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: rgba(34, 197, 94, 0.45);
+      color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2em;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-weight: 600;
+      border-bottom: 2px solid var(--glass-border);
+    }
+
+    td {
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: rgba(255, 255, 255, 0.01);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--glass-border);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DMS 文件管理系統：一般使用者說明書</h1>
+<p>本說明書提供需要查閱、搜尋、預覽或下載正式文件的一般同仁使用。</p>
+<p>如果您已被指派為資料夾管理員或協同管理員，請改讀<a href="文件管理員說明書.md">文件管理員說明書</a>。系統管理員請參考<a href="系統管理員說明書.md">系統管理員說明書</a>。</p>
+<p>---</p>
+<h2>快速導覽</h2>
+<table>
+  <thead>
+    <tr><th>我要做什麼</th><th>請閱讀</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>登入、登出或切換畫面樣式</td><td><a href="#1-登入與主畫面">1. 登入與主畫面</a></td></tr>
+    <tr><td>從資料夾尋找文件</td><td><a href="#2-從文件庫尋找文件">2. 從文件庫尋找文件</a></td></tr>
+    <tr><td>使用關鍵字搜尋文件</td><td><a href="#3-搜尋文件">3. 搜尋文件</a></td></tr>
+    <tr><td>確認自己為什麼看得到或看不到文件</td><td><a href="#4-理解查閱範圍">4. 理解查閱範圍</a></td></tr>
+    <tr><td>預覽或下載文件</td><td><a href="#5-預覽與下載">5. 預覽與下載</a></td></tr>
+    <tr><td>查看修訂內容或點閱次數</td><td><a href="#6-文件資訊">6. 文件資訊</a></td></tr>
+    <tr><td>排除常見問題</td><td><a href="#7-常見狀況">7. 常見狀況</a></td></tr>
+  </tbody>
+</table>
+<h2>1. 登入與主畫面</h2>
+<h3>1.1. 登入系統</h3>
+<ol>
+  <li>開啟 DMS 網址。</li>
+  <li>在「使用者帳號」輸入帳號。</li>
+  <li>在「密碼」輸入密碼。</li>
+  <li>按一下「登入系統」。</li>
+</ol>
+<p>登入成功，或系統還原仍有效的登入狀態後，會先顯示「儀表板」。</p>
+<p>登入失敗時，系統會顯示錯誤訊息，並清空帳號及密碼。請依訊息重新輸入。</p>
+<h3>1.2. 選擇畫面樣式</h3>
+<p>登入畫面提供「現代深色」及「現代淺色」。選擇後即可使用該畫面樣式，不會影響帳號權限或文件內容。</p>
+<h3>1.3. 認識儀表板</h3>
+<p>左側主導覽依序顯示「儀表板」、「文件庫」，以及您有權限使用的「系統管理」。儀表板提供：</p>
+<ul>
+  <li>目前有效的公告。首頁顯示前 5 筆，也可按一下「查看全部公告」。</li>
+  <li>近 30 天內生效且目前仍有效的文件總數與最新 10 筆。每筆顯示檔案圖示、發行日期及檔案所在路徑；未填寫版本號時顯示「第 N 版」。</li>
+</ul>
+<p>開啟公告後，請在閱讀完成時按一下「標示為已讀」。公告內容更新後，新版會重新顯示為未讀。</p>
+<p>近期文件若支援線上預覽，可按一下「檢視」。按一下「前往文件」可切換至文件庫、開啟所在資料夾，並短暫標示目標文件。不可預覽的格式不會從儀表板自動下載。</p>
+<p>按一下「重新整理」可更新儀表板。單一區塊載入失敗時，仍可使用其他區塊並切換至文件庫。</p>
+<p>儀表板只顯示目前帳號有權限存取的文件。已封存資料夾、廢止文件、歷史版本、撤回版本、尚未生效版本及無權限文件都不會顯示。</p>
+<h3>1.4. 登出與重新登入</h3>
+<p>按一下左側使用者資訊旁的「登出」。登出後，系統會清除目前登入狀態並返回登入畫面。</p>
+<p>登入狀態逾期或失效時，系統會顯示「登入憑證失效」。關閉訊息後會返回登入畫面，請重新登入。</p>
+<h2>2. 從文件庫尋找文件</h2>
+<h3>操作步驟</h3>
+<ol>
+  <li>按一下左側「文件庫」。</li>
+  <li>從左側資料夾樹狀清單選擇資料夾。</li>
+  <li>在右側查看該資料夾的子資料夾與文件。</li>
+  <li>開啟文件右側的操作選單，選擇目前可用的功能。</li>
+</ol>
+<h3>完成結果</h3>
+<ul>
+  <li>左側只顯示目前帳號可以看到的資料夾。</li>
+  <li>已封存或已刪除的資料夾不會出現在一般文件庫。</li>
+  <li>文件有編號時，清單會在名稱前顯示文件編號，例如「DOC-001 感染管制作業規範」。</li>
+  <li>操作選單只顯示目前帳號及文件狀態允許的功能。</li>
+</ul>
+<p>&gt; 重要提醒：沒有出現某個操作，代表目前帳號沒有該項權限，或文件狀態不符合操作條件。</p>
+<h2>3. 搜尋文件</h2>
+<h3>操作步驟</h3>
+<ol>
+  <li>在畫面上方的「搜尋文件」輸入關鍵字。</li>
+  <li>按下 <code>Enter</code> 或按一下「搜尋」。</li>
+  <li>在搜尋結果查看文件所在的完整資料夾路徑。</li>
+  <li>如要前往文件位置，開啟操作選單並按一下「前往所在資料夾」。</li>
+  <li>如要離開搜尋結果，按一下「清除」。</li>
+</ol>
+<h3>搜尋範圍</h3>
+<p>系統會搜尋目前帳號有權限查看的所有資料夾，以及文件庫根目錄中可見的文件。關鍵字會比對：</p>
+<ul>
+  <li>文件編號。</li>
+  <li>文件名稱。</li>
+  <li>版本號。</li>
+  <li>異動說明。</li>
+  <li>正式發佈檔名。</li>
+</ul>
+<p>搜尋不會比對資料夾名稱，也不會搜尋 PDF、Word、Excel、PowerPoint 或圖片內的文字。</p>
+<h3>完成結果</h3>
+<ul>
+  <li>每頁顯示 50 份文件，可使用「上一頁」及「下一頁」切換。</li>
+  <li>一般使用者只會搜尋到已生效、仍有效且有權限查看的文件。</li>
+</ul>
+<h2>4. 理解查閱範圍</h2>
+<p>DMS 用來儲存已完成簽核或確認的正式文件，並保留文件版本、發行日期及操作紀錄。DMS 不處理擬稿、會簽或核准流程。</p>
+<h3>4.1. 一般使用者權限</h3>
+<table>
+  <thead>
+    <tr><th>可以執行</th><th>不可以執行</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>瀏覽有權限進入的資料夾</td><td>建立、修改、移動或封存資料夾</td></tr>
+    <tr><td>搜尋及查看已生效的最新版文件</td><td>建立文件或上傳新版</td></tr>
+    <tr><td>預覽 PDF 及瀏覽器支援的圖檔</td><td>查看尚未生效、歷史、撤回或廢止版本</td></tr>
+    <tr><td>下載允許下載的非 PDF 文件及圖檔</td><td>撤回、刪除或廢止文件</td></tr>
+    <tr><td>查看目前可見版本的修訂對照表</td><td>下載 PDF 正式原檔或查看機密文件</td></tr>
+  </tbody>
+</table>
+<h3>4.2. 資料夾開放方式</h3>
+<table>
+  <thead>
+    <tr><th>狀態</th><th>可以進入的人員</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>公開</td><td>所有已登入同仁。</td></tr>
+    <tr><td>限閱</td><td>被授權的部門、同仁及具備管理權限的人員。</td></tr>
+    <tr><td>僅限管理者</td><td>系統管理員、資料夾管理員或協同管理員。</td></tr>
+  </tbody>
+</table>
+<h3>4.3. 文件機敏等級</h3>
+<table>
+  <thead>
+    <tr><th>等級</th><th>一般使用者的查閱方式</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>一般</td><td>依資料夾的開放方式決定是否可以查看。</td></tr>
+    <tr><td>敏感</td><td>查閱方式與一般文件相同，畫面會另外顯示敏感標示。</td></tr>
+    <tr><td>機密</td><td>一般使用者不能查看、搜尋、預覽或下載。</td></tr>
+  </tbody>
+</table>
+<p>&gt; 重要提醒：看得到資料夾，不代表可以看到資料夾內的所有文件。系統仍會依文件是否生效及機敏等級決定是否顯示。</p>
+<h2>5. 預覽與下載</h2>
+<h3>5.1. PDF 文件</h3>
+<h4>操作前確認</h4>
+<p>一般使用者可以線上預覽 PDF，但不能下載 PDF 正式原檔。</p>
+<h4>操作步驟</h4>
+<ol>
+  <li>開啟文件的操作選單。</li>
+  <li>按一下「線上預覽 PDF」。</li>
+  <li>系統會在 PDF 每一頁加入浮水印後開啟預覽。</li>
+</ol>
+<h4>完成結果</h4>
+<p>浮水印包含使用者姓名與帳號、預覽時間、使用端位置、文件編號及「內部文件，禁止外流」。浮水印不會修改系統儲存的正式原檔。</p>
+<p>如需紙本，可使用瀏覽器提供的列印功能。</p>
+<h3>5.2. 圖檔</h3>
+<p>JPG、JPEG、PNG、GIF 及 WebP 圖檔可以預覽及下載：</p>
+<ol>
+  <li>開啟文件的操作選單。</li>
+  <li>按一下「開新視窗預覽」。</li>
+  <li>如需儲存檔案，按一下「下載正式檔案」。</li>
+</ol>
+<p>TIF 及 TIFF 圖檔只提供下載。圖檔預覽不會加入浮水印。</p>
+<h3>5.3. Word、Excel、PowerPoint 及其他非 PDF 文件</h3>
+<p>Word、Excel 及 PowerPoint 不提供線上預覽。請開啟文件的操作選單，按一下「下載正式檔案」。</p>
+<p>一般使用者只能下載目前已生效的最新版。</p>
+<h3>5.4. 下載檔名</h3>
+<p>下載檔名的組成方式如下：</p>
+<p><code>文件編號_文件名稱_版本編號_下載日期.副檔名</code></p>
+<p>例如：<code>DOC-001_感染管制作業規範_V2_20260806.pdf</code>。</p>
+<p>文件編號空白時會省略該段。版本號空白時，系統會顯示「第 1 版」等版本順序。下載日期使用台北日期。</p>
+<h2>6. 文件資訊</h2>
+<h3>6.1. 點閱次數</h3>
+<ul>
+  <li>成功預覽 PDF 或圖檔時增加 1 次。</li>
+  <li>成功下載非 PDF 正式檔案時增加 1 次。</li>
+  <li>操作遭拒、操作失敗或嘗試下載 PDF 正式原檔時不會增加。</li>
+  <li>同一份文件的不同版本分開計算。</li>
+</ul>
+<h3>6.2. 修訂對照表</h3>
+<p>具備文件查閱權限時，可以查看目前可見版本的修訂對照表。</p>
+<p>修訂對照表用來說明修訂章節、修改前後內容、原因及備註，不會取代正式文件。</p>
+<h2>7. 常見狀況</h2>
+<h3>7.1. 看不到資料夾</h3>
+<p>依序確認：</p>
+<ol>
+  <li>資料夾是否為「公開」。</li>
+  <li>如果是「限閱」，您的部門或員工編號是否已被授權。</li>
+  <li>資料夾是否已封存或刪除。</li>
+</ol>
+<p>仍無法確認時，請聯絡該資料夾的管理員或系統管理員。</p>
+<h3>7.2. 看不到文件或新版</h3>
+<p>依序確認：</p>
+<ol>
+  <li>文件或新版是否尚未到發行日期。</li>
+  <li>文件是否已廢止。</li>
+  <li>最新版本是否已撤回。</li>
+  <li>所在資料夾是否已封存。</li>
+  <li>您是否具備資料夾查閱權限。</li>
+  <li>文件是否為機密文件。</li>
+</ol>
+<p>一般使用者只能看到目前仍在有效期間內的版本。</p>
+<h3>7.3. 搜尋不到文件</h3>
+<p>請確認文件是否已生效、是否位於您有權限的資料夾，以及關鍵字是否屬於可搜尋欄位。系統不會搜尋檔案內文。</p>
+<h3>7.4. PDF 沒有下載按鈕</h3>
+<p>一般使用者只能線上預覽 PDF，不提供 PDF 正式原檔下載。這是文件保護規則，不是系統錯誤。</p>
+<h3>7.5. 下載後無法開啟</h3>
+<p>請確認電腦已安裝可開啟該檔案格式的程式。DMS 只提供檔案下載，不會將 Word、Excel 或 PowerPoint 自動轉成 PDF。</p>
+<p>如果系統顯示「找不到實體檔案。」，請記錄文件名稱及發生時間後通知文件管理員，不要嘗試猜測或修改網址中的路徑。</p>
+<h2>8. 使用注意事項</h2>
+<ul>
+  <li>文件日期與生效時間以系統伺服器時間為準。</li>
+  <li>不得將有浮水印或限閱的內容轉交給未獲授權的人員。</li>
+  <li>不得以修改網址或其他方式嘗試繞過畫面權限。</li>
+  <li>系統會記錄登入、搜尋、預覽、下載及遭拒絕的文件操作。</li>
+  <li>畫面未顯示的功能不一定是系統故障，請先確認權限及文件狀態。</li>
+</ul>
+<p>---</p>
+<ul>
+  <li>文件版本：1.1</li>
+  <li>更新日期：2026-08-06</li>
+  <li>適用對象：一般使用者</li>
+  <li>內容依據：DMS 文件管理系統 V6 現行功能與系統規格</li>
+  <li>文件維護單位：待確認</li>
+  <li>問題回報管道：待確認</li>
+</ul>
+
+    <div class="footer">
+      本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
+    </div>
+  </div>
+  <script>
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        return Promise.resolve();
+      } catch (err) {
+        return Promise.reject(err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+
+    document.querySelectorAll('.copy-ddl-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        const code = button.closest('.ddl-code-block')?.querySelector('code');
+        if (!code) return;
+
+        copyText(code.textContent).then(() => {
+          const copyLabel = button.dataset.copyLabel || '複製 DDL';
+          const copiedLabel = button.dataset.copiedLabel || '已複製';
+          button.textContent = copiedLabel;
+          button.classList.add('copied');
+
+          window.setTimeout(() => {
+            button.textContent = copyLabel;
+            button.classList.remove('copied');
+          }, 1600);
+        }).catch(() => {
+          button.textContent = '複製失敗';
+        });
+      });
+    });
+  </script>
+</body>
+</html>

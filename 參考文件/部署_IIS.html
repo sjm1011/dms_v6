@@ -266,6 +266,7 @@ SESSION_MAX_AGE_SECONDS=28800
 SESSION_COOKIE_SECURE=false</code></pre>
 <p><code>C:\DMS\app\.env.production</code> 必須與 <code>server.js</code> 位於同一個目錄。第 5 節的 Windows 服務「啟動目錄」必須設為 <code>C:\DMS\app</code>，執行 Node.js 的服務帳號必須具有該檔案的讀取權限。</p>
 <p>此檔案包含資料庫密碼與 <code>SESSION_SECRET</code>，只允許系統管理員及 Node.js 服務帳號讀取，不可放入 IIS 網站目錄 <code>C:\DMS\iis-root</code>，也不可提交至 Git。</p>
+<p><code>SESSION_SECRET</code> 必須是至少 32 字元且只供該正式環境使用的隨機字串。未設定、長度不足、沿用公開範例或保留文件占位文字時，Node.js 會在接受請求前拒絕啟動；不得以開發環境預設值繞過檢查。</p>
 <p>資料庫連線可使用上述 <code>PGHOST</code>、<code>PGPORT</code>、<code>PGDATABASE</code>、<code>PGUSER</code>、<code>PGPASSWORD</code> 分項格式，也可改用單一 <code>DATABASE_URL</code>；兩種格式擇一即可。</p>
 <p>下列 3 個項目是 Node.js 服務的啟動環境變數，不屬於 <code>.env.example</code> 的應用程式設定結構。請在 NSSM、WinSW 或採用的 Windows Service Wrapper 內設定：</p>
 <pre><code class="language-text">NODE_ENV=production
@@ -312,12 +313,12 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test</code></pre>
     &lt;proxy preserveHostHeader="true" reverseRewriteHostInResponseHeaders="false" /&gt;
     &lt;security&gt;
       &lt;requestFiltering&gt;
-        &lt;requestLimits maxAllowedContentLength="1073741824" /&gt;
+        &lt;requestLimits maxAllowedContentLength="230686720" /&gt;
       &lt;/requestFiltering&gt;
     &lt;/security&gt;
   &lt;/system.webServer&gt;
 &lt;/configuration&gt;</code></pre>
-<p><code>maxAllowedContentLength</code> 範例為 <code>1 GB</code>。此值必須依組織允許的單檔上傳上限調整。</p>
+<p><code>maxAllowedContentLength</code> 固定為 <code>230686720</code> bytes（220 MiB），供每次最多 2 個、每個最多 100 MB 的 multipart 串流檔案與中繼資料使用。若前方另有 Proxy 或資安設備，限制不得低於此值。</p>
 <h2>8. 驗證</h2>
 <pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing https://dms.example.com/
 Invoke-WebRequest -UseBasicParsing https://dms.example.com/api/test</code></pre>

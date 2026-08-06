@@ -1,12 +1,17 @@
 import { constants as fsConstants } from 'node:fs';
-import { access, mkdir, realpath, rename, rm, statfs } from 'node:fs/promises';
+import { access, mkdir, rename, rm, statfs } from 'node:fs/promises';
 import path from 'node:path';
 import { APP_VERSION_DATE } from '../appVersion';
 import type { SessionUser } from '../session';
 import { formatAuditActor, getAuditActionLabel, getAuditResourceLabel, getAuditResultLabel, getAuditRoleLabel } from '../auditLabels';
 import { writeAudit } from './auditService';
 import { pool, query, withTransaction } from './db';
-import { getLegacyStorageRoot, getStorageRoot, resolveStoredPath } from './fileStorage';
+import {
+  getLegacyStorageRoot,
+  getStorageRoot,
+  isInsideStorageRoot,
+  resolveAllowedStoredFile
+} from './fileStorage';
 import { isAdmin } from './auth';
 
 export interface AuditFilters {
@@ -603,30 +608,11 @@ export const restoreArchivedBatch = async (user: SessionUser, folderId: number) 
   });
 };
 
-const isInside = (root: string, target: string) => {
-  const relative = path.relative(root, target);
-  return relative !== '' && !relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative);
-};
-
-const resolveAllowedFile = async (storedPath: string) => {
-  const resolved = await realpath(await resolveStoredPath(storedPath));
-  const configuredRoots = [getStorageRoot(), getLegacyStorageRoot()].filter(Boolean);
-  for (const configuredRoot of configuredRoots) {
-    try {
-      const root = await realpath(configuredRoot);
-      if (isInside(root, resolved)) return { resolved, root };
-    } catch {
-      // 無法解析的根目錄不可作為清理範圍。
-    }
-  }
-  throw new Error('檔案路徑超出允許的儲存根目錄。');
-};
-
 const cleanupQuarantine = async (manifest: PurgeManifestItem[]) => {
   const roots = new Set<string>();
   for (const item of manifest) {
     const configuredRoots = [getStorageRoot(), getLegacyStorageRoot()].filter(Boolean).map(root => path.resolve(root));
-    const allowed = configuredRoots.some(root => isInside(path.join(root, '.purge'), path.resolve(item.quarantinePath)));
+    const allowed = configuredRoots.some(root => isInsideStorageRoot(path.join(root, '.purge'), path.resolve(item.quarantinePath)));
     if (!allowed) throw new Error('隔離檔案路徑超出允許範圍。');
     await rm(item.quarantinePath, { force: true });
     roots.add(path.dirname(item.quarantinePath));
@@ -685,7 +671,7 @@ export const purgeArchivedBatch = async (user: SessionUser, folderId: number, co
   const manifest: PurgeManifestItem[] = [];
   try {
     for (const file of files.rows) {
-      const allowed = await resolveAllowedFile(file.stored_path);
+      const allowed = await resolveAllowedStoredFile(file.stored_path);
       manifest.push({ fileId: file.file_id, originalPath: allowed.resolved, quarantinePath: path.join(allowed.root, '.purge', String(jobId), `${file.file_id}_${path.basename(allowed.resolved)}`) });
     }
     await query('UPDATE dms_purge_job SET dpj_manifest = $2::jsonb WHERE dpj_id = $1', [jobId, JSON.stringify(manifest)]);

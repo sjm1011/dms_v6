@@ -458,6 +458,9 @@ ON dms_ann(dan_status, dan_pub_at, dan_exp_at);
 CREATE INDEX idx_dms_ann_updat
 ON dms_ann(dan_updat);
 
+CREATE UNIQUE INDEX uidx_dms_ann_id
+ON dms_ann(dan_id);
+
 COMMENT ON TABLE dms_ann IS '系統公告主檔';
 COMMENT ON COLUMN dms_ann.dan_id IS '公告識別碼';
 COMMENT ON COLUMN dms_ann.dan_title IS '公告標題';
@@ -495,6 +498,9 @@ ON dms_ann_read(danr_uid, danr_read_at);
 
 CREATE UNIQUE INDEX uidx_dms_ann_read_identity
 ON dms_ann_read(dan_id, danr_rev, danr_uid);
+
+CREATE UNIQUE INDEX uidx_dms_ann_read_id
+ON dms_ann_read(danr_id);
 
 COMMENT ON TABLE dms_ann_read IS '使用者公告已讀紀錄';
 COMMENT ON COLUMN dms_ann_read.danr_id IS '已讀紀錄識別碼';

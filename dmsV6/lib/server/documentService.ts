@@ -26,6 +26,7 @@ import {
   isPdfExt,
   isPreviewableExt,
   saveUploadedFile,
+  StoredFileJournal,
   type UploadPayload
 } from './fileStorage';
 
@@ -395,9 +396,10 @@ const insertFile = async (
   client: PoolClient,
   file: UploadPayload,
   role: number,
-  user: SessionUser
+  user: SessionUser,
+  journal: StoredFileJournal
 ) => {
-  const storedFile = await saveUploadedFile(file);
+  const storedFile = await saveUploadedFile(file, journal);
   const result = await client.query<{ id: number }>(
     `INSERT INTO dms_file (
            dfi_role,
@@ -439,6 +441,20 @@ const insertFile = async (
     id: result.rows[0].id,
     storedFile
   };
+};
+
+const withStoredFilesTransaction = async <T>(
+  work: (client: PoolClient, journal: StoredFileJournal) => Promise<T>
+) => {
+  const journal = new StoredFileJournal();
+  try {
+    const result = await withTransaction((client) => work(client, journal));
+    journal.commit();
+    return result;
+  } catch (error) {
+    await journal.rollback();
+    throw error;
+  }
 };
 
 export const createDocument = async (
@@ -513,7 +529,7 @@ export const createDocument = async (
     throw new Error('沒有此資料夾的文件管理權限。');
   }
 
-  return withTransaction(async (client) => {
+  return withStoredFilesTransaction(async (client, journal) => {
     if (parentDocumentId !== null) {
       const parent = await client.query<{
         df_fid: number;
@@ -542,10 +558,10 @@ export const createDocument = async (
       }
     }
     await ensureDocumentCodeAvailable(client, code);
-    const published = await insertFile(client, payload.file, 1, user);
+    const published = await insertFile(client, payload.file, 1, user, journal);
     const source =
       payload.source_file && isPdfExt(published.storedFile.ext)
-        ? await insertFile(client, payload.source_file, 2, user)
+        ? await insertFile(client, payload.source_file, 2, user, journal)
         : null;
     const doc = await client.query<{ id: number }>(
       `INSERT INTO dms_doc (
@@ -665,7 +681,7 @@ export const uploadVersion = async (
     throw new Error('沒有此文件的管理權限。');
   }
 
-  await withTransaction(async (client) => {
+  await withStoredFilesTransaction(async (client, journal) => {
     const latest = await client.query<{ seq: number; ver_id: number }>(
       `SELECT ddv_seq AS seq,
               ddv_id AS ver_id
@@ -677,10 +693,10 @@ export const uploadVersion = async (
       [docId]
     );
     const nextSeq = Number(latest.rows[0]?.seq || 0) + 1;
-    const published = await insertFile(client, payload.file, 1, user);
+    const published = await insertFile(client, payload.file, 1, user, journal);
     const source =
       payload.source_file && isPdfExt(published.storedFile.ext)
-        ? await insertFile(client, payload.source_file, 2, user)
+        ? await insertFile(client, payload.source_file, 2, user, journal)
         : null;
 
     if (latest.rows[0]) {
@@ -824,7 +840,7 @@ export const editDocument = async (
     throw new Error('根目錄文件不得設定為機密。');
   }
 
-  await withTransaction(async (client) => {
+  await withStoredFilesTransaction(async (client, journal) => {
     const current = await client.query<{
       code: string | null;
       title: string;
@@ -899,7 +915,7 @@ export const editDocument = async (
     }
 
     const source = payload.source_file
-      ? await insertFile(client, payload.source_file, 2, user)
+      ? await insertFile(client, payload.source_file, 2, user, journal)
       : null;
 
     const updatedSecurityLevel = requestedSecurityLevel ?? normalizeSecurityLevel(
@@ -1253,7 +1269,7 @@ export const obsoleteDocument = async (
     throw new Error('沒有此文件的管理權限。');
   }
 
-  await withTransaction(async (client) => {
+  await withStoredFilesTransaction(async (client, journal) => {
     const lockedDocument = await client.query<{
       dd_status: number;
       dd_parent_id: number | null;
@@ -1291,7 +1307,7 @@ export const obsoleteDocument = async (
     }
 
     const targetIds = targets.rows.map((row) => row.dd_id);
-    const obsoleteFile = await insertFile(client, file, 4, user);
+    const obsoleteFile = await insertFile(client, file, 4, user, journal);
 
     await client.query(
       `UPDATE dms_doc

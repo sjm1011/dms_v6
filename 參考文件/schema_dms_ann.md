@@ -62,7 +62,12 @@ ON dms_ann(dan_status, dan_pub_at, dan_exp_at);
 
 CREATE INDEX IF NOT EXISTS idx_dms_ann_updat
 ON dms_ann(dan_updat);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_dms_ann_id
+ON dms_ann(dan_id);
 ```
+
+唯一索引 `uidx_dms_ann_id` 保證公告識別碼不可重複；依專案規則不建立 `PRIMARY KEY` 或額外 `CONSTRAINT`。
 
 索引只使用原始欄位，不使用函數或型別轉換。
 
@@ -77,4 +82,3 @@ ON dms_ann(dan_updat);
 * 修改已發佈公告時，`dan_rev` 必須增加 1；舊版已讀紀錄不得刪除。
 * 修改或封存時，後端先鎖定公告並比對請求版次；版次不一致回傳 HTTP `409`。
 * 已封存公告唯讀，不提供實體刪除或重新發佈。
-

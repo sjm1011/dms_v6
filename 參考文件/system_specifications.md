@@ -316,9 +316,11 @@ AND (effective_until IS NULL OR 目前時間 < effective_until)
 * 捷徑與設定檔：`.lnk`、`.reg`
 * 壓縮檔與封裝檔：`.zip`、`.rar`、`.7z`、`.tar`、`.gz`
 
-正式發佈檔案大小上限為 100 MB，以 Base64 解碼後的實際位元組數為準；超過上限時，後端必須拒絕上傳。
+正式發佈檔案與原始編修檔案的單檔大小上限均為 100 MB，以串流接收的實際位元組數為準；超過上限時，後端必須停止接收並回傳 HTTP `413`。
 
-後端必須拒絕 0 byte 的空檔案，以及格式不合法、無法完整解碼或含非 Base64 字元的 Base64 內容。不得僅依前端驗證結果接受檔案。
+含檔案操作必須使用 `multipart/form-data` 傳送，不接受 Base64 JSON。每次請求最多包含正式檔案與原始編修檔案共 2 個檔案，`metadata` UTF-8 JSON 上限為 64 KiB，Request Body 上限為 220 MiB。後端必須逐段計算實際接收量，不得只依賴 `Content-Length`。
+
+每個 Node.js 執行個體最多同時處理 2 筆上傳；第 3 筆上傳必須回傳 HTTP `503` 與 `Retry-After: 5`。後端必須拒絕 0 byte 空檔案、傳輸不完整或格式不合法的內容，不得僅依前端驗證結果接受檔案。
 
 檔案上傳時，系統必須交叉驗證副檔名、MIME Type (媒體類型) 與檔案特徵碼。三者必須互相一致，且同時符合允許格式白名單；任一項不符、無法辨識或具有偽裝格式時，後端必須拒絕上傳。
 
@@ -332,6 +334,7 @@ AND (effective_until IS NULL OR 目前時間 < effective_until)
 * PDF 預覽畫面必須顯示浮水印。
 * 浮水印必須由 Next.js Route Handler 在伺服器端讀取 PDF 原始檔後動態套用，不得由瀏覽器端產生或合成，避免客戶端繞過浮水印取得預覽內容。
 * 浮水印使用內建 `Noto Sans TC` 字型資源產生中文字形，並以半透明、斜向方式置中顯示於每一頁；輸出結果僅供當次預覽，不得覆寫磁碟上的正式 PDF 原檔。
+* 浮水印字型檔讀取與 `fontkit` 解析結果必須以單一 Node.js 執行個體為範圍共用；首次載入失敗時清除失敗快取，讓後續請求可以重試。每份 PDF 的頁面尺寸 Form 快取仍只限該份 PDF 使用。
 * 使用者如需紙本或另存 PDF，可使用瀏覽器列印功能。
 * 資料夾管理員可下載正式 PDF 原檔。
 * 資料夾管理員介面需顯示「上傳原始檔案」按鈕。
@@ -761,8 +764,9 @@ DMS_NEXT_PORT=3000
 * `PGPOOL_MAX` 連線池最大連線數，預設為 `10`。
 * `DMS_STORAGE_ROOT` 為 V6 新上傳檔案的根目錄。完整路徑直接使用；相對路徑以 Next.js 執行目錄 `process.cwd()` 為基準解析；未設定時預設為 `./storage`。
 * `DMS_LEGACY_STORAGE_ROOT` 為既有 DMS 檔案的相容讀取根目錄，可使用完整路徑或相對路徑；不需讀取舊檔案時保持空白。
-* 新上傳檔案依 `YYYYMM` 月份建立子目錄，磁碟檔名使用時間戳記與 UUID 組合；資料庫保存相對儲存路徑，不向瀏覽器揭露實體絕對路徑。
-* `SESSION_SECRET` 必須使用正式環境專用隨機字串。
+* 預覽、下載及資源回收清理只能處理位於目前儲存根目錄或已設定 Legacy Root 內的一般檔案。後端必須以正規化路徑、相對路徑與實體路徑共同檢查，拒絕 `..`、相似前綴目錄、其他磁碟機及 Junction／符號連結逃逸。路徑不合法或檔案不存在時，對外統一顯示「找不到實體檔案。」，不得揭露伺服器路徑。
+* 新上傳檔案先串流寫入同一儲存磁碟的 `.incoming/<request-id>` 暫存目錄，驗證完成後原子搬移至 `YYYYMM` 正式月份目錄。每次交易必須登記本次建立的檔案；SQL、稽核或 `COMMIT` 失敗時回復資料庫並刪除全部新檔案，且不得以清理錯誤覆蓋原始錯誤。服務啟動時清除超過 24 小時的暫存目錄。
+* `SESSION_SECRET` 必須使用至少 32 字元且只供該正式環境使用的隨機字串。正式環境未設定、長度不足、沿用公開範例或文件占位文字時，Node.js 必須在開始接受請求前拒絕啟動。
 * `SESSION_COOKIE_SECURE=true` 時，Web Server 對外入口必須使用 HTTPS。
 * `DMS_NEXT_HOST` 建議固定為 `127.0.0.1`，避免 Next.js server 直接暴露到使用者網段。
 * `DMS_NEXT_PORT` 必須與 Web Server 反向代理目標一致。
@@ -822,7 +826,8 @@ DMS_NEXT_PORT=3000
 | `GET /api/employee?uid=...` | `app/api/employee/route.ts` | 透過 `employeeService.ts` 以 UID 精準檢索員工資料 |
 | `GET /api/departments` | `app/api/departments/route.ts` | 透過 `employeeService.ts` 查詢所有部門 |
 | `GET /api/documents?folder_id=...` | `app/api/documents/route.ts` | 透過 `documentService.ts` 查詢指定資料夾下之有效文件 |
-| `POST /api/documents` | `app/api/documents/route.ts` | 透過 `documentService.ts` 建立新文件或相關文件、上傳新版本、修訂、移動、廢止或刪除 |
+| `POST /api/documents` | `app/api/documents/route.ts` | 處理不含檔案的文件修訂、移動、撤回、刪除及其他純 JSON 操作；一般 JSON Request Body 上限為 1 MiB |
+| `POST /api/documents/upload?action=...` | `app/api/documents/upload/route.ts` | 以 multipart 串流處理建立文件、上傳新版、替換原始編修檔及廢止文件；`action` 限 `create`、`upload_version`、`edit_document` 或 `obsolete` |
 | `GET /api/search?keyword=...&page=...&page_size=...` | `app/api/search/route.ts` | 透過 `searchService.ts` 依資料夾可見性、ACL、管理範圍及版本可見性執行全可見範圍文件關鍵字搜尋 |
 | `GET /api/documents/download?version_id=...` | `app/api/documents/download/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 讀取實體檔案並傳送下載串流 |
 | `GET /api/documents/preview?version_id=...` | `app/api/documents/preview/route.ts` | 透過 `documentService.ts` 與 `fileStorage.ts` 取得預覽串流，PDF 檔案則動態加入浮水印 |
@@ -1053,6 +1058,7 @@ _github.bat "本次修改摘要"
 * 公告狀態只能依「草稿 → 已發佈 → 已封存」前進。已封存公告唯讀，不提供實體刪除或重新發佈。
 * 修改已發佈公告時，`dan_rev` 增加 1，舊版已讀紀錄保留。更新與封存請求必須帶入目前版次；版次不一致時回傳 HTTP `409`。
 * 下架時間必須晚於發佈時間。當公告對象為全體使用者時，不得同時選取系統管理員或資料夾管理員對象；此規則由後端再次驗證。
+* `dms_ann.dan_id` 與 `dms_ann_read.danr_id` 分別以唯一索引 `uidx_dms_ann_id`、`uidx_dms_ann_read_id` 保證識別碼唯一，不建立額外 `PRIMARY KEY`、`FOREIGN KEY` 或 `CONSTRAINT`。
 
 ### 9.4. 權限總覽與系統狀態
 

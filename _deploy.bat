@@ -287,7 +287,7 @@ exit /b 1
     echo     ^<proxy preserveHostHeader="true" reverseRewriteHostInResponseHeaders="false" /^>
     echo     ^<security^>
     echo       ^<requestFiltering^>
-    echo         ^<requestLimits maxAllowedContentLength="1073741824" /^>
+    echo         ^<requestLimits maxAllowedContentLength="230686720" /^>
     echo       ^</requestFiltering^>
     echo     ^</security^>
     echo   ^</system.webServer^>

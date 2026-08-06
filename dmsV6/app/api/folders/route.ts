@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { requireSession } from '../../../lib/server/auth';
-import { authOrServerError, fail, ok, parseJsonBody, serverError } from '../../../lib/server/http';
+import { authOrServerError, fail, ok, parseJsonBody, systemRouteError } from '../../../lib/server/http';
 import {
   archiveFolder,
   createFolder,
@@ -31,7 +31,7 @@ export const POST = async (request: NextRequest) => {
     const body = await parseJsonBody<{ name: string; parent_id?: number; managers?: string[] }>(request);
     return ok(await createFolder(session.user, body.name, body.parent_id, body.managers), 201);
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };
 
@@ -42,7 +42,7 @@ export const PUT = async (request: NextRequest) => {
     await updateFolder(session.user, Number(body.id), body.name);
     return ok(null);
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };
 
@@ -59,6 +59,6 @@ export const DELETE = async (request: NextRequest) => {
 
     return ok(null);
   } catch (error) {
-    return error instanceof Error ? fail(error.message, 400) : serverError(error);
+    return systemRouteError(error);
   }
 };

@@ -38,7 +38,7 @@ C:\DMS\app\server.js
 C:\DMS\app
 ```
 
-服務需設定 `NODE_ENV=production`、`HOSTNAME=127.0.0.1`、`PORT=3000`、`DATABASE_URL`、`DMS_STORAGE_ROOT=C:\DMS\storage`、`SESSION_SECRET`、`SESSION_MAX_AGE_SECONDS=28800` 與 `SESSION_COOKIE_SECURE=true`。
+服務需設定 `NODE_ENV=production`、`HOSTNAME=127.0.0.1`、`PORT=3000`、`DATABASE_URL`、`DMS_STORAGE_ROOT=C:\DMS\storage`、`SESSION_SECRET`、`SESSION_MAX_AGE_SECONDS=28800` 與 `SESSION_COOKIE_SECURE=true`。`SESSION_SECRET` 必須是至少 32 字元且只供該正式環境使用的隨機字串；未設定、長度不足、沿用公開範例或保留文件占位文字時，Node.js 會在接受請求前拒絕啟動。
 
 ## 4. 啟用 Apache 模組
 
@@ -79,14 +79,14 @@ LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Forwarded-Port "443"
 
-    LimitRequestBody 1073741824
+    LimitRequestBody 230686720
 
     ErrorLog  "logs/dms-error.log"
     CustomLog "logs/dms-access.log" combined
 </VirtualHost>
 ```
 
-`LimitRequestBody` 範例為 `1 GB`。必須依正式政策調整。Apache 2.4 的不同修訂版對允許值範圍可能不同，部署時必須以 `httpd -t` 驗證目前版本。
+`LimitRequestBody` 固定為 `230686720` bytes（220 MiB），供每次最多 2 個、每個最多 100 MB 的 multipart 串流檔案與中繼資料使用。Apache 2.4 的不同修訂版對允許值範圍可能不同，部署時必須以 `httpd -t` 驗證目前版本。
 
 ## 6. 設定檢查與服務重啟
 

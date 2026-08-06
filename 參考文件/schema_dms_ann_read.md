@@ -45,9 +45,14 @@ ON dms_ann_read(danr_uid, danr_read_at);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uidx_dms_ann_read_identity
 ON dms_ann_read(dan_id, danr_rev, danr_uid);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_dms_ann_read_id
+ON dms_ann_read(danr_id);
 ```
 
 唯一索引 `uidx_dms_ann_read_identity` 使同一使用者對同一公告版次的已讀寫入具備冪等性。索引只使用原始欄位，不使用函數或型別轉換。
+
+唯一索引 `uidx_dms_ann_read_id` 保證已讀紀錄識別碼不可重複；依專案規則不建立 `PRIMARY KEY` 或額外 `CONSTRAINT`。
 
 ---
 

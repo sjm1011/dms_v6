@@ -228,6 +228,7 @@
     <tr><td>執行方式</td><td>依批次逐步實作，每一批完成驗證後才進入下一批</td></tr>
   </tbody>
 </table>
+<p>&gt; 關聯文件：Antigravity 分析提出的 Session Secret、檔案路徑、檔案交易、公告唯一索引、PDF 字型快取及串流上傳改善，統一由 <code>Antigravity分析改善執行計畫.md</code> 追蹤。本文件保留原有 API 安全與 SQL 優化範圍，重疊項目不得重複執行。</p>
 <h2>2. 已確認原則</h2>
 <ul>
   <li>[x] 維持目前 Next.js 全端架構。</li>
@@ -636,8 +637,8 @@ Suggested Fix：</code></pre>
 <h3>10.3 安全測試</h3>
 <ul>
   <li>[ ] 未登入 API 存取。</li>
-  <li>[ ] 水平越權存取其他資料夾。</li>
-  <li>[ ] 水平越權存取其他文件版本。</li>
+  <li>[ ] 橫向越權存取其他資料夾。</li>
+  <li>[ ] 橫向越權存取其他文件版本。</li>
   <li>[ ] CSRF／錯誤 Origin。</li>
   <li>[ ] 無效 JSON。</li>
   <li>[ ] 超大 Request Body。</li>

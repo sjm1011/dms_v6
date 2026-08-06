@@ -237,7 +237,7 @@ Copy-Item -Recurse -Force public C:\DMS\app\public</code></pre>
 <pre><code class="language-text">C:\Program Files\nodejs\node.exe
 C:\DMS\app\server.js
 C:\DMS\app</code></pre>
-<p>服務需設定 <code>NODE_ENV=production</code>、<code>HOSTNAME=127.0.0.1</code>、<code>PORT=3000</code>、<code>DATABASE_URL</code>、<code>DMS_STORAGE_ROOT=C:\DMS\storage</code>、<code>SESSION_SECRET</code>、<code>SESSION_MAX_AGE_SECONDS=28800</code> 與 <code>SESSION_COOKIE_SECURE=true</code>。</p>
+<p>服務需設定 <code>NODE_ENV=production</code>、<code>HOSTNAME=127.0.0.1</code>、<code>PORT=3000</code>、<code>DATABASE_URL</code>、<code>DMS_STORAGE_ROOT=C:\DMS\storage</code>、<code>SESSION_SECRET</code>、<code>SESSION_MAX_AGE_SECONDS=28800</code> 與 <code>SESSION_COOKIE_SECURE=true</code>。<code>SESSION_SECRET</code> 必須是至少 32 字元且只供該正式環境使用的隨機字串；未設定、長度不足、沿用公開範例或保留文件占位文字時，Node.js 會在接受請求前拒絕啟動。</p>
 <h2>4. 啟用 Apache 模組</h2>
 <p>確認 <code>httpd.conf</code> 已載入：</p>
 <pre><code class="language-apache">LoadModule headers_module modules/mod_headers.so
@@ -268,12 +268,12 @@ LoadModule socache_shmcb_module modules/mod_socache_shmcb.so</code></pre>
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Forwarded-Port "443"
 
-    LimitRequestBody 1073741824
+    LimitRequestBody 230686720
 
     ErrorLog  "logs/dms-error.log"
     CustomLog "logs/dms-access.log" combined
 &lt;/VirtualHost&gt;</code></pre>
-<p><code>LimitRequestBody</code> 範例為 <code>1 GB</code>。必須依正式政策調整。Apache 2.4 的不同修訂版對允許值範圍可能不同，部署時必須以 <code>httpd -t</code> 驗證目前版本。</p>
+<p><code>LimitRequestBody</code> 固定為 <code>230686720</code> bytes（220 MiB），供每次最多 2 個、每個最多 100 MB 的 multipart 串流檔案與中繼資料使用。Apache 2.4 的不同修訂版對允許值範圍可能不同，部署時必須以 <code>httpd -t</code> 驗證目前版本。</p>
 <h2>6. 設定檢查與服務重啟</h2>
 <pre><code class="language-powershell">Set-Location C:\Apache24\bin
 .\httpd.exe -t

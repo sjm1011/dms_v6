@@ -6,15 +6,9 @@ import {
 } from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
-interface UploadFilePayload {
-  name: string;
-  mime: string;
-  base64: string;
-}
-
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
-const fileToPayload = async (file: File): Promise<UploadFilePayload> => {
+const validateUploadFile = (file: File) => {
   if (file.size === 0) {
     throw new Error('不允許上傳空檔案。');
   }
@@ -22,20 +16,27 @@ const fileToPayload = async (file: File): Promise<UploadFilePayload> => {
     throw new Error('正式發佈檔案大小不得超過 100 MB。');
   }
 
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const chunkSize = 0x8000;
+};
 
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
+const uploadDocuments = async <T>(
+  action: 'create' | 'upload_version' | 'edit_document' | 'obsolete',
+  metadata: Record<string, unknown>,
+  file?: File | null,
+  sourceFile?: File | null
+): Promise<ApiResponse<T>> => {
+  if (file) validateUploadFile(file);
+  if (sourceFile) validateUploadFile(sourceFile);
+  const form = new FormData();
+  form.append('metadata', JSON.stringify(metadata));
+  if (file) form.append('file', file, file.name);
+  if (sourceFile) form.append('source_file', sourceFile, sourceFile.name);
 
-  return {
-    name: file.name,
-    mime: file.type || 'application/octet-stream',
-    base64: btoa(binary)
-  };
+  const response = await fetch(`${API_BASE}/documents/upload?action=${encodeURIComponent(action)}`, {
+    method: 'POST',
+    headers: getAuthHeader(),
+    body: form
+  });
+  return await handleResponse(response);
 };
 
 const escapeHtml = (value: string) =>
@@ -461,34 +462,23 @@ export const DocumentsAPI = {
     securityLevel?: DocumentSecurityLevel,
     parentDocumentId?: string | null
   ): Promise<ApiResponse<Document>> => {
-    const body: Record<string, unknown> = {
-      action: 'create',
+    const metadata: Record<string, unknown> = {
       folder_id: folderId,
       code,
       title,
       version,
       change_note: changeNote,
       revision_date: revisionDate,
-      effective_at: effectiveAt,
-      file: await fileToPayload(file)
+      effective_at: effectiveAt
     };
 
     if (parentDocumentId) {
-      body.parent_document_id = parentDocumentId;
+      metadata.parent_document_id = parentDocumentId;
     } else if (securityLevel !== undefined) {
-      body.security_level = securityLevel;
+      metadata.security_level = securityLevel;
     }
 
-    if (sourceFile) {
-      body.source_file = await fileToPayload(sourceFile);
-    }
-
-    const response = await fetch(`${API_BASE}/documents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify(body)
-    });
-    return await handleResponse(response);
+    return await uploadDocuments<Document>('create', metadata, file, sourceFile);
   },
 
   uploadVersion: async (
@@ -500,26 +490,14 @@ export const DocumentsAPI = {
     file: File,
     sourceFile?: File | null
   ): Promise<ApiResponse<null>> => {
-    const body: Record<string, unknown> = {
-      action: 'upload_version',
+    const metadata: Record<string, unknown> = {
       doc_id: docId,
       version,
       change_note: changeNote,
       revision_date: revisionDate,
-      effective_at: effectiveAt,
-      file: await fileToPayload(file)
+      effective_at: effectiveAt
     };
-
-    if (sourceFile) {
-      body.source_file = await fileToPayload(sourceFile);
-    }
-
-    const response = await fetch(`${API_BASE}/documents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify(body)
-    });
-    return await handleResponse(response);
+    return await uploadDocuments<null>('upload_version', metadata, file, sourceFile);
   },
 
   cancelLatestVersion: async (docId: string, reason: string): Promise<ApiResponse<null>> => {
@@ -536,17 +514,7 @@ export const DocumentsAPI = {
   },
 
   obsoleteDocument: async (docId: string, reason: string, file: File): Promise<ApiResponse<null>> => {
-    const response = await fetch(`${API_BASE}/documents`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify({
-        action: 'obsolete',
-        doc_id: docId,
-        reason,
-        file: await fileToPayload(file)
-      })
-    });
-    return await handleResponse(response);
+    return await uploadDocuments<null>('obsolete', { doc_id: docId, reason }, file);
   },
 
   editDocument: async (
@@ -573,11 +541,12 @@ export const DocumentsAPI = {
       effective_at: effectiveAt
     };
 
-    if (sourceFile) {
-      body.source_file = await fileToPayload(sourceFile);
-    }
     if (securityLevel !== undefined) {
       body.security_level = securityLevel;
+    }
+
+    if (sourceFile) {
+      return await uploadDocuments<null>('edit_document', body, null, sourceFile);
     }
 
     const response = await fetch(`${API_BASE}/documents`, {

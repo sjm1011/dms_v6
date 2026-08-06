@@ -39,6 +39,20 @@ interface WatermarkLayout {
 const getFontPath = () =>
   path.join(process.cwd(), 'public', 'fonts', 'NotoSansTC-Bold.ttf');
 
+let watermarkFontPromise: Promise<Font> | null = null;
+
+export const getWatermarkFont = () => {
+  if (!watermarkFontPromise) {
+    watermarkFontPromise = readFile(getFontPath())
+      .then((fontBytes) => fontkit.create(fontBytes))
+      .catch((error) => {
+        watermarkFontPromise = null;
+        throw error;
+      });
+  }
+  return watermarkFontPromise;
+};
+
 const formatPreviewTime = (value: Date) => {
   const parts = new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
@@ -153,8 +167,7 @@ export const applyPdfWatermark = async (
   options: PdfWatermarkOptions
 ) => {
   const pdfDocument = await PDFDocument.load(source);
-  const fontBytes = await readFile(getFontPath());
-  const font = fontkit.create(fontBytes);
+  const font = await getWatermarkFont();
   const lines = getWatermarkLines(options);
   const rotationDegrees = 24;
   const rotationRadians = rotationDegrees * Math.PI / 180;
