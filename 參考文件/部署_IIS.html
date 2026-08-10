@@ -294,7 +294,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test</code></pre>
   <li><code>.NET CLR version</code> 設為 <code>No Managed Code</code>。</li>
   <li><code>Managed pipeline mode</code> 設為 <code>Integrated</code>。</li>
   <li>建立網站 <code>DMS_V6</code>，實體路徑可設為 <code>C:\DMS\iis-root</code>。</li>
-  <li>綁定正式主機名稱與 HTTPS <code>443</code> 憑證。</li>
+  <li>綁定正式主機名稱與目前使用的 HTTP 連接埠。</li>
   <li>在 ARR 的伺服器層級設定中啟用 <code>Enable proxy</code>。</li>
 </ol>
 <h2>7. web.config</h2>
@@ -320,9 +320,10 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test</code></pre>
 &lt;/configuration&gt;</code></pre>
 <p><code>maxAllowedContentLength</code> 固定為 <code>230686720</code> bytes（220 MiB），供每次最多 2 個、每個最多 100 MB 的 multipart 串流檔案與中繼資料使用。若前方另有 Proxy 或資安設備，限制不得低於此值。</p>
 <h2>8. 驗證</h2>
-<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing https://dms.example.com/
-Invoke-WebRequest -UseBasicParsing https://dms.example.com/api/test</code></pre>
+<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing http://dms.example.com/
+Invoke-WebRequest -UseBasicParsing http://dms.example.com/api/test</code></pre>
 <p>完整驗證必須包含登入、建立資料夾、上傳文件、預覽及下載。</p>
+<p>外部網站自動登入使用瀏覽器標準 HTML Form，以 <code>application/x-www-form-urlencoded</code> 將 <code>uid</code> 與 <code>pwd</code> 直接 <code>POST</code> 至 <code>http://dms.example.com/external-login</code>。不得將帳號或密碼放入 URL，也不得由外部網站後端代送。可使用專案根目錄的 <code>整合範例/外部網站登入呼叫範例.html</code> 驗證成功直接進入儀表板，以及失敗返回登入畫面的行為；測試帳密不得寫入範例檔或提交至 Git。</p>
 <h2>9. 常見錯誤</h2>
 <h3>9.1 IIS 回傳 500.19</h3>
 <ul>

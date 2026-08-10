@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DMS 外部網站登入呼叫範例</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+      background: #eef2f7;
+      color: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    main {
+      width: min(720px, 100%);
+      margin: 0 auto;
+    }
+
+    section {
+      margin-bottom: 24px;
+      padding: 28px;
+      border: 1px solid #d6deea;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    h1,
+    h2 {
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: 1.65rem;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+    }
+
+    .notice {
+      padding: 12px 14px;
+      border-left: 4px solid #b45309;
+      background: #fff7ed;
+      color: #7c2d12;
+      line-height: 1.7;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      margin-top: 7px;
+      padding: 11px 12px;
+      border: 1px solid #b8c3d3;
+      border-radius: 7px;
+      font: inherit;
+    }
+
+    input:focus {
+      border-color: #2563eb;
+      outline: 3px solid rgba(37, 99, 235, 0.18);
+    }
+
+    button {
+      width: 100%;
+      margin-top: 24px;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 7px;
+      background: #1d4ed8;
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1e40af;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .button-secondary {
+      background: #475569;
+    }
+
+    .button-secondary:hover {
+      background: #334155;
+    }
+
+    .example-heading {
+      margin-top: 24px;
+    }
+
+    @media (max-width: 560px) {
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 0;
+      padding: 16px;
+      border-radius: 7px;
+      background: #111827;
+      color: #e5e7eb;
+      line-height: 1.55;
+      white-space: pre;
+    }
+
+    .error {
+      min-height: 1.5em;
+      margin: 12px 0 0;
+      color: #b91c1c;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>DMS 外部網站登入呼叫範例</h1>
+      <p>此頁面會讓瀏覽器直接以 HTTP POST 將帳號及密碼送至 DMS。驗證成功後，DMS 會建立登入狀態並顯示儀表板。</p>
+      <p class="notice">目前採用 HTTP，帳號及密碼不會出現在網址，但仍會以未加密內容在內部網路傳輸。請只在受控的內部網路使用。</p>
+
+      <form id="external-login-form" method="post" action="http://127.0.0.1:3000/external-login" accept-charset="UTF-8" rel="noopener">
+        <label for="dms-url">DMS 網址</label>
+        <input id="dms-url" type="url" value="http://127.0.0.1:3000" required>
+
+        <label for="uid">使用者帳號</label>
+        <input id="uid" name="uid" type="text" autocomplete="username" required autofocus>
+
+        <label for="pwd">密碼</label>
+        <input id="pwd" name="pwd" type="password" autocomplete="current-password" required>
+
+        <p id="form-error" class="error" role="alert"></p>
+        <div class="button-row">
+          <button type="submit">使用目前頁籤開啟</button>
+          <button type="submit" class="button-secondary" formtarget="_blank">使用新頁籤開啟</button>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>使用目前頁籤開啟</h2>
+      <pre><code>&lt;form method="post" action="http://DMS位址/external-login"&gt;
+  &lt;input type="hidden" name="uid" value="使用者帳號"&gt;
+  &lt;input type="hidden" name="pwd" value="使用者密碼"&gt;
+  &lt;button type="submit"&gt;開啟 DMS&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+      <h2 class="example-heading">使用新頁籤開啟</h2>
+      <pre><code>&lt;form method="post"
+      action="http://DMS位址/external-login"
+      target="_blank"
+      rel="noopener"&gt;
+  &lt;input type="hidden" name="uid" value="使用者帳號"&gt;
+  &lt;input type="hidden" name="pwd" value="使用者密碼"&gt;
+  &lt;button type="submit"&gt;使用新頁籤開啟 DMS&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const form = document.getElementById('external-login-form');
+      const dmsUrlInput = document.getElementById('dms-url');
+      const errorElement = document.getElementById('form-error');
+
+      form.addEventListener('submit', (event) => {
+        errorElement.textContent = '';
+
+        try {
+          const target = new URL(dmsUrlInput.value.trim());
+          if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+            throw new Error('protocol');
+          }
+
+          target.pathname = `${target.pathname.replace(/\/$/, '')}/external-login`;
+          target.search = '';
+          target.hash = '';
+          form.action = target.toString();
+        } catch {
+          event.preventDefault();
+          errorElement.textContent = '請輸入有效的 DMS HTTP 網址。';
+          dmsUrlInput.focus();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

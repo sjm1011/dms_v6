@@ -2,9 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { AuthAPI } from '../api/auth';
 
-export const useAuth = (showToast: (msg: string, type: 'success' | 'error' | 'info') => void) => {
+export const useAuth = (
+  showToast: (msg: string, type: 'success' | 'error' | 'info') => void,
+  initialLoginError = ''
+) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loginError, setLoginError] = useState<string>('');
+  const [loginError, setLoginError] = useState<string>(initialLoginError);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; data?: any; error?: string } | null>(null);
   const [isPendingLogout, setIsPendingLogout] = useState(false);
@@ -25,6 +29,10 @@ export const useAuth = (showToast: (msg: string, type: 'success' | 'error' | 'in
         if (isMounted) {
           setUser(null);
           setTestResult(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsRestoringSession(false);
         }
       }
     };
@@ -106,6 +114,7 @@ export const useAuth = (showToast: (msg: string, type: 'success' | 'error' | 'in
     setUser,
     loginError,
     setLoginError,
+    isRestoringSession,
     isLoggingIn,
     testResult,
     setTestResult,

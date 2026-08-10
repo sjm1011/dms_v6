@@ -25,7 +25,7 @@ const appVersionDate =
 const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
-  allowedDevOrigins,
+  allowedDevOrigins: ['127.0.0.1', 'localhost', ...allowedDevOrigins],
   env: {
     NEXT_PUBLIC_APP_VERSION_DATE: appVersionDate
   },

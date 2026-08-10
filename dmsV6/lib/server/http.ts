@@ -99,3 +99,47 @@ export const parseJsonBody = async <T>(request: Request, maxBytes = 1024 * 1024)
     throw new Error('JSON 格式錯誤。');
   }
 };
+
+export const parseUrlEncodedBody = async (request: Request, maxBytes = 8 * 1024) => {
+  const contentType = request.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
+  if (contentType !== 'application/x-www-form-urlencoded') {
+    throw new HttpStatusError('只接受 application/x-www-form-urlencoded 格式。', 415);
+  }
+
+  const contentLength = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new HttpStatusError('表單內容超過 8 KiB 限制。', 413);
+  }
+
+  if (!request.body) {
+    return new URLSearchParams();
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw new HttpStatusError('表單內容超過 8 KiB 限制。', 413);
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  });
+
+  try {
+    return new URLSearchParams(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  } catch {
+    throw new HttpStatusError('表單內容不是有效的 UTF-8 格式。', 400);
+  }
+};

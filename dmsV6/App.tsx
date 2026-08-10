@@ -12,7 +12,11 @@ export type AppTheme = 'modern-dark' | 'modern-light';
 
 const THEME_STORAGE_KEY = 'dms-theme';
 
-export const App: React.FC = () => {
+interface AppProps {
+  initialLoginError?: string;
+}
+
+export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
   const [theme, setTheme] = useState<AppTheme>('modern-dark');
   const [themeLoaded, setThemeLoaded] = useState(false);
 
@@ -40,8 +44,18 @@ export const App: React.FC = () => {
   };
 
   // 初始化業務邏輯 Hooks
-  const auth = useAuth(showToast);
+  const auth = useAuth(showToast, initialLoginError);
   const folders = useFolders(auth.user, showToast);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('external_login_error')) {
+      return;
+    }
+
+    url.searchParams.delete('external_login_error');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -83,7 +97,14 @@ export const App: React.FC = () => {
 
   return (
     <>
-      {!auth.user ? (
+      {auth.isRestoringSession ? (
+        <div className="session-restoring" role="status" aria-live="polite">
+          <svg className="spinner" viewBox="0 0 50 50" aria-hidden="true">
+            <circle cx="25" cy="25" r="20" fill="none" strokeWidth="4"></circle>
+          </svg>
+          <span>正在載入系統...</span>
+        </div>
+      ) : !auth.user ? (
         <LoginLayout
           loginError={auth.loginError}
           isLoggingIn={auth.isLoggingIn}

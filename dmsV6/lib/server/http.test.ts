@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HttpStatusError, parseJsonBody } from './http';
+import { HttpStatusError, parseJsonBody, parseUrlEncodedBody } from './http';
 
 describe('JSON Request Body 上限', () => {
   it('解析限制內的 JSON', async () => {
@@ -24,5 +24,40 @@ describe('JSON Request Body 上限', () => {
       expect(error).toBeInstanceOf(HttpStatusError);
       expect((error as HttpStatusError).status).toBe(413);
     }
+  });
+});
+
+describe('外部登入表單解析', () => {
+  it('解析 application/x-www-form-urlencoded 表單', async () => {
+    const request = new Request('http://localhost/external-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+      body: 'uid=A001&pwd=p%40ssword'
+    });
+
+    const form = await parseUrlEncodedBody(request);
+
+    expect(form.get('uid')).toBe('A001');
+    expect(form.get('pwd')).toBe('p@ssword');
+  });
+
+  it('拒絕不支援的 Content-Type', async () => {
+    const request = new Request('http://localhost/external-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{"uid":"A001","pwd":"password"}'
+    });
+
+    await expect(parseUrlEncodedBody(request)).rejects.toMatchObject<HttpStatusError>({ status: 415 });
+  });
+
+  it('依實際串流位元組數拒絕超限表單', async () => {
+    const request = new Request('http://localhost/external-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `uid=A001&pwd=${'a'.repeat(64)}`
+    });
+
+    await expect(parseUrlEncodedBody(request, 16)).rejects.toMatchObject<HttpStatusError>({ status: 413 });
   });
 });

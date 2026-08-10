@@ -823,12 +823,32 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* <code>DMS_NEXT_HOST</code> 建議固定為 <code>127.0.0.1</code>，避免 Next.js server 直接暴露到使用者網段。</p>
 <p>* <code>DMS_NEXT_PORT</code> 必須與 Web Server 反向代理目標一致。</p>
 <h3>6.3. 登入連線規格與失敗處理</h3>
-<p>* <strong>瀏覽器登入請求</strong>：</p>
-<p>* <strong>Request URL</strong>：<code>/api/login</code></p>
-<p>* <strong>Method</strong>：<code>POST</code></p>
-<p>* <strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼"}</code></p>
-<p>* <strong>Content-Type</strong>：<code>application/json</code></p>
-<p>* <strong>Next.js 伺服器端行為</strong>：</p>
+<ul>
+  <li><strong>瀏覽器登入請求</strong>：
+<ul>
+  <li><strong>Request URL</strong>：<code>/api/login</code></li>
+  <li><strong>Method</strong>：<code>POST</code></li>
+  <li><strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼"}</code></li>
+  <li><strong>Content-Type</strong>：<code>application/json</code></li>
+</ul>
+</li>
+  <li><strong>外部網站自動登入請求</strong>：
+<ul>
+  <li><strong>Request URL</strong>：<code>/external-login</code></li>
+  <li><strong>Method</strong>：<code>POST</code></li>
+  <li><strong>Content-Type</strong>：<code>application/x-www-form-urlencoded</code></li>
+  <li><strong>Payload (Body)</strong>：固定使用 <code>uid</code> 與 <code>pwd</code> 欄位；不得以 URL 查詢參數傳送帳號或密碼。</li>
+  <li>外部網站必須由使用者瀏覽器直接提交標準 HTML Form。外部網站後端代送無法替使用者瀏覽器建立 DMS Session Cookie。</li>
+  <li>驗證成功後，以傳入帳號覆蓋瀏覽器既有 Session，設定既有 <code>HttpOnly Cookie</code>，再以 HTTP <code>303</code> 導向固定首頁 <code>/</code>；外部網站不得指定其他導向網址。</li>
+  <li>驗證失敗或欄位缺漏時，清除瀏覽器既有 Session，再以 HTTP <code>303</code> 導向登入畫面並顯示對應錯誤。錯誤狀態只使用固定非敏感代碼，顯示後需從網址移除。</li>
+  <li>外部登入成功及失敗沿用 <code>AUTH_LOGIN_SUCCESS</code>、<code>AUTH_LOGIN_FAILED</code>，並於稽核 metadata 記錄 <code>login_method = EXTERNAL_POST</code>；不得記錄密碼。</li>
+  <li>表單內容上限為 8 KiB。非 <code>POST</code>、不支援的 Content-Type 或超限內容，分別以 HTTP <code>405</code>、<code>415</code> 或 <code>413</code> 拒絕。</li>
+  <li>現行內部網路採 HTTP，<code>POST</code> 只能避免帳密出現在 URL、瀏覽器歷程及一般網址 Log，無法加密網路封包；部署環境必須維持 <code>SESSION_COOKIE_SECURE=false</code> 才能保存 Session Cookie。</li>
+  <li>此入口依目前整合需求不限制來源，不檢查 <code>Origin</code>、<code>Referer</code> 或整合密鑰，但所有登入仍須通過既有帳密驗證。</li>
+</ul>
+</li>
+  <li><strong>Next.js 伺服器端行為</strong>：</li>
+</ul>
 <p>* Route Handler 解析請求中的帳號密碼。</p>
 <p>* Route Handler 直接查詢 PostgreSQL 資料庫中的使用者與系統管理員資料（透過 <code>lib/server/auth.ts</code>）。</p>
 <p>* 驗證通過後，將使用者資訊與管理員身分封裝成 session payload。</p>
@@ -850,16 +870,23 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 瀏覽器呼叫同源 <code>/api/*</code> 時自動帶上 cookie。</p>
 <p>* Next.js route handler 從 cookie 解析並解密驗證 session，確認當前使用者身分。</p>
 <p>* 所有的資料庫查詢與權限限制（例如資料夾 ACL）皆在 Next.js 伺服器端根據解密後的 session 資訊直接執行。</p>
-<p>* <strong>前端路由機制</strong>：</p>
-<p>* 前端畫面由 Next.js App Router 承載。</p>
-<p>* 切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</p>
-<p>* <code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤。</p>
+<ul>
+  <li><strong>前端路由機制</strong>：
+<ul>
+  <li>前端畫面由 Next.js App Router 承載。</li>
+  <li>切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</li>
+  <li>初次載入及外部登入完成後，Session 還原結果確認前只顯示中性載入狀態，不得先顯示登入畫面。</li>
+  <li><code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤。</li>
+</ul>
+</li>
+</ul>
 <h3>6.5. Next.js Route Handler 路由與處理服務清單</h3>
 <table>
   <thead>
     <tr><th>瀏覽器端呼叫</th><th>Next.js Route Handler</th><th>伺服器端核心服務與邏輯 (<code>lib/server/</code>)</th></tr>
   </thead>
   <tbody>
+    <tr><td><code>POST /external-login</code></td><td><code>app/external-login/route.ts</code></td><td>驗證外部 HTML Form 帳密、寫入或清除 session cookie，並以 HTTP <code>303</code> 導向固定首頁或登入錯誤狀態</td></tr>
     <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>透過 <code>auth.ts</code> 驗證帳密並寫入 session cookie</td></tr>
     <tr><td><code>POST /api/logout</code></td><td><code>app/api/logout/route.ts</code></td><td>清除 session cookie</td></tr>
     <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>讀取 session cookie 並回傳登入狀態與身分</td></tr>

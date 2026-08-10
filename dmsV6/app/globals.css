@@ -230,6 +230,33 @@ select {
   animation: spin 1s linear infinite;
 }
 
+.session-restoring {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.session-restoring .spinner {
+  width: 32px;
+  height: 32px;
+  stroke: var(--primary-color);
+}
+
+.session-restoring .spinner circle {
+  stroke-dasharray: 90 150;
+  stroke-linecap: round;
+}
+
 .fade-in {
   animation: fadeIn var(--transition-normal) forwards;
 }

@@ -118,7 +118,7 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test
 2. `.NET CLR version` 設為 `No Managed Code`。
 3. `Managed pipeline mode` 設為 `Integrated`。
 4. 建立網站 `DMS_V6`，實體路徑可設為 `C:\DMS\iis-root`。
-5. 綁定正式主機名稱與 HTTPS `443` 憑證。
+5. 綁定正式主機名稱與目前使用的 HTTP 連接埠。
 6. 在 ARR 的伺服器層級設定中啟用 `Enable proxy`。
 
 ## 7. web.config
@@ -152,11 +152,13 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3502/api/test
 ## 8. 驗證
 
 ```powershell
-Invoke-WebRequest -UseBasicParsing https://dms.example.com/
-Invoke-WebRequest -UseBasicParsing https://dms.example.com/api/test
+Invoke-WebRequest -UseBasicParsing http://dms.example.com/
+Invoke-WebRequest -UseBasicParsing http://dms.example.com/api/test
 ```
 
 完整驗證必須包含登入、建立資料夾、上傳文件、預覽及下載。
+
+外部網站自動登入使用瀏覽器標準 HTML Form，以 `application/x-www-form-urlencoded` 將 `uid` 與 `pwd` 直接 `POST` 至 `http://dms.example.com/external-login`。不得將帳號或密碼放入 URL，也不得由外部網站後端代送。可使用專案根目錄的 `整合範例/外部網站登入呼叫範例.html` 驗證成功直接進入儀表板，以及失敗返回登入畫面的行為；測試帳密不得寫入範例檔或提交至 Git。
 
 ## 9. 常見錯誤
 
