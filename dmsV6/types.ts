@@ -1,4 +1,4 @@
-export type AppTheme = 'modern-dark' | 'modern-light';
+export type AppTheme = 'modern-dark' | 'modern-light' | 'soft-warm';
 
 export interface User {
   id: string;

@@ -508,7 +508,7 @@ ON dms_ann_read(danr_id);
 
 CREATE TABLE dms_user_preferences (
     dup_uid VARCHAR(50) NOT NULL,
-    dup_theme VARCHAR(20) NOT NULL DEFAULT 'modern-light',
+    dup_theme VARCHAR(20) NOT NULL DEFAULT 'soft-warm',
     dup_crtby VARCHAR(50) NOT NULL,
     dup_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dup_updby VARCHAR(50),
@@ -520,7 +520,7 @@ ON dms_user_preferences(dup_uid);
 
 COMMENT ON TABLE dms_user_preferences IS 'DMS 使用者個人偏好設定';
 COMMENT ON COLUMN dms_user_preferences.dup_uid IS '使用者帳號，邏輯關聯至 employee.emp_id';
-COMMENT ON COLUMN dms_user_preferences.dup_theme IS '佈景主題。modern-dark：深色，modern-light：淺色';
+COMMENT ON COLUMN dms_user_preferences.dup_theme IS '佈景主題。modern-dark：深色，modern-light：淺色，soft-warm：柔和';
 COMMENT ON COLUMN dms_user_preferences.dup_crtby IS '建立者帳號';
 COMMENT ON COLUMN dms_user_preferences.dup_crtat IS '建立時間';
 COMMENT ON COLUMN dms_user_preferences.dup_updby IS '最後異動者帳號';

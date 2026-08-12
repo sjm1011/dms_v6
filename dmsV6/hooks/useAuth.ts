@@ -70,11 +70,11 @@ export const useAuth = (
   */
 
   // 登入處理
-  const handleLogin = async (uidVal: string, pwdVal: string, theme: AppTheme) => {
+  const handleLogin = async (uidVal: string, pwdVal: string) => {
     setLoginError('');
     setIsLoggingIn(true);
     try {
-      const res = await AuthAPI.login(uidVal, pwdVal, theme);
+      const res = await AuthAPI.login(uidVal, pwdVal);
       if (res.success) {
         setUser(res.data.user);
         setAuthenticatedTheme(res.data.theme);

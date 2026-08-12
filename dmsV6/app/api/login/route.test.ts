@@ -15,18 +15,17 @@ vi.mock('../../../lib/server/auditService', () => ({
 }));
 
 vi.mock('../../../lib/server/userPreferenceService', () => ({
-  ensureUserTheme: vi.fn(),
-  isAppTheme: (value: unknown) => value === 'modern-dark' || value === 'modern-light'
+  ensureUserTheme: vi.fn()
 }));
 
 const loginUserMock = vi.mocked(loginUser);
 const writeAuditMock = vi.mocked(writeAudit);
 const ensureUserThemeMock = vi.mocked(ensureUserTheme);
 
-const createLoginRequest = (theme: string) => new NextRequest('http://localhost/api/login', {
+const createLoginRequest = (extraBody: Record<string, unknown> = {}) => new NextRequest('http://localhost/api/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ uid: 'A001', pwd: 'password', theme })
+  body: JSON.stringify({ uid: 'A001', pwd: 'password', ...extraBody })
 });
 
 describe('一般登入 Route Handler', () => {
@@ -42,20 +41,20 @@ describe('一般登入 Route Handler', () => {
     });
   });
 
-  it('首次設定使用登入畫面主題', async () => {
-    ensureUserThemeMock.mockResolvedValue('modern-light');
-    const response = await POST(createLoginRequest('modern-light'));
+  it('首次設定固定使用柔和佈景主題', async () => {
+    ensureUserThemeMock.mockResolvedValue('soft-warm');
+    const response = await POST(createLoginRequest());
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(ensureUserThemeMock).toHaveBeenCalledWith('A001', 'modern-light');
-    expect(payload.data.theme).toBe('modern-light');
+    expect(ensureUserThemeMock).toHaveBeenCalledWith('A001', 'soft-warm');
+    expect(payload.data.theme).toBe('soft-warm');
     expect(response.headers.get('set-cookie')).toContain('dms_session=');
   });
 
-  it('回傳既有使用者設定，不以登入畫面選擇覆寫', async () => {
+  it('回傳既有使用者設定且不以首次預設值覆寫', async () => {
     ensureUserThemeMock.mockResolvedValue('modern-dark');
-    const response = await POST(createLoginRequest('modern-light'));
+    const response = await POST(createLoginRequest());
     const payload = await response.json();
 
     expect(payload.data.theme).toBe('modern-dark');
@@ -64,11 +63,14 @@ describe('一般登入 Route Handler', () => {
     }));
   });
 
-  it('拒絕不支援的佈景主題且不驗證帳密', async () => {
-    const response = await POST(createLoginRequest('unknown-theme'));
+  it('忽略舊呼叫額外傳入的佈景主題欄位', async () => {
+    ensureUserThemeMock.mockResolvedValue('soft-warm');
+    const response = await POST(createLoginRequest({ theme: 'unknown-theme' }));
+    const payload = await response.json();
 
-    expect(response.status).toBe(400);
-    expect(loginUserMock).not.toHaveBeenCalled();
-    expect(ensureUserThemeMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(loginUserMock).toHaveBeenCalledWith('A001', 'password');
+    expect(ensureUserThemeMock).toHaveBeenCalledWith('A001', 'soft-warm');
+    expect(payload.data.theme).toBe('soft-warm');
   });
 });

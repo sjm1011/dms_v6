@@ -2,11 +2,11 @@ import type { ApiResponse, AppTheme, AuthSessionData } from '../types';
 import { API_BASE, apiFetch, getAuthHeader, handleResponse } from './client';
 
 export const AuthAPI = {
-  login: async (uid: string, pwd: string, theme: AppTheme): Promise<ApiResponse<AuthSessionData>> => {
+  login: async (uid: string, pwd: string): Promise<ApiResponse<AuthSessionData>> => {
     const response = await apiFetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid, pwd, theme })
+      body: JSON.stringify({ uid, pwd })
     });
     return await handleResponse(response);
   },

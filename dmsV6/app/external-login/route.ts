@@ -50,7 +50,7 @@ export const POST = async (request: NextRequest) => {
 
     const user = await loginUser(attemptedUid, password);
     const sessionUser = toSessionUser(user);
-    await ensureUserTheme(sessionUser.id, 'modern-light');
+    await ensureUserTheme(sessionUser.id, 'soft-warm');
     const response = redirectToHome();
 
     setSessionCookie(response, {

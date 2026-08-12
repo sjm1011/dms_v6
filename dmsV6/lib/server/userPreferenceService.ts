@@ -1,14 +1,14 @@
 import type { AppTheme } from '../../types';
 import { query } from './db';
 
-const DEFAULT_THEME: AppTheme = 'modern-light';
+const DEFAULT_THEME: AppTheme = 'soft-warm';
 
 interface ThemeRow {
   theme: string;
 }
 
 export const isAppTheme = (value: unknown): value is AppTheme =>
-  value === 'modern-dark' || value === 'modern-light';
+  value === 'modern-dark' || value === 'modern-light' || value === 'soft-warm';
 
 export const getUserTheme = async (userId: string): Promise<AppTheme | null> => {
   const result = await query<ThemeRow>(

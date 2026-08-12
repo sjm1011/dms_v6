@@ -196,7 +196,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
         <div className="dashboard-header-actions">
           <fieldset className="dashboard-theme-selector" disabled={isSavingTheme}>
-            <legend>佈景主題</legend>
+            <legend className="sr-only">佈景主題</legend>
+            <span className="dashboard-theme-label" aria-hidden="true">佈景主題</span>
             <div className="dashboard-theme-options">
               <label className={theme === 'modern-dark' ? 'active' : ''}>
                 <input
@@ -217,6 +218,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   onChange={() => onThemeChange('modern-light')}
                 />
                 <span>淺色</span>
+              </label>
+              <label className={theme === 'soft-warm' ? 'active' : ''}>
+                <input
+                  type="radio"
+                  name="dashboard-theme"
+                  value="soft-warm"
+                  checked={theme === 'soft-warm'}
+                  onChange={() => onThemeChange('soft-warm')}
+                />
+                <span>柔和</span>
               </label>
             </div>
           </fieldset>

@@ -222,7 +222,7 @@
   </thead>
   <tbody>
     <tr><td><code>dup_uid</code></td><td>VARCHAR(50)</td><td>是</td><td>使用者帳號，邏輯關聯至 <code>employee.emp_id</code>。</td></tr>
-    <tr><td><code>dup_theme</code></td><td>VARCHAR(20)</td><td>是</td><td><code>modern-dark</code> 為深色，<code>modern-light</code> 為淺色。</td></tr>
+    <tr><td><code>dup_theme</code></td><td>VARCHAR(20)</td><td>是</td><td><code>modern-dark</code> 為深色，<code>modern-light</code> 為淺色，<code>soft-warm</code> 為柔和。</td></tr>
     <tr><td><code>dup_crtby</code></td><td>VARCHAR(50)</td><td>是</td><td>建立者帳號。</td></tr>
     <tr><td><code>dup_crtat</code></td><td>TIMESTAMP</td><td>是</td><td>建立時間。</td></tr>
     <tr><td><code>dup_updby</code></td><td>VARCHAR(50)</td><td>否</td><td>最後異動者帳號。</td></tr>
@@ -234,7 +234,7 @@
   <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
   <pre><code class="language-sql">CREATE TABLE dms_user_preferences (
     dup_uid VARCHAR(50) NOT NULL,
-    dup_theme VARCHAR(20) NOT NULL DEFAULT 'modern-light',
+    dup_theme VARCHAR(20) NOT NULL DEFAULT 'soft-warm',
     dup_crtby VARCHAR(50) NOT NULL,
     dup_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dup_updby VARCHAR(50),
@@ -242,16 +242,14 @@
 );
 
 CREATE UNIQUE INDEX uidx_dms_user_preferences_uid
-ON dms_user_preferences(dup_uid);</code></pre>
+ON dms_user_preferences(dup_uid);</code></pre>
 </div>
 <h2>4. 資料規則</h2>
-<ul>
-  <li>每位使用者只能有 1 筆設定，由 <code>uidx_dms_user_preferences_uid</code> 保證唯一性。</li>
-  <li>一般登入的首次設定採用登入畫面所選佈景主題；已有設定時不得由登入畫面覆寫。</li>
-  <li>外部網站自動登入的首次設定為淺色；已有設定時不得覆寫。</li>
-  <li>只接受 <code>modern-dark</code> 與 <code>modern-light</code>。</li>
-  <li>本表不建立 foreign key，使用者有效性由既有登入與 Session 驗證流程保證。</li>
-</ul>
+<p>- 每位使用者只能有 1 筆設定，由 <code>uidx_dms_user_preferences_uid</code> 保證唯一性。</p>
+<p>- 一般登入與外部網站自動登入的首次設定均為柔和；已有設定時不得覆寫。</p>
+<p>- 登入畫面不提供佈景主題選擇；使用者登入後可在儀表板修改個人設定。</p>
+<p>- 只接受 <code>modern-dark</code>、<code>modern-light</code> 與 <code>soft-warm</code>。</p>
+<p>- 本表不建立 foreign key，使用者有效性由既有登入與 Session 驗證流程保證。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

@@ -15,7 +15,7 @@ vi.mock('../../lib/server/auditService', () => ({
 }));
 
 vi.mock('../../lib/server/userPreferenceService', () => ({
-  ensureUserTheme: vi.fn(async () => 'modern-light')
+  ensureUserTheme: vi.fn(async () => 'soft-warm')
 }));
 
 const loginUserMock = vi.mocked(loginUser);
@@ -53,7 +53,7 @@ describe('外部網站自動登入 Route Handler', () => {
     expect(response.headers.get('set-cookie')).toContain('dms_session=');
     expect(response.headers.get('set-cookie')).not.toContain('Max-Age=0');
     expect(loginUserMock).toHaveBeenCalledWith('A001', 'password');
-    expect(ensureUserThemeMock).toHaveBeenCalledWith('A001', 'modern-light');
+    expect(ensureUserThemeMock).toHaveBeenCalledWith('A001', 'soft-warm');
     expect(writeAuditMock).toHaveBeenCalledWith(expect.objectContaining({
       action: 'AUTH_LOGIN_SUCCESS',
       metadata: { login_method: 'EXTERNAL_POST' }

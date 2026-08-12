@@ -10,15 +10,11 @@ import { TooltipHost } from './components/TooltipHost';
 import { AuthAPI } from './api/auth';
 import type { AppTheme } from './types';
 
-const LOGIN_THEME_STORAGE_KEY = 'dms-login-theme';
-
 interface AppProps {
   initialLoginError?: string;
 }
 
 export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
-  const [loginTheme, setLoginTheme] = useState<AppTheme>('modern-dark');
-  const [themeLoaded, setThemeLoaded] = useState(false);
   const [isSavingTheme, setIsSavingTheme] = useState(false);
 
   // Toast 訊息狀態
@@ -59,26 +55,10 @@ export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
   }, []);
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem(LOGIN_THEME_STORAGE_KEY);
-    if (savedTheme === 'modern-light') {
-      setLoginTheme('modern-light');
-    }
-    setThemeLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!themeLoaded) {
-      return;
-    }
-
-    const displayTheme = auth.user && auth.authenticatedTheme
+    document.documentElement.dataset.theme = auth.user && auth.authenticatedTheme
       ? auth.authenticatedTheme
-      : loginTheme;
-    document.documentElement.dataset.theme = displayTheme;
-    if (!auth.user) {
-      window.localStorage.setItem(LOGIN_THEME_STORAGE_KEY, loginTheme);
-    }
-  }, [auth.authenticatedTheme, auth.user, loginTheme, themeLoaded]);
+      : 'modern-light';
+  }, [auth.authenticatedTheme, auth.user]);
 
   const handleAuthenticatedThemeChange = async (nextTheme: AppTheme) => {
     const previousTheme = auth.authenticatedTheme;
@@ -133,14 +113,12 @@ export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
           isLoggingIn={auth.isLoggingIn}
           uidInputRef={auth.uidInputRef}
           onLogin={auth.handleLogin}
-          theme={loginTheme}
-          onThemeChange={setLoginTheme}
         />
       ) : (
         <MainLayout
           user={auth.user}
           onLogout={handleLogout}
-          theme={auth.authenticatedTheme || 'modern-light'}
+          theme={auth.authenticatedTheme || 'soft-warm'}
           isSavingTheme={isSavingTheme}
           onThemeChange={handleAuthenticatedThemeChange}
           // 資料夾 Hooks 狀態與方法

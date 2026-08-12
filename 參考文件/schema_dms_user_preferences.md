@@ -9,7 +9,7 @@
 | 欄位 | 型別 | 必填 | 說明 |
 |---|---|---|---|
 | `dup_uid` | VARCHAR(50) | 是 | 使用者帳號，邏輯關聯至 `employee.emp_id`。 |
-| `dup_theme` | VARCHAR(20) | 是 | `modern-dark` 為深色，`modern-light` 為淺色。 |
+| `dup_theme` | VARCHAR(20) | 是 | `modern-dark` 為深色，`modern-light` 為淺色，`soft-warm` 為柔和。 |
 | `dup_crtby` | VARCHAR(50) | 是 | 建立者帳號。 |
 | `dup_crtat` | TIMESTAMP | 是 | 建立時間。 |
 | `dup_updby` | VARCHAR(50) | 否 | 最後異動者帳號。 |
@@ -20,7 +20,7 @@
 ```sql
 CREATE TABLE dms_user_preferences (
     dup_uid VARCHAR(50) NOT NULL,
-    dup_theme VARCHAR(20) NOT NULL DEFAULT 'modern-light',
+    dup_theme VARCHAR(20) NOT NULL DEFAULT 'soft-warm',
     dup_crtby VARCHAR(50) NOT NULL,
     dup_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dup_updby VARCHAR(50),
@@ -34,7 +34,7 @@ ON dms_user_preferences(dup_uid);
 ## 4. 資料規則
 
 - 每位使用者只能有 1 筆設定，由 `uidx_dms_user_preferences_uid` 保證唯一性。
-- 一般登入的首次設定採用登入畫面所選佈景主題；已有設定時不得由登入畫面覆寫。
-- 外部網站自動登入的首次設定為淺色；已有設定時不得覆寫。
-- 只接受 `modern-dark` 與 `modern-light`。
+- 一般登入與外部網站自動登入的首次設定均為柔和；已有設定時不得覆寫。
+- 登入畫面不提供佈景主題選擇；使用者登入後可在儀表板修改個人設定。
+- 只接受 `modern-dark`、`modern-light` 與 `soft-warm`。
 - 本表不建立 foreign key，使用者有效性由既有登入與 Session 驗證流程保證。

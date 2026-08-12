@@ -13,7 +13,8 @@ vi.mock('../../../../lib/server/auth', () => ({
 
 vi.mock('../../../../lib/server/userPreferenceService', () => ({
   getUserThemeOrDefault: vi.fn(),
-  isAppTheme: (value: unknown) => value === 'modern-dark' || value === 'modern-light',
+  isAppTheme: (value: unknown) =>
+    value === 'modern-dark' || value === 'modern-light' || value === 'soft-warm',
   updateUserTheme: vi.fn()
 }));
 
@@ -51,15 +52,15 @@ describe('使用者佈景主題 Route Handler', () => {
   });
 
   it('更新只能套用至目前登入使用者', async () => {
-    updateUserThemeMock.mockResolvedValue('modern-light');
+    updateUserThemeMock.mockResolvedValue('soft-warm');
     const response = await PUT(new NextRequest('http://localhost/api/preferences/theme', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ theme: 'modern-light', user_id: 'B002' })
+      body: JSON.stringify({ theme: 'soft-warm', user_id: 'B002' })
     }));
 
     expect(response.status).toBe(200);
-    expect(updateUserThemeMock).toHaveBeenCalledWith('A001', 'modern-light');
+    expect(updateUserThemeMock).toHaveBeenCalledWith('A001', 'soft-warm');
   });
 
   it('拒絕不支援的佈景主題', async () => {

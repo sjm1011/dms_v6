@@ -5,7 +5,6 @@ import {
   ArrowForwardIcon,
   ErrorOutlineIcon
 } from '../components/Icons';
-import type { AppTheme } from '../types';
 import { showRequiredFieldMessage } from '../lib/clientValidation';
 import { Modal } from '../components/Modal';
 import { APP_VERSION_LABEL } from '../lib/appVersion';
@@ -14,27 +13,18 @@ interface LoginLayoutProps {
   loginError: string;
   isLoggingIn: boolean;
   uidInputRef: React.RefObject<HTMLInputElement | null>;
-  onLogin: (uid: string, pwd: string, theme: AppTheme) => Promise<boolean>;
-  theme: AppTheme;
-  onThemeChange: (theme: AppTheme) => void;
+  onLogin: (uid: string, pwd: string) => Promise<boolean>;
 }
 
 export const LoginLayout: React.FC<LoginLayoutProps> = ({
   loginError,
   isLoggingIn,
   uidInputRef,
-  onLogin,
-  theme,
-  onThemeChange
+  onLogin
 }) => {
   const [uid, setUid] = useState('');
   const [pwd, setPwd] = useState('');
   const pwdInputRef = useRef<HTMLInputElement>(null);
-
-  const handleThemeChange = (nextTheme: AppTheme) => {
-    onThemeChange(nextTheme);
-    window.requestAnimationFrame(() => uidInputRef.current?.focus());
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +39,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       return;
     }
 
-    const success = await onLogin(uid, pwd, theme);
+    const success = await onLogin(uid, pwd);
     if (!success) {
       setUid('');
       setPwd('');
@@ -97,31 +87,6 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
           <img src="/logo.png" alt="Logo" style={{ width: 48, height: 48, marginBottom: 12, borderRadius: 8, objectFit: 'contain' }} />
           <p>請輸入您的帳戶以存取平台</p>
         </div>
-        <fieldset className="theme-selector" aria-label="佈景主題">
-          <legend>佈景主題</legend>
-          <div className="theme-options">
-            <label className={`theme-option ${theme === 'modern-dark' ? 'active' : ''}`}>
-              <input
-                type="radio"
-                name="theme"
-                value="modern-dark"
-                checked={theme === 'modern-dark'}
-                onChange={() => handleThemeChange('modern-dark')}
-              />
-              <span>現代深色</span>
-            </label>
-            <label className={`theme-option ${theme === 'modern-light' ? 'active' : ''}`}>
-              <input
-                type="radio"
-                name="theme"
-                value="modern-light"
-                checked={theme === 'modern-light'}
-                onChange={() => handleThemeChange('modern-light')}
-              />
-              <span>現代淺色</span>
-            </label>
-          </div>
-        </fieldset>
         <form id="login-form" onSubmit={handleSubmit}>
           <div className="input-group">
             <label htmlFor="uid">使用者帳號</label>

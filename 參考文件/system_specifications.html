@@ -253,11 +253,9 @@
 <p>* 本專案資料庫不建立實體 <code>FOREIGN KEY</code> 約束。跨表關聯以欄位命名、索引、後端交易檢核與必要查詢條件維護，不依賴資料庫外鍵。</p>
 <p>* 索引定義只使用原始欄位，不得在索引欄位或條件內使用 <code>UPPER()</code>、<code>LOWER()</code>、<code>BTRIM()</code>、<code>CAST()</code>、<code>::type</code> 或其他函數與型別轉換。需要統一大小寫或格式的資料，必須由前端在送出前完成正規化，後端再執行防呆檢核。</p>
 <p>* 關聯欄位若只指向單一父表，沿用父表主鍵欄位名，例如 <code>dms_doc_ver.dd_id</code>、<code>dms_ver_rev.ddv_id</code>。</p>
-<ul>
-  <li>同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 <code>ddv_pub_dfi_id</code> (正式發佈檔案) 與 <code>ddv_src_dfi_id</code> (原始編修檔案)。</li>
-  <li><code>da_</code> 已由 <code>dms_admins</code> 使用，公告主檔為避免前綴衝突，使用 <code>dan_</code>；公告已讀紀錄再增加語意字母，使用 <code>danr_</code>。</li>
-  <li><code>dms_ann_read.dan_id</code> 沿用公告主檔識別碼名稱，邏輯關聯至 <code>dms_ann.dan_id</code>。</li>
-</ul>
+<p>* 同一資料表若有多個關聯欄位指向同一父表，需加入用途語意，並保留被參照主鍵縮寫，例如 <code>ddv_pub_dfi_id</code> (正式發佈檔案) 與 <code>ddv_src_dfi_id</code> (原始編修檔案)。</p>
+<p>* <code>da_</code> 已由 <code>dms_admins</code> 使用，公告主檔為避免前綴衝突，使用 <code>dan_</code>；公告已讀紀錄再增加語意字母，使用 <code>danr_</code>。</p>
+<p>* <code>dms_ann_read.dan_id</code> 沿用公告主檔識別碼名稱，邏輯關聯至 <code>dms_ann.dan_id</code>。</p>
 <p>* 欄位名稱不得包含句點。<code>dms_doc.dd_id</code> 僅代表 SQL 查詢中的「資料表名稱 + 欄位名稱」參照方式，實際欄位名稱為 <code>dd_id</code>。</p>
 <p>* 文件版本不設 <code>ddv_status</code> 欄位。版本狀態需由 <code>ddv_eff_at</code>、<code>ddv_eff_to</code> 與 <code>ddv_cancel_at</code> 推導。</p>
 <p>* 建立、更新、作廢欄位延續既有命名慣例，例如 <code>crtby</code>、<code>crtat</code>、<code>updby</code>、<code>updat</code>、<code>dc</code>、<code>dcby</code>、<code>dcat</code>。</p>
@@ -370,9 +368,7 @@
 <p>* 當管理員對某一正常狀態（<code>1</code>）的資料夾進行封存時，系統將執行遞迴封存，一併將其下所有子資料夾之狀態更新為 <code>2</code>。</p>
 <p>* <strong>文件聯動廢止</strong>：被封存資料夾及其子資料夾下的所有文件，其文件主檔狀態將被自動更新為 <code>Obsolete</code> (已廢止)，並於文件主檔註記廢止時間與廢止原因。文件版本的有效期間與撤回紀錄不因資料夾封存而改寫，以確保版本歷史維持原始紀錄。</p>
 <p>* <strong>文件庫顯示規則</strong>：已封存資料夾不得顯示於文件庫的資料夾樹、資料夾清單與一般文件瀏覽流程中。已封存資料夾與其文件保留於資料庫及檔案儲存中，改由「資源回收區」檢視。</p>
-<ul>
-  <li><strong>還原與永久刪除</strong>：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 9.5 節規則永久作廢資料並刪除實體檔案。</li>
-</ul>
+<p>* <strong>還原與永久刪除</strong>：封存批次可由系統管理員還原；封存滿 90 天後，才可依第 9.5 節規則永久作廢資料並刪除實體檔案。</p>
 <p>---</p>
 <h2>4. 文件管理與版本控管</h2>
 <p>DMS 不負責文件簽核流程。文件內容之擬稿、會簽、核准均由 BPM 系統處理；DMS 僅負責保存 BPM 簽核完成後，由資料夾管理員上傳之正式文件，並管理其版本、預約生效、有效期間、撤回、廢止、查閱與下載規則。</p>
@@ -380,9 +376,7 @@
 <h3>4.1. 文件主檔與版本分離</h3>
 <p>系統採「文件主檔」與「文件版本」分離設計。</p>
 <p>* <strong>文件主檔</strong>：代表一份文件本身，例如文件編號、文件名稱、所屬資料夾、文件是否廢止、廢止原因與廢止公文等資料。</p>
-<ul>
-  <li><strong>文件版本</strong>：代表該文件某一次正式發佈的版本，包含版本號、修訂日期、發行日期、結束日期、異動說明、正式發佈檔案、撤回紀錄與修訂對照表等資料。</li>
-</ul>
+<p>* <strong>文件版本</strong>：代表該文件某一次正式發佈的版本，包含版本號、修訂日期、發行日期、結束日期、異動說明、正式發佈檔案、撤回紀錄與修訂對照表等資料。</p>
 <p>同一份文件可以有多個版本，但同一時間對一般使用者僅能解析出一個目前有效版本。</p>
 <p>版本不另設版本狀態欄位。版本是否尚未生效、目前有效、已成為歷史版本或已撤回，均由版本有效期間與撤回欄位推導。</p>
 <h3>4.2. 文件主檔狀態</h3>
@@ -414,9 +408,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>每一個文件版本需保存以下資訊：</p>
 <p>* <strong>版本號</strong>：可空白，由管理員依實際文件規範自行填寫。</p>
 <p>* <strong>修訂日期</strong>：必填，代表該文件內容正式修訂日期。</p>
-<ul>
-  <li><strong>發行日期 <code>effective_at</code>（內部生效時間）</strong>：必填，可指定今天或未來日期，不允許早於上傳日期。</li>
-</ul>
+<p>* <strong>發行日期 <code>effective_at</code>（內部生效時間）</strong>：必填，可指定今天或未來日期，不允許早於上傳日期。</p>
 <p>* <strong>結束日期 <code>effective_until</code> (結束時間)</strong>：由系統於預約新版或立即版更時寫入，不提供使用者手動填寫。</p>
 <p>* <strong>異動說明</strong>：必填，欄位需支援下拉片語選擇與手動輸入。使用者可從下拉選單選取常用異動說明項目，也可直接輸入自訂說明內容。下拉選單至少包含：</p>
 <p>- <code>初版發行</code></p>
@@ -440,10 +432,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 凡需由使用者輸入日期的欄位，均需提供月曆介面選擇。</p>
 <p>* 月曆介面不得取代後端日期檢核；後端仍需依欄位規則驗證日期是否允許。</p>
 <p>發行日期之時間粒度規則如下：</p>
-<ul>
-  <li>若發行日期為上傳當日，版本於上傳交易完成後立即生效。</li>
-  <li>若發行日期晚於上傳當日，版本於該日期 <code>00:00:00</code> 生效。</li>
-</ul>
+<p>* 若發行日期為上傳當日，版本於上傳交易完成後立即生效。</p>
+<p>* 若發行日期晚於上傳當日，版本於該日期 <code>00:00:00</code> 生效。</p>
 <p>* 系統以伺服器時間作為版本有效期間判斷基準，前端不得自行判斷版本是否生效。</p>
 <p>* 本系統僅在本地環境使用，所有「目前時間」均指後端伺服器本地時間，資料庫保存系統本地時間即可。</p>
 <p>文件主檔需保存以下廢止資訊：</p>
@@ -479,10 +469,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 一般使用者即使直接呼叫 PDF 正式原檔下載 API (應用程式介面)，或以 URL (網址) 猜測檔案路徑，後端仍必須依角色與 ACL (存取控制清單) 拒絕下載。</p>
 <p>* PDF 預覽畫面必須顯示浮水印。</p>
 <p>* 浮水印必須由 Next.js Route Handler 在伺服器端讀取 PDF 原始檔後動態套用，不得由瀏覽器端產生或合成，避免客戶端繞過浮水印取得預覽內容。</p>
-<ul>
-  <li>浮水印使用內建 <code>Noto Sans TC</code> 字型資源產生中文字形，並以半透明、斜向方式置中顯示於每一頁；輸出結果僅供當次預覽，不得覆寫磁碟上的正式 PDF 原檔。</li>
-  <li>浮水印字型檔讀取與 <code>fontkit</code> 解析結果必須以單一 Node.js 執行個體為範圍共用；首次載入失敗時清除失敗快取，讓後續請求可以重試。每份 PDF 的頁面尺寸 Form 快取仍只限該份 PDF 使用。</li>
-</ul>
+<p>* 浮水印使用內建 <code>Noto Sans TC</code> 字型資源產生中文字形，並以半透明、斜向方式置中顯示於每一頁；輸出結果僅供當次預覽，不得覆寫磁碟上的正式 PDF 原檔。</p>
+<p>* 浮水印字型檔讀取與 <code>fontkit</code> 解析結果必須以單一 Node.js 執行個體為範圍共用；首次載入失敗時清除失敗快取，讓後續請求可以重試。每份 PDF 的頁面尺寸 Form 快取仍只限該份 PDF 使用。</p>
 <p>* 使用者如需紙本或另存 PDF，可使用瀏覽器列印功能。</p>
 <p>* 資料夾管理員可下載正式 PDF 原檔。</p>
 <p>* 資料夾管理員介面需顯示「上傳原始檔案」按鈕。</p>
@@ -516,21 +504,14 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>3. 文件編號可填寫或留空；有填寫時，前端必須去除前後空白並轉為大寫。</p>
 <p>4. 建立文件主檔。</p>
 <p>5. 上傳第一個正式發佈檔案。</p>
-<ol>
-  <li>填寫修訂日期、發行日期，並選取或輸入異動說明。
-<ul>
-  <li>發行日期預設為當下日期。</li>
-</ul>
-</li>
-</ol>
+<p>6. 填寫修訂日期、發行日期，並選取或輸入異動說明。</p>
+<p>- 發行日期預設為當下日期。</p>
 <p>7. 版本號可填寫或留空。</p>
 <p>8. 文件主檔狀態設為 <code>Effective</code> (有效的)。</p>
 <p>9. 第一個文件版本寫入 <code>effective_at</code> (生效時間)。</p>
 <p>10. 第一個文件版本的 <code>effective_until</code> (結束時間) 保持空白。</p>
-<ol>
-  <li>若第一個版本尚未到發行日期，一般使用者不可看到該文件；系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員可看到此尚未生效版本。</li>
-  <li>管理員查看尚未生效文件時，文件清單的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示發行日期。第一版尚未生效時，清單只顯示該預約版本。</li>
-</ol>
+<p>11. 若第一個版本尚未到發行日期，一般使用者不可看到該文件；系統管理員與對文件所屬資料夾具有效管理權的資料夾管理員可看到此尚未生效版本。</p>
+<p>12. 管理員查看尚未生效文件時，文件清單的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示發行日期。第一版尚未生效時，清單只顯示該預約版本。</p>
 <p>文件編號留空時，後端必須將 <code>dd_code</code> 儲存為 <code>NULL</code>，不得儲存空字串。非空白文件編號採全系統唯一；資料庫唯一索引直接使用 <code>dd_code</code>，不得在索引定義內使用 <code>UPPER()</code>、型別轉換或其他函數。</p>
 <p>文件清單隱藏獨立的「文件編號」欄位，並將文件編號作為文件名稱的顯示前綴。前端必須將文件編號與文件名稱渲染為獨立元素，文件編號使用 Consolas、<code>Courier New</code> 或系統等寬字型，兩者之間以 <code>0.5rem</code> 的 CSS 固定間距分隔，不得依賴空白字元控制距離。文件編號留空時只顯示文件名稱，不得加入替代文字或多餘間距；資料夾名稱維持原值。此規則只影響清單呈現，文件編號仍須以 <code>dms_doc.dd_code</code> 獨立實體欄位保存，不得併入 <code>dd_title</code>。一般清單、搜尋結果、主文件、相關文件及預約版本均採相同呈現方式。</p>
 <p>文件清單與搜尋結果必須在「發行日期」右側顯示「點閱次數」。點閱次數以文件版本為統計單位，所有具備該文件可見權限的使用者均可查看；資料夾列不顯示數值。版本歷史仍須在「修訂日期」右側顯示各版本的點閱次數，不得因顯示統計而擴大既有版本歷史檢視權限。</p>
@@ -551,9 +532,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>上傳新版文件時：</p>
 <p>1. 新增一筆文件版本。</p>
 <p>2. 上傳新的正式發佈檔案。</p>
-<ol>
-  <li>填寫修訂日期、發行日期，並選取或輸入異動說明。</li>
-</ol>
+<p>3. 填寫修訂日期、發行日期，並選取或輸入異動說明。</p>
 <p>4. 版本號可填寫或留空。</p>
 <p>5. 正式發佈檔案為 PDF 時，可上傳該新版本的 PDF 原始編修檔案。</p>
 <p>6. 新版本寫入 <code>effective_at</code> (生效時間)。</p>
@@ -579,9 +558,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 主文件廢止時，系統在同一交易內使用相同原因及同一份核准文件，一併廢止全部尚未廢止的相關文件，並逐份寫入 <code>DOCUMENT_OBSOLETED</code>。</p>
 <p>* 有相關文件的主文件執行「刪除文件」時，屬於第一版刪除規則的限定例外。系統需先顯示相關文件數與總版本數，再於同一交易內強制刪除主文件、全部相關文件、全部版本及修訂資料；每份文件刪除前均需寫入 <code>DOCUMENT_DELETED</code> 稽核快照。</p>
 <p>* 沒有相關文件的一般文件，以及單獨刪除相關文件時，仍只允許刪除目前有效版本為第一版的文件。</p>
-<ul>
-  <li>預約版本的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示發行日期。目前有效版本仍顯示其版本號。當同一份文件同時具有目前有效版本與預約版本時，預約版本必須緊接顯示於目前有效版本下方，並在兩列檔案名稱後方以帶箭頭的連線標示版本接續關係。</li>
-</ul>
+<p>* 預約版本的「屬性 / 版本」欄位顯示「即將生效」；滑鼠移至該狀態時，顯示發行日期。目前有效版本仍顯示其版本號。當同一份文件同時具有目前有效版本與預約版本時，預約版本必須緊接顯示於目前有效版本下方，並在兩列檔案名稱後方以帶箭頭的連線標示版本接續關係。</p>
 <p>* 管理員可從預約版本的操作選單執行「修改文件」，但只允許修改新版本號、修訂日期、發行日期與異動說明，不得藉此修改文件編號、文件名稱或替換版本檔案。</p>
 <p>* 管理員可刪除尚未生效的最新預約版本。刪除後，該版本、修訂對照資料與檔案有效狀態必須於同一筆交易處理，並將前一個未撤回版本的 <code>effective_until</code> 清空，使目前有效版本繼續生效。</p>
 <p>* 若刪除的是尚未生效的第一版，且文件沒有其他版本，系統必須一併刪除文件主檔。</p>
@@ -658,10 +635,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 在其可管理的資料夾指派或撤銷多位協同管理員。</p>
 <p>* 建立文件。</p>
 <p>* 上傳新版。</p>
-<ul>
-  <li>透過「修改文件」修改文件編號，以及目前顯示版本的文件名稱、版本號、修訂日期、發行日期與異動說明。</li>
-  <li>目前顯示版本為 PDF 時，透過「修改文件」新增或替換原始編修檔案。</li>
-</ul>
+<p>* 透過「修改文件」修改文件編號，以及目前顯示版本的文件名稱、版本號、修訂日期、發行日期與異動說明。</p>
+<p>* 目前顯示版本為 PDF 時，透過「修改文件」新增或替換原始編修檔案。</p>
 <p>* 上傳預約生效版本。</p>
 <p>* 撤回最新版本並回復前版。</p>
 <p>* 查看所有版本歷史。</p>
@@ -669,9 +644,7 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 查看已撤回版本。</p>
 <p>* 下載歷史版本檔案。</p>
 <p>* 下載 PDF 正式原檔。</p>
-<ul>
-  <li>上傳、替換與下載 PDF 文件之原始編修檔案。</li>
-</ul>
+<p>* 上傳、替換與下載 PDF 文件之原始編修檔案。</p>
 <p>* 查看廢止原因。</p>
 <p>* 下載廢止公文。</p>
 <p>* 手動廢止文件。</p>
@@ -714,10 +687,8 @@ AND (effective_until IS NULL OR 目前時間 &lt; effective_until)</code></pre>
 <p>* 存取事件：<code>DOCUMENT_PREVIEWED</code> (調閱文件)、<code>DOCUMENT_PREVIEW_DENIED</code> (調閱文件遭拒)、<code>DOCUMENT_DOWNLOADED</code> (下載文件)、<code>DOCUMENT_DOWNLOAD_DENIED</code> (文件下載遭拒)。</p>
 <p>* 資料夾事件：<code>FOLDER_CREATED</code> (建立資料夾)、<code>FOLDER_UPDATED</code> (修改資料夾)、<code>FOLDER_ARCHIVED</code> (封存資料夾)、<code>FOLDER_DELETED</code> (作廢資料夾)。</p>
 <p>* 權限事件：<code>FOLDER_MANAGER_UPDATED</code> (資料夾管理員異動)、<code>FOLDER_CO_MANAGER_UPDATED</code> (協同管理員異動)、<code>FOLDER_ACL_UPDATED</code> (資料夾存取控制清單異動)。</p>
-<ul>
-  <li>文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_MOVED</code> (移動文件)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</li>
-  <li>公告事件：<code>ANNOUNCEMENT_CREATED</code> (建立公告)、<code>ANNOUNCEMENT_UPDATED</code> (修改公告)、<code>ANNOUNCEMENT_PUBLISHED</code> (發佈公告)、<code>ANNOUNCEMENT_ARCHIVED</code> (封存公告)。公告已讀只寫入 <code>dms_ann_read</code>，不逐筆寫入 <code>dms_log</code>。</li>
-</ul>
+<p>* 文件事件：<code>DOCUMENT_CREATED</code> (建立文件)、<code>DOCUMENT_VERSION_CREATED</code> (上傳新版文件)、<code>DOCUMENT_UPDATED</code> (修改文件描述)、<code>DOCUMENT_VERSION_CANCELLED</code> (撤回新版文件)、<code>DOCUMENT_VERSION_DELETED</code> (刪除預約版本)、<code>DOCUMENT_MOVED</code> (移動文件)、<code>DOCUMENT_DELETED</code> (刪除文件)、<code>DOCUMENT_OBSOLETED</code> (廢止文件)。</p>
+<p>* 公告事件：<code>ANNOUNCEMENT_CREATED</code> (建立公告)、<code>ANNOUNCEMENT_UPDATED</code> (修改公告)、<code>ANNOUNCEMENT_PUBLISHED</code> (發佈公告)、<code>ANNOUNCEMENT_ARCHIVED</code> (封存公告)。公告已讀只寫入 <code>dms_ann_read</code>，不逐筆寫入 <code>dms_log</code>。</p>
 <h3>5.3. 稽核資料欄位</h3>
 <p>全域稽核紀錄建議至少保存下列欄位：</p>
 <table>
@@ -814,51 +785,42 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* <code>DATABASE_URL</code> PostgreSQL 資料庫連線字串（包含帳密、主機、埠與資料庫名稱）。</p>
 <p>* 未設定 <code>DATABASE_URL</code> 時，可改用 <code>PGHOST</code>、<code>PGPORT</code>、<code>PGDATABASE</code>、<code>PGUSER</code>、<code>PGPASSWORD</code> 分別設定 PostgreSQL 連線資訊。</p>
 <p>* <code>PGPOOL_MAX</code> 連線池最大連線數，預設為 <code>10</code>。</p>
-<ul>
-  <li><code>DMS_STORAGE_ROOT</code> 為 V6 新上傳檔案的根目錄。完整路徑直接使用；相對路徑以 Next.js 執行目錄 <code>process.cwd()</code> 為基準解析；未設定時預設為 <code>./storage</code>。</li>
-  <li><code>DMS_LEGACY_STORAGE_ROOT</code> 為既有 DMS 檔案的相容讀取根目錄，可使用完整路徑或相對路徑；不需讀取舊檔案時保持空白。</li>
-  <li>預覽、下載及資源回收清理只能處理位於目前儲存根目錄或已設定 Legacy Root 內的一般檔案。後端必須以正規化路徑、相對路徑與實體路徑共同檢查，拒絕 <code>..</code>、相似前綴目錄、其他磁碟機及 Junction／符號連結逃逸。路徑不合法或檔案不存在時，對外統一顯示「找不到實體檔案。」，不得揭露伺服器路徑。</li>
-  <li>新上傳檔案先串流寫入同一儲存磁碟的 <code>.incoming/&lt;request-id&gt;</code> 暫存目錄，驗證完成後原子搬移至 <code>YYYYMM</code> 正式月份目錄。每次交易必須登記本次建立的檔案；SQL、稽核或 <code>COMMIT</code> 失敗時回復資料庫並刪除全部新檔案，且不得以清理錯誤覆蓋原始錯誤。服務啟動時清除超過 24 小時的暫存目錄。</li>
-  <li><code>SESSION_SECRET</code> 必須使用至少 32 字元且只供該正式環境使用的隨機字串。正式環境未設定、長度不足、沿用公開範例或文件占位文字時，Node.js 必須在開始接受請求前拒絕啟動。</li>
-</ul>
+<p>* <code>DMS_STORAGE_ROOT</code> 為 V6 新上傳檔案的根目錄。完整路徑直接使用；相對路徑以 Next.js 執行目錄 <code>process.cwd()</code> 為基準解析；未設定時預設為 <code>./storage</code>。</p>
+<p>* <code>DMS_LEGACY_STORAGE_ROOT</code> 為既有 DMS 檔案的相容讀取根目錄，可使用完整路徑或相對路徑；不需讀取舊檔案時保持空白。</p>
+<p>* 預覽、下載及資源回收清理只能處理位於目前儲存根目錄或已設定 Legacy Root 內的一般檔案。後端必須以正規化路徑、相對路徑與實體路徑共同檢查，拒絕 <code>..</code>、相似前綴目錄、其他磁碟機及 Junction／符號連結逃逸。路徑不合法或檔案不存在時，對外統一顯示「找不到實體檔案。」，不得揭露伺服器路徑。</p>
+<p>* 新上傳檔案先串流寫入同一儲存磁碟的 <code>.incoming/&lt;request-id&gt;</code> 暫存目錄，驗證完成後原子搬移至 <code>YYYYMM</code> 正式月份目錄。每次交易必須登記本次建立的檔案；SQL、稽核或 <code>COMMIT</code> 失敗時回復資料庫並刪除全部新檔案，且不得以清理錯誤覆蓋原始錯誤。服務啟動時清除超過 24 小時的暫存目錄。</p>
+<p>* <code>SESSION_SECRET</code> 必須使用至少 32 字元且只供該正式環境使用的隨機字串。正式環境未設定、長度不足、沿用公開範例或文件占位文字時，Node.js 必須在開始接受請求前拒絕啟動。</p>
 <p>* <code>SESSION_COOKIE_SECURE=true</code> 時，Web Server 對外入口必須使用 HTTPS。</p>
 <p>* <code>DMS_NEXT_HOST</code> 建議固定為 <code>127.0.0.1</code>，避免 Next.js server 直接暴露到使用者網段。</p>
 <p>* <code>DMS_NEXT_PORT</code> 必須與 Web Server 反向代理目標一致。</p>
 <h3>6.3. 登入連線規格與失敗處理</h3>
-<ul>
-  <li><strong>瀏覽器登入請求</strong>：
-<ul>
-  <li><strong>Request URL</strong>：<code>/api/login</code></li>
-  <li><strong>Method</strong>：<code>POST</code></li>
-  <li><strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼", "theme": "modern-dark 或 modern-light"}</code></li>
-  <li><strong>Content-Type</strong>：<code>application/json</code></li>
-  <li>驗證成功後查詢 <code>dms_user_preferences</code>。已有設定時以使用者設定為準；尚無設定時，才以登入畫面傳入的佈景主題建立首次設定。</li>
-</ul>
-</li>
-  <li><strong>外部網站自動登入請求</strong>：
-<ul>
-  <li><strong>Request URL</strong>：<code>/external-login</code></li>
-  <li><strong>Method</strong>：<code>POST</code></li>
-  <li><strong>Content-Type</strong>：<code>application/x-www-form-urlencoded</code></li>
-  <li><strong>Payload (Body)</strong>：固定使用 <code>uid</code> 與 <code>pwd</code> 欄位；不得以 URL 查詢參數傳送帳號或密碼。</li>
-  <li>外部網站必須由使用者瀏覽器直接提交標準 HTML Form。外部網站後端代送無法替使用者瀏覽器建立 DMS Session Cookie。</li>
-  <li>驗證成功後，以傳入帳號覆蓋瀏覽器既有 Session，設定既有 <code>HttpOnly Cookie</code>，再以 HTTP <code>303</code> 導向固定首頁 <code>/</code>；外部網站不得指定其他導向網址。</li>
-  <li>外部登入尚無使用者佈景主題設定時，建立 <code>modern-light</code>；已有設定時不得覆寫。</li>
-  <li>驗證失敗或欄位缺漏時，清除瀏覽器既有 Session，再以 HTTP <code>303</code> 導向登入畫面並顯示對應錯誤。錯誤狀態只使用固定非敏感代碼，顯示後需從網址移除。</li>
-  <li>外部登入成功及失敗沿用 <code>AUTH_LOGIN_SUCCESS</code>、<code>AUTH_LOGIN_FAILED</code>，並於稽核 metadata 記錄 <code>login_method = EXTERNAL_POST</code>；不得記錄密碼。</li>
-  <li>表單內容上限為 8 KiB。非 <code>POST</code>、不支援的 Content-Type 或超限內容，分別以 HTTP <code>405</code>、<code>415</code> 或 <code>413</code> 拒絕。</li>
-  <li>現行內部網路採 HTTP，<code>POST</code> 只能避免帳密出現在 URL、瀏覽器歷程及一般網址 Log，無法加密網路封包；部署環境必須維持 <code>SESSION_COOKIE_SECURE=false</code> 才能保存 Session Cookie。</li>
-  <li>此入口依目前整合需求不限制來源，不檢查 <code>Origin</code>、<code>Referer</code> 或整合密鑰，但所有登入仍須通過既有帳密驗證。</li>
-</ul>
-</li>
-  <li><strong>Next.js 伺服器端行為</strong>：</li>
-</ul>
+<p>* <strong>瀏覽器登入請求</strong>：</p>
+<p>* <strong>Request URL</strong>：<code>/api/login</code></p>
+<p>* <strong>Method</strong>：<code>POST</code></p>
+<p>* <strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼"}</code></p>
+<p>* <strong>Content-Type</strong>：<code>application/json</code></p>
+<p>* 驗證成功後查詢 <code>dms_user_preferences</code>。已有設定時以使用者設定為準；尚無設定時建立 <code>soft-warm</code>。為相容既有呼叫，額外傳入的 <code>theme</code> 欄位一律忽略。</p>
+<p>* <strong>外部網站自動登入請求</strong>：</p>
+<p>* <strong>Request URL</strong>：<code>/external-login</code></p>
+<p>* <strong>Method</strong>：<code>POST</code></p>
+<p>* <strong>Content-Type</strong>：<code>application/x-www-form-urlencoded</code></p>
+<p>* <strong>Payload (Body)</strong>：固定使用 <code>uid</code> 與 <code>pwd</code> 欄位；不得以 URL 查詢參數傳送帳號或密碼。</p>
+<p>* 外部網站必須由使用者瀏覽器直接提交標準 HTML Form。外部網站後端代送無法替使用者瀏覽器建立 DMS Session Cookie。</p>
+<p>* 驗證成功後，以傳入帳號覆蓋瀏覽器既有 Session，設定既有 <code>HttpOnly Cookie</code>，再以 HTTP <code>303</code> 導向固定首頁 <code>/</code>；外部網站不得指定其他導向網址。</p>
+<p>* 外部登入尚無使用者佈景主題設定時，建立 <code>soft-warm</code>；已有設定時不得覆寫。</p>
+<p>* 驗證失敗或欄位缺漏時，清除瀏覽器既有 Session，再以 HTTP <code>303</code> 導向登入畫面並顯示對應錯誤。錯誤狀態只使用固定非敏感代碼，顯示後需從網址移除。</p>
+<p>* 外部登入成功及失敗沿用 <code>AUTH_LOGIN_SUCCESS</code>、<code>AUTH_LOGIN_FAILED</code>，並於稽核 metadata 記錄 <code>login_method = EXTERNAL_POST</code>；不得記錄密碼。</p>
+<p>* 表單內容上限為 8 KiB。非 <code>POST</code>、不支援的 Content-Type 或超限內容，分別以 HTTP <code>405</code>、<code>415</code> 或 <code>413</code> 拒絕。</p>
+<p>* 現行內部網路採 HTTP，<code>POST</code> 只能避免帳密出現在 URL、瀏覽器歷程及一般網址 Log，無法加密網路封包；部署環境必須維持 <code>SESSION_COOKIE_SECURE=false</code> 才能保存 Session Cookie。</p>
+<p>* 此入口依目前整合需求不限制來源，不檢查 <code>Origin</code>、<code>Referer</code> 或整合密鑰，但所有登入仍須通過既有帳密驗證。</p>
+<p>* <strong>Next.js 伺服器端行為</strong>：</p>
 <p>* Route Handler 解析請求中的帳號密碼。</p>
 <p>* Route Handler 直接查詢 PostgreSQL 資料庫中的使用者與系統管理員資料（透過 <code>lib/server/auth.ts</code>）。</p>
 <p>* 驗證通過後，將使用者資訊與管理員身分封裝成 session payload。</p>
 <p>* session payload 以 <code>HttpOnly Cookie</code> 加密保存，瀏覽器端 JavaScript 不可讀取敏感資料。</p>
 <p>* <strong>登入頁面欄位</strong>：</p>
 <p>* 登入畫面使用共用 <code>Modal</code> 元件顯示，禁止點擊背景遮罩關閉，且不顯示右上角關閉按鈕。</p>
+<p>* 登入畫面固定使用柔和米白背景、象牙白卡片、低彩度綠灰邊框及深綠灰主要按鈕的中性淺色布局，不提供佈景主題選擇，亦不讀取瀏覽器暫存或使用者個人佈景主題。</p>
 <p>* 進入登入畫面時，帳號與密碼輸入欄位預設保持空白。</p>
 <p>* 網頁初次載入、或點選登出時，滑鼠游標會自動定位在「使用者帳號」輸入框。</p>
 <p>* <strong>驗證失敗處理</strong>：</p>
@@ -874,16 +836,11 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 瀏覽器呼叫同源 <code>/api/*</code> 時自動帶上 cookie。</p>
 <p>* Next.js route handler 從 cookie 解析並解密驗證 session，確認當前使用者身分。</p>
 <p>* 所有的資料庫查詢與權限限制（例如資料夾 ACL）皆在 Next.js 伺服器端根據解密後的 session 資訊直接執行。</p>
-<ul>
-  <li><strong>前端路由機制</strong>：
-<ul>
-  <li>前端畫面由 Next.js App Router 承載。</li>
-  <li>切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</li>
-  <li>初次載入及外部登入完成後，Session 還原結果確認前只顯示中性載入狀態，不得先顯示登入畫面。</li>
-  <li><code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤；登入有效時一併回傳資料庫中的使用者佈景主題，舊 Session 尚無設定時以 <code>modern-light</code> 回傳。</li>
-</ul>
-</li>
-</ul>
+<p>* <strong>前端路由機制</strong>：</p>
+<p>* 前端畫面由 Next.js App Router 承載。</p>
+<p>* 切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</p>
+<p>* 初次載入及外部登入完成後，Session 還原結果確認前只顯示中性載入狀態，不得先顯示登入畫面。</p>
+<p>* <code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤；登入有效時一併回傳資料庫中的使用者佈景主題，舊 Session 尚無設定時以 <code>soft-warm</code> 回傳。</p>
 <h3>6.5. Next.js Route Handler 路由與處理服務清單</h3>
 <table>
   <thead>
@@ -891,10 +848,10 @@ DMS_NEXT_PORT=3000</code></pre>
   </thead>
   <tbody>
     <tr><td><code>POST /external-login</code></td><td><code>app/external-login/route.ts</code></td><td>驗證外部 HTML Form 帳密、寫入或清除 session cookie，並以 HTTP <code>303</code> 導向固定首頁或登入錯誤狀態</td></tr>
-    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>驗證帳密、解析或建立使用者佈景主題，並寫入 session cookie</td></tr>
+    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>驗證帳密、讀取或以淺色建立使用者佈景主題，並寫入 session cookie</td></tr>
     <tr><td><code>POST /api/logout</code></td><td><code>app/api/logout/route.ts</code></td><td>清除 session cookie</td></tr>
     <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>讀取 session cookie，並回傳登入身分與資料庫中的使用者佈景主題</td></tr>
-    <tr><td><code>GET</code>、<code>PUT /api/preferences/theme</code></td><td><code>app/api/preferences/theme/route.ts</code></td><td>讀取或更新目前登入使用者的深色／淺色佈景主題，不接受指定其他帳號</td></tr>
+    <tr><td><code>GET</code>、<code>PUT /api/preferences/theme</code></td><td><code>app/api/preferences/theme/route.ts</code></td><td>讀取或更新目前登入使用者的深色／淺色／柔和佈景主題，不接受指定其他帳號</td></tr>
     <tr><td><code>GET /api/test</code></td><td><code>app/api/test/route.ts</code></td><td>進行伺服器端資料庫連線測試</td></tr>
     <tr><td><code>GET /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 查詢資料夾樹與 ACL</td></tr>
     <tr><td><code>POST /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 建立新資料夾</td></tr>
@@ -974,11 +931,9 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* <strong>開啟時焦點</strong>：<code>Modal</code> 開啟後，焦點自動位於第一個可見且可編輯的輸入框。</p>
 <p>* <strong>Enter 導航</strong>：</p>
 <p>* 在非最後一個可編輯輸入框按下 <code>Enter</code>，系統阻止預設提交，並將焦點移至下一個可編輯輸入框。</p>
-<ul>
-  <li>僅在最後一個可編輯輸入框按下 <code>Enter</code> 時，才觸發 <code>Modal</code> 底部操作區中第一個符合 <code>.btn-primary</code> 或 <code>.btn-danger</code> 且未停用的主要按鈕。</li>
-  <li>明確標示為多行內容的文字區域可使用 <code>Shift + Enter</code> 插入換行；單獨按下 <code>Enter</code> 仍依上述欄位導航規則處理。</li>
-  <li>中文輸入法組字期間的 <code>Enter</code> 不得觸發欄位導航或提交。</li>
-</ul>
+<p>* 僅在最後一個可編輯輸入框按下 <code>Enter</code> 時，才觸發 <code>Modal</code> 底部操作區中第一個符合 <code>.btn-primary</code> 或 <code>.btn-danger</code> 且未停用的主要按鈕。</p>
+<p>* 明確標示為多行內容的文字區域可使用 <code>Shift + Enter</code> 插入換行；單獨按下 <code>Enter</code> 仍依上述欄位導航規則處理。</p>
+<p>* 中文輸入法組字期間的 <code>Enter</code> 不得觸發欄位導航或提交。</p>
 <p>* 隱藏、唯讀、停用、核取方塊、選項按鈕及檔案欄位不列入鍵盤導航順序。</p>
 <p>* <strong>必填欄位驗證</strong>：</p>
 <p>* 使用者提交輸入畫面時，若必填欄位未填寫，系統必須顯示明確的錯誤訊息框，不得僅以停用主要按鈕或無訊息返回阻擋操作。</p>
@@ -1025,36 +980,28 @@ DMS_NEXT_PORT=3000</code></pre>
 <p><code>_github.bat</code> 已會自動處理本機 commit (提交)，因此日常同步遠端時可直接使用 <code>_github.bat</code>。</p>
 <h2>8. 登入後儀表板</h2>
 <h3>8.1. 導覽與更新</h3>
-<ul>
-  <li>使用者登入成功或還原有效 Session 後，固定先進入「儀表板」。左側主導覽依序為「儀表板」、「文件庫」、「系統管理」；既有系統管理子選單順序不變。</li>
-  <li>儀表板在首次進入、手動重新整理、公告標示已讀及管理員完成公告異動後更新。第一版不使用定時輪詢。</li>
-  <li>儀表板標題區提供「深色」及「淺色」佈景主題。點選後立即套用並保存至目前登入帳號；保存失敗時恢復原主題並顯示錯誤。此個人顯示偏好不寫入系統稽核紀錄。</li>
-  <li>佈景主題以 <code>dms_user_preferences</code> 為準，跨瀏覽器與電腦沿用。未登入的登入畫面可以使用瀏覽器暫存顯示，但登入成功後必須由使用者設定覆蓋，不得將既有瀏覽器暫存直接遷移至其他帳號。</li>
-  <li>公告、近期發佈的文件、預約發佈提醒及系統異常摘要採分區載入。單一區塊查詢失敗時，其他成功區塊仍需顯示，且不得阻止使用者切換至文件庫。</li>
-  <li><code>GET /api/dashboard</code> 與公告已讀 API 必須驗證有效 Session，並設定 <code>Cache-Control: no-store</code>。JSON API 使用完整英文名稱，不回傳 <code>dan_</code> 或 <code>danr_</code> 資料庫縮寫欄位。</li>
-</ul>
+<p>* 使用者登入成功或還原有效 Session 後，固定先進入「儀表板」。左側主導覽依序為「儀表板」、「文件庫」、「系統管理」；既有系統管理子選單順序不變。</p>
+<p>* 儀表板在首次進入、手動重新整理、公告標示已讀及管理員完成公告異動後更新。第一版不使用定時輪詢。</p>
+<p>* 儀表板標題區提供「深色」、「淺色」及「柔和」佈景主題。「柔和」沿用登入畫面的米白、象牙白、鼠尾草綠與暖杏色風格，主要與次要文字均使用高對比深色，不得以低對比淡灰文字降低辨識度。點選後立即套用並保存至目前登入帳號；保存失敗時恢復原主題並顯示錯誤。此個人顯示偏好不寫入系統稽核紀錄。</p>
+<p>* 佈景主題以 <code>dms_user_preferences</code> 為準，跨瀏覽器與電腦沿用。登入畫面固定使用中性淺色布局；登入成功後才套用使用者設定。尚無設定時建立 <code>soft-warm</code>，不得以瀏覽器暫存建立或覆寫其他帳號的設定。</p>
+<p>* 公告、近期發佈的文件、預約發佈提醒及系統異常摘要採分區載入。單一區塊查詢失敗時，其他成功區塊仍需顯示，且不得阻止使用者切換至文件庫。</p>
+<p>* <code>GET /api/dashboard</code> 與公告已讀 API 必須驗證有效 Session，並設定 <code>Cache-Control: no-store</code>。JSON API 使用完整英文名稱，不回傳 <code>dan_</code> 或 <code>danr_</code> 資料庫縮寫欄位。</p>
 <h3>8.2. 公告區</h3>
-<ul>
-  <li>儀表板顯示排序後前 5 筆有效公告，並提供「查看全部公告」。排序依序為重要程度、未讀狀態及發佈時間；緊急公告置頂，但不得阻擋其他操作。</li>
-  <li>公告重要程度分為「一般」、「重要」、「緊急」。內容為純文字，保留換行，不接受 HTML；標題上限 120 字，內容上限 2000 字。</li>
-  <li>公告對象可選全體使用者、系統管理員、資料夾管理員及協同管理員。「全體使用者」與兩種角色條件互斥；系統管理員與資料夾管理員條件可同時選取。</li>
-  <li>使用者開啟公告後，必須主動選取「標示為已讀」。已讀紀錄以公告識別碼、公告版次及使用者帳號冪等寫入；公告改版後，新版重新顯示為未讀。</li>
-  <li>角色公告及公告已讀 API 依查詢當下的系統管理員身分或有效資料夾管理指派判斷。跨公告對象呼叫已讀 API 回傳 HTTP <code>403</code>；公告版次不一致回傳 HTTP <code>409</code>。</li>
-</ul>
+<p>* 儀表板顯示排序後前 5 筆有效公告，並提供「查看全部公告」。排序依序為重要程度、未讀狀態及發佈時間；緊急公告置頂，但不得阻擋其他操作。</p>
+<p>* 公告重要程度分為「一般」、「重要」、「緊急」。內容為純文字，保留換行，不接受 HTML；標題上限 120 字，內容上限 2000 字。</p>
+<p>* 公告對象可選全體使用者、系統管理員、資料夾管理員及協同管理員。「全體使用者」與兩種角色條件互斥；系統管理員與資料夾管理員條件可同時選取。</p>
+<p>* 使用者開啟公告後，必須主動選取「標示為已讀」。已讀紀錄以公告識別碼、公告版次及使用者帳號冪等寫入；公告改版後，新版重新顯示為未讀。</p>
+<p>* 角色公告及公告已讀 API 依查詢當下的系統管理員身分或有效資料夾管理指派判斷。跨公告對象呼叫已讀 API 回傳 HTTP <code>403</code>；公告版次不一致回傳 HTTP <code>409</code>。</p>
 <h3>8.3. 近期發佈的文件與角色專屬區塊</h3>
-<ul>
-  <li>「近期發佈的文件」以版本生效時間判斷，顯示目前仍有效且於近 30 天內生效的文件版本總數與最新 10 筆。每筆內容包含文件編號、名稱、版本、發行日期及資料夾路徑；發行日期不顯示時間，並與後方的檔案所在路徑顯示於同一行。未編版號時以版本序號顯示「第 N 版」，文件圖示依已發佈檔案的副檔名顯示，規則與文件清單一致。</li>
-  <li>近期發佈的文件必須在伺服器端依目前使用者的資料夾 ACL、文件機敏等級、文件狀態、版本狀態及資料夾狀態過濾，不得先載入全域文件再由前端過濾。</li>
-  <li>可預覽格式提供「檢視」，沿用既有預覽 API；「前往文件」切換至文件庫、開啟所在資料夾並短暫標示目標文件。不可預覽格式不從儀表板自動下載。</li>
-  <li>具有目前有效資料夾管理員或協同管理員指派的使用者，可在「預約發佈提醒」看到目前管理範圍內，未來 30 天將發佈的版本總數與前 10 筆。技術上仍以版本生效時間判斷；多個管理範圍重疊時，同一文件版本不得重複。</li>
-  <li>系統管理員可看到資料庫連線、儲存空間讀寫、必要設定、連線池等待、待清理工作及失敗工作的異常摘要。摘要不得回傳儲存根目錄、資料庫版本、原始錯誤堆疊或其他敏感技術資訊；點擊異常後前往「系統狀態」或「資源回收區」。</li>
-  <li>系統管理員若同時具有有效資料夾管理指派，也顯示預約版本區塊。系統管理員身分本身不等同資料夾管理身分，亦不得因此取得機密文件。</li>
-</ul>
+<p>* 「近期發佈的文件」以版本生效時間判斷，顯示目前仍有效且於近 30 天內生效的文件版本總數與最新 10 筆。每筆內容包含文件編號、名稱、版本、發行日期及資料夾路徑；發行日期不顯示時間，並與後方的檔案所在路徑顯示於同一行。未編版號時以版本序號顯示「第 N 版」，文件圖示依已發佈檔案的副檔名顯示，規則與文件清單一致。</p>
+<p>* 近期發佈的文件必須在伺服器端依目前使用者的資料夾 ACL、文件機敏等級、文件狀態、版本狀態及資料夾狀態過濾，不得先載入全域文件再由前端過濾。</p>
+<p>* 可預覽格式提供「檢視」，沿用既有預覽 API；「前往文件」切換至文件庫、開啟所在資料夾並短暫標示目標文件。不可預覽格式不從儀表板自動下載。</p>
+<p>* 具有目前有效資料夾管理員或協同管理員指派的使用者，可在「預約發佈提醒」看到目前管理範圍內，未來 30 天將發佈的版本總數與前 10 筆。技術上仍以版本生效時間判斷；多個管理範圍重疊時，同一文件版本不得重複。</p>
+<p>* 系統管理員可看到資料庫連線、儲存空間讀寫、必要設定、連線池等待、待清理工作及失敗工作的異常摘要。摘要不得回傳儲存根目錄、資料庫版本、原始錯誤堆疊或其他敏感技術資訊；點擊異常後前往「系統狀態」或「資源回收區」。</p>
+<p>* 系統管理員若同時具有有效資料夾管理指派，也顯示預約版本區塊。系統管理員身分本身不等同資料夾管理身分，亦不得因此取得機密文件。</p>
 <h2>9. 系統管理功能區</h2>
 <h3>9.1. 導覽與權限</h3>
-<ul>
-  <li>左側主導覽依序提供「儀表板」、「文件庫」及「系統管理」。「系統管理」只在登入角色為 <code>ADMIN</code>，或使用者具有至少一項目前有效資料夾管理員或協同管理員指派時顯示。</li>
-</ul>
+<p>* 左側主導覽依序提供「儀表板」、「文件庫」及「系統管理」。「系統管理」只在登入角色為 <code>ADMIN</code>，或使用者具有至少一項目前有效資料夾管理員或協同管理員指派時顯示。</p>
 <p>* 系統管理員展開「系統管理」後，依序顯示「系統稽核紀錄」、「系統設定」、「權限總覽」、「系統狀態」、「資源回收區」。資料夾管理員及協同管理員只顯示「系統稽核紀錄」。</p>
 <p>* 系統管理頁面開啟時不得載入文件清單；返回文件庫時保留原資料夾位置。</p>
 <p>* <code>/api/system/audit</code> 與 <code>/api/system/audit/export</code> 必須在後端驗證目前登入者為系統管理員、資料夾管理員或協同管理員；其他 <code>/api/system/*</code> API 仍只允許 <code>ADMIN</code> 使用。未具相應權限時回傳 HTTP <code>403</code>。</p>
@@ -1076,21 +1023,17 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* 明細另顯示操作者角色、結果原因、事件來源 IP、用戶端識別資訊、請求追蹤識別碼、關聯識別碼、異動前後資料及其他技術資料。</p>
 <p>* 登入失敗必須保存使用者嘗試登入的帳號與事件來源，但不得保存密碼。</p>
 <h3>9.3. 系統設定</h3>
-<ul>
-  <li>系統設定為系統層級設定的統一入口，提供「系統管理員」與「公告管理」，不顯示空白或尚未實作的分類。</li>
-  <li>系統管理員以員工編號指定，後端必須驗證員工存在且在職。</li>
-</ul>
+<p>* 系統設定為系統層級設定的統一入口，提供「系統管理員」與「公告管理」，不顯示空白或尚未實作的分類。</p>
+<p>* 系統管理員以員工編號指定，後端必須驗證員工存在且在職。</p>
 <p>* 撤銷管理員採 <code>dms_admins.da_dc = 'Y'</code>，不得物理刪除紀錄。</p>
 <p>* 系統管理員不得撤銷自己，也不得撤銷最後 1 位有效管理員。</p>
-<ul>
-  <li>指定與撤銷分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>，保存異動前後資料。</li>
-  <li>管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。</li>
-  <li>公告管理支援草稿、立即發佈、預約發佈、選填下架時間、修改及手動封存；發佈與下架由查詢時間判斷，不建立背景排程。</li>
-  <li>公告狀態只能依「草稿 → 已發佈 → 已封存」前進。已封存公告唯讀，不提供實體刪除或重新發佈。</li>
-  <li>修改已發佈公告時，<code>dan_rev</code> 增加 1，舊版已讀紀錄保留。更新與封存請求必須帶入目前版次；版次不一致時回傳 HTTP <code>409</code>。</li>
-  <li>下架時間必須晚於發佈時間。當公告對象為全體使用者時，不得同時選取系統管理員或資料夾管理員對象；此規則由後端再次驗證。</li>
-  <li><code>dms_ann.dan_id</code> 與 <code>dms_ann_read.danr_id</code> 分別以唯一索引 <code>uidx_dms_ann_id</code>、<code>uidx_dms_ann_read_id</code> 保證識別碼唯一，不建立額外 <code>PRIMARY KEY</code>、<code>FOREIGN KEY</code> 或 <code>CONSTRAINT</code>。</li>
-</ul>
+<p>* 指定與撤銷分別寫入 <code>SYSTEM_ADMIN_ASSIGNED</code>、<code>SYSTEM_ADMIN_REVOKED</code>，保存異動前後資料。</p>
+<p>* 管理員角色異動於使用者重新登入後生效，操作完成後畫面必須提示此規則。</p>
+<p>* 公告管理支援草稿、立即發佈、預約發佈、選填下架時間、修改及手動封存；發佈與下架由查詢時間判斷，不建立背景排程。</p>
+<p>* 公告狀態只能依「草稿 → 已發佈 → 已封存」前進。已封存公告唯讀，不提供實體刪除或重新發佈。</p>
+<p>* 修改已發佈公告時，<code>dan_rev</code> 增加 1，舊版已讀紀錄保留。更新與封存請求必須帶入目前版次；版次不一致時回傳 HTTP <code>409</code>。</p>
+<p>* 下架時間必須晚於發佈時間。當公告對象為全體使用者時，不得同時選取系統管理員或資料夾管理員對象；此規則由後端再次驗證。</p>
+<p>* <code>dms_ann.dan_id</code> 與 <code>dms_ann_read.danr_id</code> 分別以唯一索引 <code>uidx_dms_ann_id</code>、<code>uidx_dms_ann_read_id</code> 保證識別碼唯一，不建立額外 <code>PRIMARY KEY</code>、<code>FOREIGN KEY</code> 或 <code>CONSTRAINT</code>。</p>
 <h3>9.4. 權限總覽與系統狀態</h3>
 <p>* 權限總覽唯讀顯示有效第一層資料夾的主要管理員、協同管理員、公開、僅限管理者或限閱狀態、授權摘要、子資料夾數與文件數。</p>
 <p>* 權限總覽提供篩選及「前往資料夾」，實際權限異動仍由文件庫中的資料夾管理畫面處理。</p>
@@ -1109,13 +1052,11 @@ DMS_NEXT_PORT=3000</code></pre>
 <p>* <code>SYSTEM_ADMIN_REVOKED</code>：撤銷系統管理員。</p>
 <p>* <code>AUDIT_LOG_EXPORTED</code>：匯出稽核紀錄。</p>
 <p>* <code>FOLDER_RESTORED</code>：還原封存批次。</p>
-<ul>
-  <li><code>FOLDER_PURGED</code>：永久作廢封存批次並啟動實體檔案清理。</li>
-  <li><code>ANNOUNCEMENT_CREATED</code>：建立公告草稿。</li>
-  <li><code>ANNOUNCEMENT_UPDATED</code>：修改公告。</li>
-  <li><code>ANNOUNCEMENT_PUBLISHED</code>：發佈或預約發佈公告。</li>
-  <li><code>ANNOUNCEMENT_ARCHIVED</code>：封存公告。</li>
-</ul>
+<p>* <code>FOLDER_PURGED</code>：永久作廢封存批次並啟動實體檔案清理。</p>
+<p>* <code>ANNOUNCEMENT_CREATED</code>：建立公告草稿。</p>
+<p>* <code>ANNOUNCEMENT_UPDATED</code>：修改公告。</p>
+<p>* <code>ANNOUNCEMENT_PUBLISHED</code>：發佈或預約發佈公告。</p>
+<p>* <code>ANNOUNCEMENT_ARCHIVED</code>：封存公告。</p>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統
