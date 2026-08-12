@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType, MainView, SystemPage } from '../types';
+import { User, Folder, DMSItem, Document, DocumentVersion, FolderManagerAssignmentType, MainView, SystemPage, type AppTheme } from '../types';
 import { Sidebar } from '../components/Sidebar';
 import { FileTable } from '../components/FileTable';
 import { useDocuments } from '../hooks/useDocuments';
@@ -25,6 +25,9 @@ import { ACCEPTED_DOCUMENT_FILE_TYPES, DeleteScheduledVersionModal, EditDocument
 interface MainLayoutProps {
   user: User;
   onLogout: () => void;
+  theme: AppTheme;
+  isSavingTheme: boolean;
+  onThemeChange: (theme: AppTheme) => void;
   // Folders Hooks
   folders: Folder[];
   isLoadingFolders: boolean;
@@ -54,6 +57,9 @@ interface MainLayoutProps {
 export const MainLayout: React.FC<MainLayoutProps> = ({
   user,
   onLogout,
+  theme,
+  isSavingTheme,
+  onThemeChange,
   folders,
   isLoadingFolders,
   hasLoadedFolders,
@@ -822,6 +828,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         {activeView === 'dashboard' ? (
           <Dashboard
             user={user}
+            theme={theme}
+            isSavingTheme={isSavingTheme}
+            onThemeChange={onThemeChange}
             showToast={showToast}
             onOpenDocument={(folderId, documentId) => {
               clearSearch();

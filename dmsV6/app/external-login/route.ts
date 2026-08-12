@@ -3,6 +3,7 @@ import { clearSessionCookie, setSessionCookie, toSessionUser } from '../../lib/s
 import { createSessionToken, loginUser } from '../../lib/server/auth';
 import { writeAudit } from '../../lib/server/auditService';
 import { fail, HttpStatusError, parseUrlEncodedBody } from '../../lib/server/http';
+import { ensureUserTheme } from '../../lib/server/userPreferenceService';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,7 @@ export const POST = async (request: NextRequest) => {
 
     const user = await loginUser(attemptedUid, password);
     const sessionUser = toSessionUser(user);
+    await ensureUserTheme(sessionUser.id, 'modern-light');
     const response = redirectToHome();
 
     setSessionCookie(response, {

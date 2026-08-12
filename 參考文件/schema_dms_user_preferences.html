@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>部署_資料庫</title>
+  <title>schema_dms_user_preferences</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -212,89 +212,46 @@
 </head>
 <body>
   <div class="container">
-    <h1>DMS V6 Windows 部署：PostgreSQL 資料庫</h1>
-<h2>1. 部署目標</h2>
-<p>本文件說明在 Windows Server 上建立 DMS V6 使用的 PostgreSQL 資料庫。應用程式實際使用 <code>pg</code> 套件連線，預設資料庫名稱為 <code>dms</code>，預設連接埠為 <code>5432</code>。</p>
-<p>正式環境不得讓應用程式使用 <code>postgres</code> 超級使用者。下列範例建立專用登入角色 <code>dms_app</code>。</p>
-<h2>2. 前置條件</h2>
-<p>1. 安裝 PostgreSQL 16 或組織核准版本。</p>
-<p>2. 確認 PostgreSQL Windows 服務已啟動。</p>
-<p>3. 確認 <code>psql.exe</code> 所在目錄已加入 <code>PATH</code>，或使用完整路徑執行。</p>
-<p>4. 準備一組只供 DMS 使用的強密碼。</p>
-<h2>3. 建立登入角色與資料庫</h2>
-<p>以 PostgreSQL 管理者身分開啟 PowerShell，先連入預設資料庫：</p>
-<pre><code class="language-powershell">psql -U postgres -h 127.0.0.1 -p 5432 -d postgres</code></pre>
-<p>執行下列 SQL。請先替換密碼，不要沿用範例值：</p>
-<pre><code class="language-sql">CREATE ROLE dms_app
-  WITH LOGIN
-       PASSWORD '請替換成正式環境強密碼';
+    <h1>資料表結構：dms_user_preferences（DMS 使用者個人偏好設定）</h1>
+<h2>1. 用途</h2>
+<p>保存每位 DMS 使用者的個人顯示偏好。目前僅保存佈景主題，設定會跟隨使用者帳號，跨瀏覽器與電腦套用。</p>
+<h2>2. 欄位</h2>
+<table>
+  <thead>
+    <tr><th>欄位</th><th>型別</th><th>必填</th><th>說明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>dup_uid</code></td><td>VARCHAR(50)</td><td>是</td><td>使用者帳號，邏輯關聯至 <code>employee.emp_id</code>。</td></tr>
+    <tr><td><code>dup_theme</code></td><td>VARCHAR(20)</td><td>是</td><td><code>modern-dark</code> 為深色，<code>modern-light</code> 為淺色。</td></tr>
+    <tr><td><code>dup_crtby</code></td><td>VARCHAR(50)</td><td>是</td><td>建立者帳號。</td></tr>
+    <tr><td><code>dup_crtat</code></td><td>TIMESTAMP</td><td>是</td><td>建立時間。</td></tr>
+    <tr><td><code>dup_updby</code></td><td>VARCHAR(50)</td><td>否</td><td>最後異動者帳號。</td></tr>
+    <tr><td><code>dup_updat</code></td><td>TIMESTAMP</td><td>否</td><td>最後異動時間。</td></tr>
+  </tbody>
+</table>
+<h2>3. PostgreSQL DDL</h2>
+<div class="ddl-code-block">
+  <button type="button" class="copy-ddl-btn" data-copy-label="複製 DDL" data-copied-label="已複製">複製 DDL</button>
+  <pre><code class="language-sql">CREATE TABLE dms_user_preferences (
+    dup_uid VARCHAR(50) NOT NULL,
+    dup_theme VARCHAR(20) NOT NULL DEFAULT 'modern-light',
+    dup_crtby VARCHAR(50) NOT NULL,
+    dup_crtat TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dup_updby VARCHAR(50),
+    dup_updat TIMESTAMP
+);
 
-CREATE DATABASE dms
-  WITH OWNER = dms_app
-       ENCODING = 'UTF8'
-       TEMPLATE = template0;</code></pre>
-<p>本專案規範不建立外鍵與命名 <code>CONSTRAINT</code>。資料表的主鍵與資料一致性由既有 DDL 及應用程式流程管理。</p>
-<h2>4. 建立資料表與索引</h2>
-<p>依下列順序，使用 <code>dms_app</code> 連入 <code>dms</code> 資料庫，執行各文件「DDL」區段中的 SQL：</p>
-<p>1. <code>schema_department.md</code></p>
-<p>2. <code>schema_employee.md</code></p>
-<p>3. <code>schema_dms_admins.md</code></p>
-<p>4. <code>schema_dms_folders.md</code></p>
-<p>5. <code>schema_dms_folder_managers.md</code></p>
-<p>6. <code>schema_dms_folder_acl.md</code></p>
-<p>7. <code>schema_dms_doc.md</code></p>
-<p>8. <code>schema_dms_file.md</code></p>
-<p>9. <code>schema_dms_doc_ver.md</code></p>
-<p>10. <code>schema_dms_ver_rev.md</code></p>
-<ol>
-  <li><code>schema_dms_log.md</code></li>
-  <li><code>schema_dms_purge_job.md</code></li>
-  <li><code>schema_dms_ann.md</code></li>
-  <li><code>schema_dms_ann_read.md</code></li>
-  <li><code>schema_dms_user_preferences.md</code></li>
-</ol>
-<p>連線命令如下：</p>
-<pre><code class="language-powershell">psql -U dms_app -h 127.0.0.1 -p 5432 -d dms</code></pre>
-<p>若現場已有 <code>department</code> 與 <code>employee</code> 主檔，不可直接覆蓋。必須先比對欄位名稱、資料型別，以及 <code>employee.emp_id</code>、<code>employee.dept_id</code>、<code>department.dept_id</code> 是否符合本專案查詢需求。</p>
-<h2>5. 建立第一位系統管理者</h2>
-<p>登入驗證以 <code>employee</code> 為人員主檔，<code>dms_admins</code> 用於判斷系統管理員權限。先依 <code>schema_employee.md</code> 的欄位定義建立員工資料，再依 <code>schema_dms_admins.md</code> 建立管理員資料。</p>
-<p>正式匯入前必須確認現有密碼欄位格式符合 <code>dmsV6/lib/server/auth.ts</code> 的驗證邏輯，不可自行改成另一種雜湊格式。</p>
-<h2>6. 應用程式連線設定</h2>
-<p>建議設定單一 <code>DATABASE_URL</code>：</p>
-<pre><code class="language-text">DATABASE_URL=postgres://dms_app:URL編碼後的密碼@127.0.0.1:5432/dms
-PGPOOL_MAX=10</code></pre>
-<p>密碼若包含 <code>@</code>、<code>:</code>、<code>/</code>、<code>#</code> 或 <code>%</code>，必須先做 URL 編碼。也可以不用 <code>DATABASE_URL</code>，改設下列變數：</p>
-<pre><code class="language-text">PGHOST=127.0.0.1
-PGPORT=5432
-PGDATABASE=dms
-PGUSER=dms_app
-PGPASSWORD=正式環境密碼
-PGPOOL_MAX=10</code></pre>
-<h2>7. 遠端資料庫設定</h2>
-<p>資料庫與 Web Server 分開時，才需要調整遠端連線：</p>
-<p>1. 在 <code>postgresql.conf</code> 將 <code>listen_addresses</code> 設為資料庫伺服器實際內網 IP，不要直接使用 <code>*</code>。</p>
-<p>2. 在 <code>pg_hba.conf</code> 只允許 Web Server 的固定內網 IP 連入 <code>dms</code>。</p>
-<p>3. Windows Defender 防火牆只允許該來源 IP 存取 TCP <code>5432</code>。</p>
-<p>4. 重新啟動 PostgreSQL Windows 服務。</p>
-<p><code>pg_hba.conf</code> 範例：</p>
-<pre><code class="language-text">host    dms    dms_app    192.168.10.25/32    scram-sha-256</code></pre>
-<h2>8. 驗證</h2>
-<h3>8.1 資料表驗證</h3>
-<pre><code class="language-powershell">psql -U dms_app -h 127.0.0.1 -p 5432 -d dms -c "\dt"</code></pre>
-<p>應至少看到第 4 節列出的 12 個資料表。</p>
-<h3>8.2 應用程式連線驗證</h3>
-<p>應用程式啟動後，在伺服器本機執行：</p>
-<pre><code class="language-powershell">Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/test</code></pre>
-<p>若失敗，依下列格式判斷：</p>
-<p>* Status：HTTP <code>500</code> 或無法連線。</p>
-<p>* Root Cause：資料庫服務未啟動、連線字串錯誤、來源 IP 未被 <code>pg_hba.conf</code> 允許，或資料表尚未建立。</p>
-<p>* Suggested Fix：先用相同帳號執行 <code>psql</code> 連線測試，再檢查應用程式服務所取得的環境變數。</p>
-<h2>9. 備份與還原</h2>
-<p>每日備份命令範例：</p>
-<pre><code class="language-powershell">pg_dump -U dms_app -h 127.0.0.1 -p 5432 -d dms -F c -f C:\DMS\backup\dms.backup</code></pre>
-<p>還原至已建立的空白 <code>dms</code> 資料庫：</p>
-<pre><code class="language-powershell">pg_restore -U dms_app -h 127.0.0.1 -p 5432 -d dms --clean --if-exists C:\DMS\backup\dms.backup</code></pre>
-<p>資料庫備份不包含 <code>C:\DMS\storage</code> 的實體文件。資料庫與檔案儲存目錄必須使用同一個備份時間點，否則版本紀錄可能指向不存在的檔案。</p>
+CREATE UNIQUE INDEX uidx_dms_user_preferences_uid
+ON dms_user_preferences(dup_uid);</code></pre>
+</div>
+<h2>4. 資料規則</h2>
+<ul>
+  <li>每位使用者只能有 1 筆設定，由 <code>uidx_dms_user_preferences_uid</code> 保證唯一性。</li>
+  <li>一般登入的首次設定採用登入畫面所選佈景主題；已有設定時不得由登入畫面覆寫。</li>
+  <li>外部網站自動登入的首次設定為淺色；已有設定時不得覆寫。</li>
+  <li>只接受 <code>modern-dark</code> 與 <code>modern-light</code>。</li>
+  <li>本表不建立 foreign key，使用者有效性由既有登入與 Session 驗證流程保證。</li>
+</ul>
 
     <div class="footer">
       本文件由系統自動將 Markdown 轉換生成 &copy; 2026 DMS V5 文件系統

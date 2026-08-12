@@ -1,3 +1,5 @@
+export type AppTheme = 'modern-dark' | 'modern-light';
+
 export interface User {
   id: string;
   name: string;
@@ -6,6 +8,11 @@ export interface User {
   dept_name: string;
   position: string;
   token?: string;
+}
+
+export interface AuthSessionData {
+  user: User;
+  theme: AppTheme;
 }
 
 export type FolderAccessType = 1 | 2 | 3;

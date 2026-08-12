@@ -43,6 +43,7 @@
 | `dms_purge_job` | 實體檔案清理工作 | `dpj_` | `dpj_id` |
 | `dms_ann` | 系統公告主檔 | `dan_` | `dan_id` |
 | `dms_ann_read` | 公告已讀紀錄 | `danr_` | `danr_id` |
+| `dms_user_preferences` | 使用者個人偏好設定 | `dup_` | `dup_uid` |
 
 欄位命名原則如下：
 
@@ -89,6 +90,7 @@
 | `dms_purge_job` | `dpj_id`、`df_fid`、`dpj_status`、`dpj_manifest`、`dpj_requested_by`、`dpj_requested_at`、`dpj_completed_at`、`dpj_retry_count`、`dpj_error` |
 | `dms_ann` | `dan_id`、`dan_title`、`dan_body`、`dan_priority`、`dan_status`、`dan_rev`、`dan_aud_all`、`dan_aud_admin`、`dan_aud_mgr`、`dan_pub_at`、`dan_exp_at`、`dan_crtby`、`dan_crtat`、`dan_updby`、`dan_updat` |
 | `dms_ann_read` | `danr_id`、`dan_id`、`danr_rev`、`danr_uid`、`danr_read_at` |
+| `dms_user_preferences` | `dup_uid`、`dup_theme`、`dup_crtby`、`dup_crtat`、`dup_updby`、`dup_updat` |
 
 第 5 節稽核資料表採同一命名原則。全域稽核表使用 `dms_log`。既有 `dms_audit_log` 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 `dms_doc_access_log`。
 
@@ -776,8 +778,9 @@ DMS_NEXT_PORT=3000
 * **瀏覽器登入請求**：
     * **Request URL**：`/api/login`
     * **Method**：`POST`
-    * **Payload (Body)**：`{"uid": "使用者帳號", "pwd": "使用者密碼"}`
+    * **Payload (Body)**：`{"uid": "使用者帳號", "pwd": "使用者密碼", "theme": "modern-dark 或 modern-light"}`
     * **Content-Type**：`application/json`
+    * 驗證成功後查詢 `dms_user_preferences`。已有設定時以使用者設定為準；尚無設定時，才以登入畫面傳入的佈景主題建立首次設定。
 * **外部網站自動登入請求**：
     * **Request URL**：`/external-login`
     * **Method**：`POST`
@@ -785,6 +788,7 @@ DMS_NEXT_PORT=3000
     * **Payload (Body)**：固定使用 `uid` 與 `pwd` 欄位；不得以 URL 查詢參數傳送帳號或密碼。
     * 外部網站必須由使用者瀏覽器直接提交標準 HTML Form。外部網站後端代送無法替使用者瀏覽器建立 DMS Session Cookie。
     * 驗證成功後，以傳入帳號覆蓋瀏覽器既有 Session，設定既有 `HttpOnly Cookie`，再以 HTTP `303` 導向固定首頁 `/`；外部網站不得指定其他導向網址。
+    * 外部登入尚無使用者佈景主題設定時，建立 `modern-light`；已有設定時不得覆寫。
     * 驗證失敗或欄位缺漏時，清除瀏覽器既有 Session，再以 HTTP `303` 導向登入畫面並顯示對應錯誤。錯誤狀態只使用固定非敏感代碼，顯示後需從網址移除。
     * 外部登入成功及失敗沿用 `AUTH_LOGIN_SUCCESS`、`AUTH_LOGIN_FAILED`，並於稽核 metadata 記錄 `login_method = EXTERNAL_POST`；不得記錄密碼。
     * 表單內容上限為 8 KiB。非 `POST`、不支援的 Content-Type 或超限內容，分別以 HTTP `405`、`415` 或 `413` 拒絕。
@@ -818,16 +822,17 @@ DMS_NEXT_PORT=3000
     * 前端畫面由 Next.js App Router 承載。
     * 切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。
     * 初次載入及外部登入完成後，Session 還原結果確認前只顯示中性載入狀態，不得先顯示登入畫面。
-    * `GET /api/session` 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 `success: false` 與空資料，不視為 API 例外錯誤。
+    * `GET /api/session` 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 `success: false` 與空資料，不視為 API 例外錯誤；登入有效時一併回傳資料庫中的使用者佈景主題，舊 Session 尚無設定時以 `modern-light` 回傳。
 
 ### 6.5. Next.js Route Handler 路由與處理服務清單
 
 | 瀏覽器端呼叫 | Next.js Route Handler | 伺服器端核心服務與邏輯 (`lib/server/`) |
 |---|---|---|
 | `POST /external-login` | `app/external-login/route.ts` | 驗證外部 HTML Form 帳密、寫入或清除 session cookie，並以 HTTP `303` 導向固定首頁或登入錯誤狀態 |
-| `POST /api/login` | `app/api/login/route.ts` | 透過 `auth.ts` 驗證帳密並寫入 session cookie |
+| `POST /api/login` | `app/api/login/route.ts` | 驗證帳密、解析或建立使用者佈景主題，並寫入 session cookie |
 | `POST /api/logout` | `app/api/logout/route.ts` | 清除 session cookie |
-| `GET /api/session` | `app/api/session/route.ts` | 讀取 session cookie 並回傳登入狀態與身分 |
+| `GET /api/session` | `app/api/session/route.ts` | 讀取 session cookie，並回傳登入身分與資料庫中的使用者佈景主題 |
+| `GET`、`PUT /api/preferences/theme` | `app/api/preferences/theme/route.ts` | 讀取或更新目前登入使用者的深色／淺色佈景主題，不接受指定其他帳號 |
 | `GET /api/test` | `app/api/test/route.ts` | 進行伺服器端資料庫連線測試 |
 | `GET /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 查詢資料夾樹與 ACL |
 | `POST /api/folders` | `app/api/folders/route.ts` | 透過 `folderService.ts` 建立新資料夾 |
@@ -1012,6 +1017,8 @@ _github.bat "本次修改摘要"
 
 * 使用者登入成功或還原有效 Session 後，固定先進入「儀表板」。左側主導覽依序為「儀表板」、「文件庫」、「系統管理」；既有系統管理子選單順序不變。
 * 儀表板在首次進入、手動重新整理、公告標示已讀及管理員完成公告異動後更新。第一版不使用定時輪詢。
+* 儀表板標題區提供「深色」及「淺色」佈景主題。點選後立即套用並保存至目前登入帳號；保存失敗時恢復原主題並顯示錯誤。此個人顯示偏好不寫入系統稽核紀錄。
+* 佈景主題以 `dms_user_preferences` 為準，跨瀏覽器與電腦沿用。未登入的登入畫面可以使用瀏覽器暫存顯示，但登入成功後必須由使用者設定覆蓋，不得將既有瀏覽器暫存直接遷移至其他帳號。
 * 公告、近期發佈的文件、預約發佈提醒及系統異常摘要採分區載入。單一區塊查詢失敗時，其他成功區塊仍需顯示，且不得阻止使用者切換至文件庫。
 * `GET /api/dashboard` 與公告已讀 API 必須驗證有效 Session，並設定 `Cache-Control: no-store`。JSON API 使用完整英文名稱，不回傳 `dan_` 或 `danr_` 資料庫縮寫欄位。
 

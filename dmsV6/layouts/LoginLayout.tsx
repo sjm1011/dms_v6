@@ -5,7 +5,7 @@ import {
   ArrowForwardIcon,
   ErrorOutlineIcon
 } from '../components/Icons';
-import type { AppTheme } from '../App';
+import type { AppTheme } from '../types';
 import { showRequiredFieldMessage } from '../lib/clientValidation';
 import { Modal } from '../components/Modal';
 import { APP_VERSION_LABEL } from '../lib/appVersion';
@@ -14,7 +14,7 @@ interface LoginLayoutProps {
   loginError: string;
   isLoggingIn: boolean;
   uidInputRef: React.RefObject<HTMLInputElement | null>;
-  onLogin: (uid: string, pwd: string) => Promise<boolean>;
+  onLogin: (uid: string, pwd: string, theme: AppTheme) => Promise<boolean>;
   theme: AppTheme;
   onThemeChange: (theme: AppTheme) => void;
 }
@@ -49,7 +49,7 @@ export const LoginLayout: React.FC<LoginLayoutProps> = ({
       return;
     }
 
-    const success = await onLogin(uid, pwd);
+    const success = await onLogin(uid, pwd, theme);
     if (!success) {
       setUid('');
       setPwd('');

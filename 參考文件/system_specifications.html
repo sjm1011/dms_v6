@@ -244,6 +244,7 @@
     <tr><td><code>dms_purge_job</code></td><td>實體檔案清理工作</td><td><code>dpj_</code></td><td><code>dpj_id</code></td></tr>
     <tr><td><code>dms_ann</code></td><td>系統公告主檔</td><td><code>dan_</code></td><td><code>dan_id</code></td></tr>
     <tr><td><code>dms_ann_read</code></td><td>公告已讀紀錄</td><td><code>danr_</code></td><td><code>danr_id</code></td></tr>
+    <tr><td><code>dms_user_preferences</code></td><td>使用者個人偏好設定</td><td><code>dup_</code></td><td><code>dup_uid</code></td></tr>
   </tbody>
 </table>
 <p>欄位命名原則如下：</p>
@@ -296,6 +297,7 @@
     <tr><td><code>dms_purge_job</code></td><td><code>dpj_id</code>、<code>df_fid</code>、<code>dpj_status</code>、<code>dpj_manifest</code>、<code>dpj_requested_by</code>、<code>dpj_requested_at</code>、<code>dpj_completed_at</code>、<code>dpj_retry_count</code>、<code>dpj_error</code></td></tr>
     <tr><td><code>dms_ann</code></td><td><code>dan_id</code>、<code>dan_title</code>、<code>dan_body</code>、<code>dan_priority</code>、<code>dan_status</code>、<code>dan_rev</code>、<code>dan_aud_all</code>、<code>dan_aud_admin</code>、<code>dan_aud_mgr</code>、<code>dan_pub_at</code>、<code>dan_exp_at</code>、<code>dan_crtby</code>、<code>dan_crtat</code>、<code>dan_updby</code>、<code>dan_updat</code></td></tr>
     <tr><td><code>dms_ann_read</code></td><td><code>danr_id</code>、<code>dan_id</code>、<code>danr_rev</code>、<code>danr_uid</code>、<code>danr_read_at</code></td></tr>
+    <tr><td><code>dms_user_preferences</code></td><td><code>dup_uid</code>、<code>dup_theme</code>、<code>dup_crtby</code>、<code>dup_crtat</code>、<code>dup_updby</code>、<code>dup_updat</code></td></tr>
   </tbody>
 </table>
 <p>第 5 節稽核資料表採同一命名原則。全域稽核表使用 <code>dms_log</code>。既有 <code>dms_audit_log</code> 為早期保留表，不再作為新稽核紀錄寫入目標；文件查閱、預覽與下載紀錄若獨立成表，使用 <code>dms_doc_access_log</code>。</p>
@@ -828,8 +830,9 @@ DMS_NEXT_PORT=3000</code></pre>
 <ul>
   <li><strong>Request URL</strong>：<code>/api/login</code></li>
   <li><strong>Method</strong>：<code>POST</code></li>
-  <li><strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼"}</code></li>
+  <li><strong>Payload (Body)</strong>：<code>{"uid": "使用者帳號", "pwd": "使用者密碼", "theme": "modern-dark 或 modern-light"}</code></li>
   <li><strong>Content-Type</strong>：<code>application/json</code></li>
+  <li>驗證成功後查詢 <code>dms_user_preferences</code>。已有設定時以使用者設定為準；尚無設定時，才以登入畫面傳入的佈景主題建立首次設定。</li>
 </ul>
 </li>
   <li><strong>外部網站自動登入請求</strong>：
@@ -840,6 +843,7 @@ DMS_NEXT_PORT=3000</code></pre>
   <li><strong>Payload (Body)</strong>：固定使用 <code>uid</code> 與 <code>pwd</code> 欄位；不得以 URL 查詢參數傳送帳號或密碼。</li>
   <li>外部網站必須由使用者瀏覽器直接提交標準 HTML Form。外部網站後端代送無法替使用者瀏覽器建立 DMS Session Cookie。</li>
   <li>驗證成功後，以傳入帳號覆蓋瀏覽器既有 Session，設定既有 <code>HttpOnly Cookie</code>，再以 HTTP <code>303</code> 導向固定首頁 <code>/</code>；外部網站不得指定其他導向網址。</li>
+  <li>外部登入尚無使用者佈景主題設定時，建立 <code>modern-light</code>；已有設定時不得覆寫。</li>
   <li>驗證失敗或欄位缺漏時，清除瀏覽器既有 Session，再以 HTTP <code>303</code> 導向登入畫面並顯示對應錯誤。錯誤狀態只使用固定非敏感代碼，顯示後需從網址移除。</li>
   <li>外部登入成功及失敗沿用 <code>AUTH_LOGIN_SUCCESS</code>、<code>AUTH_LOGIN_FAILED</code>，並於稽核 metadata 記錄 <code>login_method = EXTERNAL_POST</code>；不得記錄密碼。</li>
   <li>表單內容上限為 8 KiB。非 <code>POST</code>、不支援的 Content-Type 或超限內容，分別以 HTTP <code>405</code>、<code>415</code> 或 <code>413</code> 拒絕。</li>
@@ -876,7 +880,7 @@ DMS_NEXT_PORT=3000</code></pre>
   <li>前端畫面由 Next.js App Router 承載。</li>
   <li>切換資料夾、登入狀態還原與頁面重新整理，均應以 Next.js 應用程式狀態與同源 API 回應為準。</li>
   <li>初次載入及外部登入完成後，Session 還原結果確認前只顯示中性載入狀態，不得先顯示登入畫面。</li>
-  <li><code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤。</li>
+  <li><code>GET /api/session</code> 屬於登入狀態探測路由。未登入或 session cookie 不存在時，回傳 <code>success: false</code> 與空資料，不視為 API 例外錯誤；登入有效時一併回傳資料庫中的使用者佈景主題，舊 Session 尚無設定時以 <code>modern-light</code> 回傳。</li>
 </ul>
 </li>
 </ul>
@@ -887,9 +891,10 @@ DMS_NEXT_PORT=3000</code></pre>
   </thead>
   <tbody>
     <tr><td><code>POST /external-login</code></td><td><code>app/external-login/route.ts</code></td><td>驗證外部 HTML Form 帳密、寫入或清除 session cookie，並以 HTTP <code>303</code> 導向固定首頁或登入錯誤狀態</td></tr>
-    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>透過 <code>auth.ts</code> 驗證帳密並寫入 session cookie</td></tr>
+    <tr><td><code>POST /api/login</code></td><td><code>app/api/login/route.ts</code></td><td>驗證帳密、解析或建立使用者佈景主題，並寫入 session cookie</td></tr>
     <tr><td><code>POST /api/logout</code></td><td><code>app/api/logout/route.ts</code></td><td>清除 session cookie</td></tr>
-    <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>讀取 session cookie 並回傳登入狀態與身分</td></tr>
+    <tr><td><code>GET /api/session</code></td><td><code>app/api/session/route.ts</code></td><td>讀取 session cookie，並回傳登入身分與資料庫中的使用者佈景主題</td></tr>
+    <tr><td><code>GET</code>、<code>PUT /api/preferences/theme</code></td><td><code>app/api/preferences/theme/route.ts</code></td><td>讀取或更新目前登入使用者的深色／淺色佈景主題，不接受指定其他帳號</td></tr>
     <tr><td><code>GET /api/test</code></td><td><code>app/api/test/route.ts</code></td><td>進行伺服器端資料庫連線測試</td></tr>
     <tr><td><code>GET /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 查詢資料夾樹與 ACL</td></tr>
     <tr><td><code>POST /api/folders</code></td><td><code>app/api/folders/route.ts</code></td><td>透過 <code>folderService.ts</code> 建立新資料夾</td></tr>
@@ -1023,6 +1028,8 @@ DMS_NEXT_PORT=3000</code></pre>
 <ul>
   <li>使用者登入成功或還原有效 Session 後，固定先進入「儀表板」。左側主導覽依序為「儀表板」、「文件庫」、「系統管理」；既有系統管理子選單順序不變。</li>
   <li>儀表板在首次進入、手動重新整理、公告標示已讀及管理員完成公告異動後更新。第一版不使用定時輪詢。</li>
+  <li>儀表板標題區提供「深色」及「淺色」佈景主題。點選後立即套用並保存至目前登入帳號；保存失敗時恢復原主題並顯示錯誤。此個人顯示偏好不寫入系統稽核紀錄。</li>
+  <li>佈景主題以 <code>dms_user_preferences</code> 為準，跨瀏覽器與電腦沿用。未登入的登入畫面可以使用瀏覽器暫存顯示，但登入成功後必須由使用者設定覆蓋，不得將既有瀏覽器暫存直接遷移至其他帳號。</li>
   <li>公告、近期發佈的文件、預約發佈提醒及系統異常摘要採分區載入。單一區塊查詢失敗時，其他成功區塊仍需顯示，且不得阻止使用者切換至文件庫。</li>
   <li><code>GET /api/dashboard</code> 與公告已讀 API 必須驗證有效 Session，並設定 <code>Cache-Control: no-store</code>。JSON API 使用完整英文名稱，不回傳 <code>dan_</code> 或 <code>danr_</code> 資料庫縮寫欄位。</li>
 </ul>

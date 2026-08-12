@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { loginUser } from '../../lib/server/auth';
 import { writeAudit } from '../../lib/server/auditService';
+import { ensureUserTheme } from '../../lib/server/userPreferenceService';
 import { POST } from './route';
 
 vi.mock('../../lib/server/auth', () => ({
@@ -13,8 +14,13 @@ vi.mock('../../lib/server/auditService', () => ({
   writeAudit: vi.fn(async () => undefined)
 }));
 
+vi.mock('../../lib/server/userPreferenceService', () => ({
+  ensureUserTheme: vi.fn(async () => 'modern-light')
+}));
+
 const loginUserMock = vi.mocked(loginUser);
 const writeAuditMock = vi.mocked(writeAudit);
+const ensureUserThemeMock = vi.mocked(ensureUserTheme);
 
 const createFormRequest = (uid: string, pwd: string) => new NextRequest(
   'http://localhost/external-login',
@@ -47,6 +53,7 @@ describe('外部網站自動登入 Route Handler', () => {
     expect(response.headers.get('set-cookie')).toContain('dms_session=');
     expect(response.headers.get('set-cookie')).not.toContain('Max-Age=0');
     expect(loginUserMock).toHaveBeenCalledWith('A001', 'password');
+    expect(ensureUserThemeMock).toHaveBeenCalledWith('A001', 'modern-light');
     expect(writeAuditMock).toHaveBeenCalledWith(expect.objectContaining({
       action: 'AUTH_LOGIN_SUCCESS',
       metadata: { login_method: 'EXTERNAL_POST' }

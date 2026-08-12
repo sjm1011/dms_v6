@@ -7,18 +7,19 @@ import { LoginLayout } from './layouts/LoginLayout';
 import { MainLayout } from './layouts/MainLayout';
 import { CheckCircleIcon, ErrorOutlineIcon, InfoIcon } from './components/Icons';
 import { TooltipHost } from './components/TooltipHost';
+import { AuthAPI } from './api/auth';
+import type { AppTheme } from './types';
 
-export type AppTheme = 'modern-dark' | 'modern-light';
-
-const THEME_STORAGE_KEY = 'dms-theme';
+const LOGIN_THEME_STORAGE_KEY = 'dms-login-theme';
 
 interface AppProps {
   initialLoginError?: string;
 }
 
 export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
-  const [theme, setTheme] = useState<AppTheme>('modern-dark');
+  const [loginTheme, setLoginTheme] = useState<AppTheme>('modern-dark');
   const [themeLoaded, setThemeLoaded] = useState(false);
+  const [isSavingTheme, setIsSavingTheme] = useState(false);
 
   // Toast 訊息狀態
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -58,9 +59,9 @@ export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
   }, []);
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (savedTheme === 'modern-light' || savedTheme === 'light-high-contrast') {
-      setTheme('modern-light');
+    const savedTheme = window.localStorage.getItem(LOGIN_THEME_STORAGE_KEY);
+    if (savedTheme === 'modern-light') {
+      setLoginTheme('modern-light');
     }
     setThemeLoaded(true);
   }, []);
@@ -70,9 +71,31 @@ export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
       return;
     }
 
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme, themeLoaded]);
+    const displayTheme = auth.user && auth.authenticatedTheme
+      ? auth.authenticatedTheme
+      : loginTheme;
+    document.documentElement.dataset.theme = displayTheme;
+    if (!auth.user) {
+      window.localStorage.setItem(LOGIN_THEME_STORAGE_KEY, loginTheme);
+    }
+  }, [auth.authenticatedTheme, auth.user, loginTheme, themeLoaded]);
+
+  const handleAuthenticatedThemeChange = async (nextTheme: AppTheme) => {
+    const previousTheme = auth.authenticatedTheme;
+    if (!previousTheme || previousTheme === nextTheme || isSavingTheme) return;
+
+    auth.setAuthenticatedTheme(nextTheme);
+    setIsSavingTheme(true);
+    try {
+      const response = await AuthAPI.updateTheme(nextTheme);
+      auth.setAuthenticatedTheme(response.data.theme);
+    } catch (error) {
+      auth.setAuthenticatedTheme(previousTheme);
+      showToast(error instanceof Error ? error.message : String(error), 'error');
+    } finally {
+      setIsSavingTheme(false);
+    }
+  };
 
   // 關閉錯誤對話框的處理邏輯
   const handleCloseErrorModal = () => {
@@ -110,13 +133,16 @@ export const App: React.FC<AppProps> = ({ initialLoginError = '' }) => {
           isLoggingIn={auth.isLoggingIn}
           uidInputRef={auth.uidInputRef}
           onLogin={auth.handleLogin}
-          theme={theme}
-          onThemeChange={setTheme}
+          theme={loginTheme}
+          onThemeChange={setLoginTheme}
         />
       ) : (
         <MainLayout
           user={auth.user}
           onLogout={handleLogout}
+          theme={auth.authenticatedTheme || 'modern-light'}
+          isSavingTheme={isSavingTheme}
+          onThemeChange={handleAuthenticatedThemeChange}
           // 資料夾 Hooks 狀態與方法
           folders={folders.folders}
           isLoadingFolders={folders.isLoadingFolders}

@@ -7,6 +7,7 @@ import type {
   DashboardAnnouncement,
   DashboardData,
   DashboardDocumentItem,
+  AppTheme,
   SystemPage,
   User
 } from '../types';
@@ -23,6 +24,9 @@ import { Modal } from './Modal';
 
 interface DashboardProps {
   user: User;
+  theme: AppTheme;
+  isSavingTheme: boolean;
+  onThemeChange: (theme: AppTheme) => void;
   onOpenDocument: (folderId: string, documentId: string) => void;
   onOpenSystemPage: (page: SystemPage) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -109,6 +113,9 @@ const DocumentList: React.FC<{
 
 export const Dashboard: React.FC<DashboardProps> = ({
   user,
+  theme,
+  isSavingTheme,
+  onThemeChange,
   onOpenDocument,
   onOpenSystemPage,
   showToast
@@ -187,9 +194,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h1>儀表板</h1>
           <p>{user.name}，以下是目前需要留意的公告與文件資訊。</p>
         </div>
-        <button className="btn btn-secondary" disabled={loading} onClick={() => void load()}>
-          {loading ? '載入中...' : '重新整理'}
-        </button>
+        <div className="dashboard-header-actions">
+          <fieldset className="dashboard-theme-selector" disabled={isSavingTheme}>
+            <legend>佈景主題</legend>
+            <div className="dashboard-theme-options">
+              <label className={theme === 'modern-dark' ? 'active' : ''}>
+                <input
+                  type="radio"
+                  name="dashboard-theme"
+                  value="modern-dark"
+                  checked={theme === 'modern-dark'}
+                  onChange={() => onThemeChange('modern-dark')}
+                />
+                <span>深色</span>
+              </label>
+              <label className={theme === 'modern-light' ? 'active' : ''}>
+                <input
+                  type="radio"
+                  name="dashboard-theme"
+                  value="modern-light"
+                  checked={theme === 'modern-light'}
+                  onChange={() => onThemeChange('modern-light')}
+                />
+                <span>淺色</span>
+              </label>
+            </div>
+          </fieldset>
+          <button className="btn btn-secondary" disabled={loading} onClick={() => void load()}>
+            {loading ? '載入中...' : '重新整理'}
+          </button>
+        </div>
       </header>
 
       {data?.section_errors.map(error => (

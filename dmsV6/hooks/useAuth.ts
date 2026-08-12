@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User } from '../types';
+import type { AppTheme, User } from '../types';
 import { AuthAPI } from '../api/auth';
 
 export const useAuth = (
@@ -7,6 +7,7 @@ export const useAuth = (
   initialLoginError = ''
 ) => {
   const [user, setUser] = useState<User | null>(null);
+  const [authenticatedTheme, setAuthenticatedTheme] = useState<AppTheme | null>(null);
   const [loginError, setLoginError] = useState<string>(initialLoginError);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -23,11 +24,13 @@ export const useAuth = (
       try {
         const res = await AuthAPI.session();
         if (isMounted && res.success) {
-          setUser(res.data);
+          setUser(res.data.user);
+          setAuthenticatedTheme(res.data.theme);
         }
       } catch {
         if (isMounted) {
           setUser(null);
+          setAuthenticatedTheme(null);
           setTestResult(null);
         }
       } finally {
@@ -67,14 +70,15 @@ export const useAuth = (
   */
 
   // 登入處理
-  const handleLogin = async (uidVal: string, pwdVal: string) => {
+  const handleLogin = async (uidVal: string, pwdVal: string, theme: AppTheme) => {
     setLoginError('');
     setIsLoggingIn(true);
     try {
-      const res = await AuthAPI.login(uidVal, pwdVal);
+      const res = await AuthAPI.login(uidVal, pwdVal, theme);
       if (res.success) {
-        setUser(res.data);
-        showToast(`歡迎回來，${res.data.name}！`, 'success');
+        setUser(res.data.user);
+        setAuthenticatedTheme(res.data.theme);
+        showToast(`歡迎回來，${res.data.user.name}！`, 'success');
         // 登入成功後，執行 /test API 進行驗證測試
         // runTestCall();
         return true;
@@ -101,6 +105,7 @@ export const useAuth = (
       // 即使 server-side session 清除失敗，前端仍清空本地狀態。
     }
     setUser(null);
+    setAuthenticatedTheme(null);
     setTestResult(null);
   };
 
@@ -112,6 +117,8 @@ export const useAuth = (
   return {
     user,
     setUser,
+    authenticatedTheme,
+    setAuthenticatedTheme,
     loginError,
     setLoginError,
     isRestoringSession,
